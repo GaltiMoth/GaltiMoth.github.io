@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tim's D.I.M Sim - DPSH Interpretation Machine Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ecf0f1;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1800px; margin: 0 auto; }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 10px; 
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #e94560 0%, #f39c12 50%, #e94560 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(233, 69, 96, 0.3);
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 1.1em;
+            color: #95a5a6;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+        .control-panel { 
+            background: rgba(233, 69, 96, 0.1); 
+            padding: 25px; 
+            border-radius: 10px; 
+            margin-bottom: 30px;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.2);
+        }
+        .file-input-section { 
+            margin-bottom: 25px; 
+            padding: 20px; 
+            background: rgba(233, 69, 96, 0.05); 
+            border-radius: 8px;
+            border: 1px solid rgba(233, 69, 96, 0.2);
+        }
+        .drop-zone {
+            border: 3px dashed rgba(233, 69, 96, 0.5);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(233, 69, 96, 0.03);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone.dragover {
+            border-color: #e94560;
+            background: rgba(233, 69, 96, 0.15);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
+        }
+        .drop-zone-text {
+            font-size: 1.1em;
+            color: #e94560;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .drop-zone-subtext {
+            font-size: 0.9em;
+            color: #95a5a6;
+        }
+        .file-label { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
+            color: white; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-top: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+        }
+        input[type="file"] { display: none; }
+        .files-loaded { 
+            margin-top: 15px; 
+            padding: 10px; 
+            background: rgba(46, 204, 113, 0.2); 
+            border-left: 4px solid #2ecc71; 
+            border-radius: 4px; 
+        }
+        .chart-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .option-group { 
+            background: rgba(233, 69, 96, 0.08); 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 1px solid rgba(233, 69, 96, 0.2);
+        }
+        .option-group h4 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+        .option-item { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
+        .option-item input { width: 18px; height: 18px; margin-right: 8px; cursor: pointer; }
+        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .param-input { display: flex; flex-direction: column; }
+        .param-input input { padding: 8px; border: none; border-radius: 5px; background: rgba(255, 255, 255, 0.9); color: #2c3e50; }
+        .btn { 
+            padding: 12px 24px; 
+            background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 1em; 
+            margin-top: 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+        }
+        .btn:disabled { 
+            background: #7f8c8d; 
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .chart-container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-bottom: 30px; 
+            min-height: 700px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .stats-panel { 
+            background: rgba(233, 69, 96, 0.1); 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin-top: 20px;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+        .stats-panel h3 {
+            color: #e94560;
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stat-card { 
+            background: rgba(233, 69, 96, 0.08); 
+            padding: 15px; 
+            border-radius: 8px; 
+            position: relative;
+            border: 1px solid rgba(233, 69, 96, 0.2);
+        }
+        .copy-btn { 
+            position: absolute; 
+            top: 10px; 
+            right: 10px; 
+            padding: 6px 12px; 
+            background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(233, 69, 96, 0.4);
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: rgba(233, 69, 96, 0.1);
+            color: #ecf0f1;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .tab-btn:hover {
+            background: rgba(233, 69, 96, 0.2);
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
+            border-color: #e94560;
+        }
+        .hidden { display: none; }
+        .status {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Tim's D.I.M Sim</h1>
+        <div class="subtitle">DPSH INTERPRETATION MACHINE Simulator</div>
+        
+        <div class="control-panel">
+            <div class="file-input-section">
+                <h3>📁 Import Data</h3>
+                
+                <!-- Tab selection -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="tab-btn active" onclick="switchTab('file')" id="fileTab">
+                        📂 Upload Files
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('paste')" id="pasteTab">
+                        📋 Paste Data
+                    </button>
+                </div>
+
+                <!-- File upload section -->
+                <div id="fileSection">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-text">📂 Drag & Drop XLSX Files Here</div>
+                        <div class="drop-zone-subtext">or click to browse</div>
+                        <label for="xlsxFiles" class="file-label">Choose Files</label>
+                    </div>
+                    <input type="file" id="xlsxFiles" accept=".xlsx,.xls" multiple onchange="handleXlsxUpload(event)">
+                </div>
+
+                <!-- Paste section -->
+                <div id="pasteSection" style="display: none;">
+                    <div style="margin-bottom: 15px;">
+                        <p style="color: #95a5a6; font-size: 0.9em; margin-bottom: 10px;">
+                            Paste tabular data (from Excel, CSV, etc.). First row should contain borehole names, first column should be depths.
+                        </p>
+                        
+                        <div style="margin-bottom: 15px; padding: 15px; background: rgba(233, 69, 96, 0.08); border-radius: 8px; border: 1px solid rgba(233, 69, 96, 0.2);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #e94560;">Input Data Type:</label>
+                            <div style="display: flex; gap: 20px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="inputType" value="penetration" checked style="margin-right: 8px; width: 18px; height: 18px;">
+                                    <span>Penetration (mm per blow)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="inputType" value="n20" style="margin-right: 8px; width: 18px; height: 18px;">
+                                    <span>N20 (blows per 200mm)</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <textarea id="pasteArea" 
+                                  placeholder="Paste your data here...
+Example (Penetration):
+DPSH01  DPSH03  DPSH06  DPSH08
+27      33      51      34
+21      24      12      31
+17      15      6       43
+
+Example (N20):
+DPSH01  DPSH03  DPSH06  DPSH08
+7.4     6.1     3.9     5.9
+9.5     8.3     16.7    6.5
+11.8    13.3    33.3    4.7
+
+Note: First row = borehole names, no depth column needed"
+                                  style="width: 100%; height: 300px; padding: 15px; background: rgba(255,255,255,0.9); 
+                                         color: #2c3e50; border: 2px solid rgba(233,69,96,0.3); border-radius: 8px; 
+                                         font-family: 'Courier New', monospace; font-size: 0.9em; resize: vertical;">
+                        </textarea>
+                    </div>
+                    <button class="btn" onclick="processPastedData()" style="margin-top: 10px;">
+                        📊 Process Pasted Data
+                    </button>
+                </div>
+
+                <div id="filesLoadedInfo"></div>
+            </div>
+
+            <div class="chart-options">
+                <div class="option-group">
+                    <h4>Chart Type</h4>
+                    <div class="option-item">
+                        <input type="radio" id="chartCumBlows" name="chartType" value="cumulative" onchange="updateChart()">
+                        <label for="chartCumBlows">Cumulative Blows vs Depth</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="chartQd" name="chartType" value="qd" onchange="updateChart()">
+                        <label for="chartQd">qd (MPa) vs Depth</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="chartCBR" name="chartType" value="cbr" onchange="updateChart()">
+                        <label for="chartCBR">CBR (%) vs Depth</label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h4>N-Values</h4>
+                    <div class="option-item">
+                        <input type="radio" id="chartN10" name="chartType" value="n10" onchange="updateChart()">
+                        <label for="chartN10">N10 (100mm)</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="chartN20" name="chartType" value="n20" onchange="updateChart()">
+                        <label for="chartN20">N20 (200mm)</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="chartN30" name="chartType" value="n30" checked onchange="updateChart()">
+                        <label for="chartN30">N30 (300mm)</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="chartN60" name="chartType" value="n60" onchange="updateChart()">
+                        <label for="chartN60">N60 (600mm)</label>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 0.85em;">Interval (cm):</label>
+                        <input type="number" id="nValueInterval" value="30" min="5" max="100" step="5" 
+                               style="width: 70px; padding: 4px; margin-left: 8px;" onchange="updateChart()">
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h4>Display</h4>
+                    <div class="option-item">
+                        <input type="checkbox" id="showCriteria" checked onchange="updateChart()">
+                        <label for="showCriteria">Show Target Line</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="showLegend" checked onchange="updateChart()">
+                        <label for="showLegend">Show Legend</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="showMarkers" checked onchange="updateChart()">
+                        <label for="showMarkers">Show Markers</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden" style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <h4>DPSH Parameters</h4>
+                <div class="param-grid">
+                    <div class="param-input">
+                        <label>Hammer (kg)</label>
+                        <input type="number" id="hammerWeight" value="73" step="0.1" onchange="updateChart()">
+                    </div>
+                    <div class="param-input">
+                        <label>System (kg)</label>
+                        <input type="number" id="systemWeight" value="6.3" step="0.1" onchange="updateChart()">
+                    </div>
+                    <div class="param-input">
+                        <label>Drop (m)</label>
+                        <input type="number" id="dropHeight" value="0.76" step="0.01" onchange="updateChart()">
+                    </div>
+                    <div class="param-input">
+                        <label>Area (m²)</label>
+                        <input type="number" id="coneArea" value="0.002" step="0.0001" onchange="updateChart()">
+                    </div>
+                    <div class="param-input">
+                        <label>Target</label>
+                        <input type="number" id="targetValue" value="8" step="0.5" onchange="updateChart()">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" id="generateBtn" onclick="updateChart()" disabled>Generate Chart</button>
+        </div>
+
+        <div id="chartContainer" class="chart-container" style="display: none;">
+            <div id="chart"></div>
+        </div>
+
+        <div id="statsPanel" class="stats-panel" style="display: none;">
+            <h3>📊 Statistics</h3>
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button class="btn" style="background: #3498db; padding: 8px 16px; font-size: 0.9em;" onclick="exportCurrentChart()">📥 Export Current Chart Type</button>
+                <button class="btn" style="background: #28a745; padding: 8px 16px; font-size: 0.9em;" onclick="copySimplifiedToExcel()">📋 Copy Simplified to Excel</button>
+                <button class="btn" id="toggleCompactBtn" style="background: #6c757d; padding: 8px 16px; font-size: 0.9em;" onclick="toggleCompactNames()">📝 Use Compact Names (L, MD, D, VD)</button>
+            </div>
+            <div id="copyStatus" style="display: none; padding: 10px; border-radius: 5px; margin: 10px 0;"></div>
+            <div id="statsGrid" class="stats-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+        let processedData = [];
+        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+        let useCompactNames = false;
+
+        // Tab switching
+        function switchTab(tab) {
+            const fileTab = document.getElementById('fileTab');
+            const pasteTab = document.getElementById('pasteTab');
+            const fileSection = document.getElementById('fileSection');
+            const pasteSection = document.getElementById('pasteSection');
+
+            if (tab === 'file') {
+                fileTab.classList.add('active');
+                pasteTab.classList.remove('active');
+                fileSection.style.display = 'block';
+                pasteSection.style.display = 'none';
+            } else {
+                pasteTab.classList.add('active');
+                fileTab.classList.remove('active');
+                pasteSection.style.display = 'block';
+                fileSection.style.display = 'none';
+            }
+        }
+
+        // Process pasted data
+        function processPastedData() {
+            const pasteArea = document.getElementById('pasteArea');
+            const text = pasteArea.value.trim();
+            
+            if (!text) {
+                alert('Please paste some data first!');
+                return;
+            }
+
+            // Get input type
+            const inputType = document.querySelector('input[name="inputType"]:checked').value;
+
+            boreholeData = [];
+            
+            // Split into lines
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            
+            if (lines.length < 2) {
+                alert('Need at least header row and one data row!');
+                return;
+            }
+
+            // Parse header row to get borehole names
+            const headerLine = lines[0];
+            const headerParts = headerLine.split(/\t|\s{2,}/); // Split by tab or 2+ spaces
+            
+            // Filter out empty strings and trim
+            const boreholeNames = headerParts.map(s => s.trim()).filter(s => s);
+
+            console.log('Found borehole names:', boreholeNames);
+
+            // Initialize borehole data structures
+            const boreholes = {};
+            boreholeNames.forEach(name => {
+                boreholes[name] = { name: name, depths: [], rawValues: [], dataType: 'perBlow' };
+            });
+
+            // Starting depth (in meters)
+            let currentDepth = 0.2; // Start at 0.2m
+            const depthIncrement = 0.2; // 0.2m per row
+
+            // Parse data rows
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Split by tabs or multiple spaces
+                const parts = line.split(/\t|\s{2,}/).map(s => s.trim()).filter(s => s);
+                
+                // Skip lines that don't have data (like "Refusal @" or "Dry to X")
+                if (parts.length === 0 || 
+                    parts.some(p => p.toLowerCase().includes('refusal') || 
+                               p.toLowerCase().includes('dry to'))) {
+                    continue;
+                }
+
+                // Process each borehole's value for this depth
+                for (let colIdx = 0; colIdx < Math.min(parts.length, boreholeNames.length); colIdx++) {
+                    const name = boreholeNames[colIdx];
+                    if (!boreholes[name]) continue;
+                    
+                    const valueStr = parts[colIdx];
+                    
+                    // Skip if contains refusal or dry
+                    if (valueStr.toLowerCase().includes('refusal') || 
+                        valueStr.toLowerCase().includes('dry')) {
+                        continue;
+                    }
+
+                    const value = parseFloat(valueStr);
+                    if (isNaN(value)) continue;
+
+                    let penetration_mm;
+                    
+                    if (inputType === 'n20') {
+                        // Convert N20 to penetration per blow
+                        penetration_mm = 200 / value;
+                    } else {
+                        // Direct penetration value
+                        penetration_mm = value;
+                    }
+
+                    boreholes[name].depths.push(currentDepth);
+                    boreholes[name].rawValues.push({
+                        penetration: penetration_mm,
+                        blows: 1
+                    });
+                }
+
+                currentDepth += depthIncrement;
+            }
+
+            // Convert to array and filter out empty boreholes
+            boreholeData = Object.values(boreholes).filter(bh => bh.depths.length > 0);
+
+            console.log('Processed boreholes:', boreholeData.length);
+            boreholeData.forEach(bh => {
+                console.log(`${bh.name}: ${bh.depths.length} points`);
+            });
+
+            if (boreholeData.length === 0) {
+                alert('No valid data found. Please check your format.');
+                return;
+            }
+
+            displayFilesLoaded();
+            document.getElementById('generateBtn').disabled = false;
+            updateChart();
+        }
+
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('xlsxFiles');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleXlsxUpload({ target: { files: files } });
+            }
+        });
+
+        async function handleXlsxUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            boreholeData = [];
+            let filesProcessed = 0;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
+                        const boreholeName = file.name.replace(/\.(xlsx|xls)$/i, '');
+                        const parsedData = parseXlsxData(jsonData, boreholeName);
+                        if (parsedData) boreholeData.push(parsedData);
+                        filesProcessed++;
+                        if (filesProcessed === files.length) {
+                            if (boreholeData.length === 0) {
+                                alert('No valid data found');
+                                return;
+                            }
+                            displayFilesLoaded();
+                            document.getElementById('generateBtn').disabled = false;
+                            updateChart();
+                        }
+                    } catch (error) {
+                        console.error('Error:', file.name, error);
+                        filesProcessed++;
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function parseXlsxData(jsonData, boreholeName) {
+            const parsedData = { name: boreholeName, depths: [], rawValues: [], dataType: 'perBlow' };
+            let startRow = 0;
+            if (jsonData.length > 0 && jsonData[0].length > 0) {
+                const firstValue = jsonData[0][0];
+                if (isNaN(parseFloat(firstValue))) startRow = 1;
+            }
+            for (let i = startRow; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || row.length < 2) continue;
+                const depth = parseFloat(row[0]);
+                const penetration_mm = parseFloat(row[1]);
+                if (isNaN(depth) || isNaN(penetration_mm)) continue;
+                parsedData.depths.push(depth);
+                const dataPoint = { penetration: penetration_mm, blows: 1 };
+                if (row.length >= 3 && !isNaN(parseFloat(row[2]))) {
+                    dataPoint.qd = parseFloat(row[2]);
+                }
+                parsedData.rawValues.push(dataPoint);
+            }
+            return parsedData.depths.length > 0 ? parsedData : null;
+        }
+
+        function displayFilesLoaded() {
+            const info = document.getElementById('filesLoadedInfo');
+            info.className = 'files-loaded';
+            info.innerHTML = `<strong>✓ Loaded ${boreholeData.length} borehole(s)</strong>`;
+        }
+
+        function calculateQdFromPenetration(penetration_mm) {
+            const m = parseFloat(document.getElementById('hammerWeight').value);
+            const m_prime = parseFloat(document.getElementById('systemWeight').value);
+            const H = parseFloat(document.getElementById('dropHeight').value);
+            const A = parseFloat(document.getElementById('coneArea').value);
+            const g = 9.8;
+            const e = penetration_mm / 1000;
+            const rd = (m * g * H) / (A * e);
+            const energyEfficiency = m / (m + m_prime);
+            return (energyEfficiency * rd) / 1000000;
+        }
+
+        function calculateCBR(penetration_mm) {
+            return Math.pow(10, 2.81 - 1.32 * Math.log10(penetration_mm));
+        }
+
+        function getProcessedData(chartType) {
+            const processedBoreholes = [];
+            const isNValue = ['n10', 'n20', 'n30', 'n60'].includes(chartType);
+
+            boreholeData.forEach(borehole => {
+                if (isNValue) {
+                    const intervalCm = parseFloat(document.getElementById('nValueInterval').value);
+                    const intervalM = intervalCm / 100;
+                    const maxDepth = Math.max(...borehole.depths);
+                    const numIntervals = Math.ceil(maxDepth / intervalM);
+                    const processed = { name: borehole.name, depths: [], values: [] };
+                    const targetDepth_mm = { 'n10': 100, 'n20': 200, 'n30': 300, 'n60': 600 }[chartType];
+                    
+                    for (let i = 1; i <= numIntervals; i++) {
+                        const intervalDepth = i * intervalM;
+                        const intervalStart = (i - 1) * intervalM;
+                        const intervalEnd = i * intervalM;
+                        let totalPenetration = 0;
+                        let blowsInInterval = 0;
+                        
+                        for (let j = 0; j < borehole.depths.length; j++) {
+                            const depth = borehole.depths[j];
+                            if (depth > intervalStart && depth <= intervalEnd) {
+                                totalPenetration += borehole.rawValues[j].penetration;
+                                blowsInInterval++;
+                            }
+                        }
+                        
+                        if (blowsInInterval > 0) {
+                            const avgPenetration = totalPenetration / blowsInInterval;
+                            const nValue = targetDepth_mm / avgPenetration;
+                            processed.depths.push(intervalDepth);
+                            processed.values.push(nValue);
+                        }
+                    }
+                    
+                    if (processed.values.length > 0) processedBoreholes.push(processed);
+                } else {
+                    const processed = { name: borehole.name, depths: [...borehole.depths], values: [] };
+                    let cumulativeBlows = 0;
+
+                    for (let i = 0; i < borehole.rawValues.length; i++) {
+                        const raw = borehole.rawValues[i];
+                        let value;
+                        cumulativeBlows += 1;
+
+                        switch(chartType) {
+                            case 'cumulative': value = cumulativeBlows; break;
+                            case 'qd': value = raw.qd !== undefined ? raw.qd : calculateQdFromPenetration(raw.penetration); break;
+                            case 'cbr': value = calculateCBR(raw.penetration); break;
+                        }
+
+                        if (value !== undefined && !isNaN(value)) {
+                            processed.values.push(value);
+                        } else {
+                            processed.depths.splice(processed.values.length, 1);
+                        }
+                    }
+                    if (processed.values.length > 0) processedBoreholes.push(processed);
+                }
+            });
+            return processedBoreholes;
+        }
+
+        function updateChart() {
+            if (boreholeData.length === 0) return;
+            const chartType = document.querySelector('input[name="chartType"]:checked').value;
+            const processedData = getProcessedData(chartType);
+            if (processedData.length === 0) return;
+
+            const traces = [];
+            const allDepths = [];
+            const isNValue = ['n10', 'n20', 'n30', 'n60'].includes(chartType);
+            const showMarkers = document.getElementById('showMarkers').checked;
+
+            processedData.forEach((borehole, index) => {
+                allDepths.push(...borehole.depths);
+                if (isNValue) {
+                    const stepX = [], stepY = [];
+                    for (let i = 0; i < borehole.values.length; i++) {
+                        const depth = borehole.depths[i];
+                        const value = borehole.values[i];
+                        const intervalM = parseFloat(document.getElementById('nValueInterval').value) / 100;
+                        const prevDepth = depth - intervalM;
+                        if (i === 0) { stepX.push(value); stepY.push(prevDepth); }
+                        stepX.push(value); stepY.push(depth);
+                    }
+                    traces.push({ x: stepX, y: stepY, type: 'scatter', mode: 'lines', name: borehole.name, line: { color: colors[index % colors.length], width: 3, shape: 'hv' } });
+                } else {
+                    traces.push({ x: borehole.values, y: borehole.depths, type: 'scatter', mode: showMarkers ? 'lines+markers' : 'lines', name: borehole.name, line: { color: colors[index % colors.length], width: 2 }, marker: { size: 6 } });
+                }
+            });
+
+            if (document.getElementById('showCriteria').checked && allDepths.length > 0) {
+                const targetValue = parseFloat(document.getElementById('targetValue').value);
+                traces.push({ x: [targetValue, targetValue], y: [Math.min(...allDepths), Math.max(...allDepths)], type: 'scatter', mode: 'lines', name: 'Target', line: { color: 'red', width: 2, dash: 'dash' } });
+            }
+
+            const titles = { 'cumulative': 'Cumulative Blows', 'qd': 'qd (MPa)', 'cbr': 'CBR (%)', 'n10': 'N10', 'n20': 'N20', 'n30': 'N30', 'n60': 'N60' };
+            Plotly.newPlot('chart', traces, {
+                title: { text: titles[chartType] + ' vs Depth', font: { size: 24, family: 'Segoe UI' } },
+                xaxis: { 
+                    title: { text: titles[chartType], font: { size: 18 } }, 
+                    gridcolor: '#e0e0e0', 
+                    rangemode: 'tozero',
+                    tickfont: { size: 14 }
+                },
+                yaxis: { 
+                    title: { text: 'Depth (m)', font: { size: 18 } }, 
+                    autorange: 'reversed', 
+                    gridcolor: '#e0e0e0',
+                    tickfont: { size: 14 }
+                },
+                showlegend: document.getElementById('showLegend').checked,
+                legend: { 
+                    orientation: 'h', 
+                    y: -0.12, 
+                    x: 0.5, 
+                    xanchor: 'center',
+                    font: { size: 14 }
+                },
+                margin: { l: 80, r: 40, t: 80, b: 80 },
+                height: 650
+            }, { responsive: true });
+            
+            document.getElementById('chartContainer').style.display = 'block';
+            generateStatistics(processedData);
+        }
+
+        function generateStatistics(processedData) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '';
+            processedData.forEach((borehole, idx) => {
+                const values = borehole.values;
+                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `<button class="copy-btn" onclick="copyStats(${idx})">📋</button><h4>${borehole.name}</h4><p>Avg: ${avg.toFixed(2)} | Max: ${Math.max(...values).toFixed(2)} | Points: ${values.length}</p>`;
+                statsGrid.appendChild(statCard);
+            });
+            document.getElementById('statsPanel').style.display = 'block';
+        }
+
+        function copyStats(idx) {
+            const borehole = boreholeData[idx];
+            let text = `${borehole.name}\nDepth\tPenetration\n`;
+            for (let i = 0; i < borehole.depths.length; i++) {
+                text += `${borehole.depths[i].toFixed(2)}\t${borehole.rawValues[i].penetration.toFixed(2)}\n`;
+            }
+            navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+        }
+
+        function exportCurrentChart() {
+            const chartType = document.querySelector('input[name="chartType"]:checked').value;
+            const processedData = getProcessedData(chartType);
+            const names = { 'cumulative': 'Cumulative_Blows', 'qd': 'qd_MPa', 'cbr': 'CBR', 'n10': 'N10', 'n20': 'N20', 'n30': 'N30', 'n60': 'N60' };
+            const timestamp = new Date().toISOString().slice(0, 10);
+            
+            processedData.forEach((borehole, index) => {
+                const originalBorehole = boreholeData.find(bh => bh.name === borehole.name);
+                
+                if (chartType.startsWith('n')) {
+                    const data = [['Depth', 'qd', '', '', names[chartType]]];
+                    const intervalM = parseFloat(document.getElementById('nValueInterval').value) / 100;
+                    const nValueMap = new Map();
+                    const maxDepth = Math.max(...originalBorehole.depths);
+                    const numIntervals = Math.ceil(maxDepth / intervalM);
+                    const targetDepth_mm = { 'n10': 100, 'n20': 200, 'n30': 300, 'n60': 600 }[chartType];
+                    
+                    for (let i = 1; i <= numIntervals; i++) {
+                        const intervalDepth = i * intervalM;
+                        const intervalStart = (i - 1) * intervalM;
+                        const intervalEnd = i * intervalM;
+                        let totalPenetration = 0;
+                        let blowsInInterval = 0;
+                        
+                        for (let j = 0; j < originalBorehole.depths.length; j++) {
+                            const depth = originalBorehole.depths[j];
+                            if (depth > intervalStart && depth <= intervalEnd) {
+                                totalPenetration += originalBorehole.rawValues[j].penetration;
+                                blowsInInterval++;
+                            }
+                        }
+                        
+                        if (blowsInInterval > 0) {
+                            const avgPenetration = totalPenetration / blowsInInterval;
+                            const nValue = targetDepth_mm / avgPenetration;
+                            nValueMap.set(parseFloat(intervalDepth.toFixed(2)), Math.round(nValue));
+                        }
+                    }
+                    
+                    for (let i = 0; i < originalBorehole.depths.length; i++) {
+                        const depth = originalBorehole.depths[i];
+                        const qd = originalBorehole.rawValues[i].qd || calculateQdFromPenetration(originalBorehole.rawValues[i].penetration);
+                        const intervalEnd = Math.ceil(depth / intervalM) * intervalM;
+                        const nValue = nValueMap.get(parseFloat(intervalEnd.toFixed(2))) || '';
+                        
+                        data.push([
+                            depth.toFixed(2),
+                            qd.toFixed(2),
+                            '',
+                            '',
+                            nValue
+                        ]);
+                    }
+                    
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    ws['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 5 }, { wch: 5 }, { wch: 10 }];
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+                    
+                    setTimeout(() => {
+                        XLSX.writeFile(wb, `${borehole.name}.xlsx`);
+                    }, index * 100);
+                } else {
+                    const data = [['Depth', names[chartType]]];
+                    for (let i = 0; i < borehole.depths.length; i++) {
+                        let value = borehole.values[i];
+                        if (chartType === 'cumulative') {
+                            value = Math.round(value);
+                        } else {
+                            value = value.toFixed(2);
+                        }
+                        data.push([borehole.depths[i].toFixed(2), value]);
+                    }
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+                    
+                    setTimeout(() => {
+                        XLSX.writeFile(wb, `${borehole.name}.xlsx`);
+                    }, index * 100);
+                }
+            });
+            
+            setTimeout(() => {
+                alert(`Exported ${processedData.length} file(s) for ${names[chartType]}`);
+            }, processedData.length * 100 + 200);
+        }
+
+        function classifyGranularSoil(qd) {
+            // Using granular soil classification based on qd (MPa)
+            // Default thresholds: LOOSE < 5, MED_DENSE < 12, DENSE < 30, VERY_DENSE >= 30
+            let classification;
+            if (qd < 5) classification = 'LOOSE';
+            else if (qd < 12) classification = 'MED_DENSE';
+            else if (qd < 30) classification = 'DENSE';
+            else classification = 'VERY_DENSE';
+            
+            // Apply compact naming if enabled
+            if (useCompactNames) {
+                const compactMap = {
+                    'LOOSE': 'L',
+                    'MED_DENSE': 'MD',
+                    'DENSE': 'D',
+                    'VERY_DENSE': 'VD'
+                };
+                return compactMap[classification] || classification;
+            }
+            
+            return classification;
+        }
+
+        function analyzeLayers(borehole) {
+            const layers = [];
+            if (borehole.depths.length === 0) return layers;
+
+            let currentClassification = null;
+            let currentStartDepth = 0;
+
+            for (let i = 0; i < borehole.depths.length; i++) {
+                const depth = borehole.depths[i];
+                const qd = borehole.rawValues[i].qd || calculateQdFromPenetration(borehole.rawValues[i].penetration);
+                const classification = classifyGranularSoil(qd);
+
+                if (classification !== currentClassification) {
+                    if (currentClassification !== null) {
+                        // Save previous layer
+                        layers.push({
+                            classification: currentClassification,
+                            depth: depth.toFixed(1)
+                        });
+                    }
+                    currentClassification = classification;
+                    currentStartDepth = depth;
+                }
+            }
+
+            // Add the final layer
+            if (currentClassification !== null) {
+                const finalDepth = borehole.depths[borehole.depths.length - 1];
+                layers.push({
+                    classification: currentClassification,
+                    depth: finalDepth.toFixed(1)
+                });
+            }
+
+            return layers;
+        }
+
+        async function copySimplifiedToExcel() {
+            if (boreholeData.length === 0) {
+                showCopyStatus('No data to copy! Please load some borehole data first.', 'error');
+                return;
+            }
+
+            try {
+                const tabDelimitedData = generateSimplifiedData();
+                await navigator.clipboard.writeText(tabDelimitedData);
+                showCopyStatus('✅ Simplified data copied! Ready to paste into Excel (Ctrl+V)', 'success');
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = generateSimplifiedData();
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopyStatus('✅ Simplified data copied! Ready to paste into Excel (Ctrl+V)', 'success');
+            }
+        }
+
+        function generateSimplifiedData() {
+            // Determine maximum number of layers across all boreholes
+            const allLayers = boreholeData.map(bh => analyzeLayers(bh));
+            const maxLayers = Math.max(...allLayers.map(layers => layers.length), 5);
+
+            // Create header row
+            let result = 'Name\tLat (utm)\tLong (utm)\tElev (m)\tTotal Depth (m)\tGW (m)';
+            for (let i = 1; i <= maxLayers; i++) {
+                result += `\tS${i}\tS${i} Depth (m)`;
+            }
+            result += '\n';
+
+            // Create data rows
+            boreholeData.forEach((borehole, index) => {
+                const layers = allLayers[index];
+                const totalDepth = borehole.depths.length > 0 ? 
+                    Math.max(...borehole.depths).toFixed(1) : '0.0';
+
+                // Basic information (empty for lat, lon, elev, gw as not in original data)
+                let row = `${borehole.name}\t\t\t\t${totalDepth}\t-`;
+
+                // Add layer information
+                for (let i = 0; i < maxLayers; i++) {
+                    if (i < layers.length) {
+                        const layer = layers[i];
+                        row += `\t${layer.classification}\t${layer.depth}`;
+                    } else {
+                        row += '\t\t';
+                    }
+                }
+
+                result += row + '\n';
+            });
+
+            return result;
+        }
+
+        function showCopyStatus(message, type) {
+            const statusDiv = document.getElementById('copyStatus');
+            if (!statusDiv) return;
+            
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function toggleCompactNames() {
+            useCompactNames = !useCompactNames;
+            const btn = document.getElementById('toggleCompactBtn');
+            
+            if (useCompactNames) {
+                btn.textContent = '📝 Use Full Names (LOOSE, MED_DENSE, etc)';
+                btn.style.background = '#e94560';
+            } else {
+                btn.textContent = '📝 Use Compact Names (L, MD, D, VD)';
+                btn.style.background = '#6c757d';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1214 @@
+    <script>
+        // Data storage
+        let data = [
+            [387714.218, 6532500.978, -0.012],
+            [387714.379, 6532500.975, -0.011],
+            [387717.032, 6532498.243, -0.010],
+            [387717.034, 6532498.081, -0.009],
+            [387714.218, 6532495.345, -0.010],
+            [387711.401, 6532498.082, -0.011],
+            [387714.22, 6532067.301, -0.013],
+            [387717.035, 6532064.561, -0.011],
+            [387717.038, 6532064.401, -0.010],
+            [387713.736, 6532061.706, -0.012],
+            [387711.402, 6532064.403, -0.010],
+            [387711.402, 6532064.565, -0.010],
+            [387714.202, 6531567.296, -0.008],
+            [387714.372, 6531567.291, -0.008],
+            [387717.035, 6531564.562, -0.007],
+            [387717.019, 6531564.237, -0.007],
+            [387714.213, 6531561.664, -0.007],
+            [387714.054, 6531561.669, -0.008],
+            [387711.396, 6531564.401, -0.008],
+            [387711.398, 6531564.559, -0.008],
+            [387714.214, 6531067.296, -0.003],
+            [387714.375, 6531067.293, -0.007],
+            [387717.029, 6531064.560, -0.006],
+            [387717.029, 6531064.398, -0.006],
+            [387714.213, 6531061.660, -0.006],
+            [387714.053, 6531061.667, -0.006],
+            [387711.397, 6531064.399, -0.006],
+            [387711.395, 6531064.561, -0.006],
+            [387714.212, 6530567.300, -0.017],
+            [387714.373, 6530567.296, -0.023],
+            [387717.032, 6530564.566, -0.007],
+            [387717.035, 6530564.403, -0.010],
+            [387714.219, 6530561.662, -0.006],
+            [387714.058, 6530561.672, -0.007],
+            [387711.401, 6530564.400, 0.004],
+            [387711.4, 6530564.562, -0.001],
+            [387714.214, 6531067.296, -0.004],
+            [387714.375, 6530067.294, -0.005],
+            [387717.029, 6530064.563, -0.004],
+            [387717.029, 6530064.398, -0.005],
+            [387714.215, 6530061.663, -0.003],
+            [387714.053, 6530061.665, -0.004],
+            [387711.395, 6530064.398, -0.004],
+            [387711.397, 6531064.561, -0.004],
+            [387714.37, 6529567.298, -0.002],
+            [387717.031, 6529564.570, 0.002],
+            [387717.032, 6529564.407, 0.002],
+            [387714.053, 6529561.665, -0.001],
+            [387711.397, 6529564.398, 0.001],
+            [387711.398, 6529564.561, 0.000]
+        ];
+
+        let sortDirection = { column: -1, ascending: true };
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Activate corresponding button
+            event.target.classList.add('active');
+            
+            // Update plot when switching to visualization tab
+            if (tabName === 'visualization') {
+                updatePlot();
+            }
+        }
+
+        // Data table functionality
+        function populateDataTable() {
+            const tableBody = document.getElementById('dataTableBody');
+            tableBody.innerHTML = '';
+            
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="select-col">
+                        <input type="checkbox" name="rowSelect" value="${index}">
+                    </td>
+                    <td>
+                        <input type="number" step="0.001" value="${row[0]}" 
+                               onchange="updateData(${index}, 0, this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="0.001" value="${row[1]}" 
+                               onchange="updateData(${index}, 1, this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="0.001" value="${row[2]}" 
+                               onchange="updateData(${index}, 2, this.value)">
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function updateData(rowIndex, columnIndex, value) {
+            data[rowIndex][columnIndex] = parseFloat(value) || 0;
+            populateStats();
+        }
+
+        function addRow() {
+            // Add a new row with default values
+            const lastRow = data[data.length - 1];
+            const newRow = [
+                lastRow ? lastRow[0] + 1 : 387714,
+                lastRow ? lastRow[1] + 1 : 6532500,
+                0
+            ];
+            data.push(newRow);
+            populateDataTable();
+            populateStats();
+        }
+
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('input[name="rowSelect"]:checked');
+            const indicesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (indicesToDelete.length === 0) {
+                alert('Please select rows to delete');
+                return;
+            }
+            
+            if (confirm(`Delete ${indicesToDelete.length} selected row(s)?`)) {
+                // Sort indices in descending order to avoid index shifting issues
+                indicesToDelete.sort((a, b) => b - a);
+                indicesToDelete.forEach(index => {
+                    data.splice(index, 1);
+                });
+                populateDataTable();
+                populateStats();
+            }
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                data = [];
+                populateDataTable();
+                populateStats();
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('input[name="rowSelect"]');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        function sortTable(columnIndex) {
+            const isAscending = sortDirection.column === columnIndex ? !sortDirection.ascending : true;
+            sortDirection = { column: columnIndex, ascending: isAscending };
+            
+            data.sort((a, b) => {
+                const aVal = a[columnIndex - 1];
+                const bVal = b[columnIndex - 1];
+                
+                if (isAscending) {
+                    return aVal - bVal;
+                } else {
+                    return bVal - aVal;
+                }
+            });
+            
+            populateDataTable();
+            
+            // Update sort indicators
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.textContent = '↕️';
+            });
+            
+            const currentIcon = document.querySelector(`.sortable:nth-child(${columnIndex + 1}) .sort-icon`);
+            currentIcon.textContent = isAscending ? '↑' : '↓';
+        }
+
+        function processBulkInput() {
+            const bulkInput = document.getElementById('bulkInput').value.trim();
+            if (!bulkInput) {
+                alert('Please enter data to process');
+                return;
+            }
+            
+            try {
+                const lines = bulkInput.split('\n').filter(line => line.trim());
+                const newData = [];
+                
+                // Skip header line if it exists
+                const startIndex = lines[0].toLowerCase().includes('x') ? 1 : 0;
+                
+                for (let i = startIndex; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line) {
+                        const values = line.split(',').map(v => parseFloat(v.trim()));
+                        if (values.length >= 3 && values.every(v => !isNaN(v))) {
+                            newData.push([values[0], values[1], values[2]]);
+                        }
+                    }
+                }
+                
+                if (newData.length > 0) {
+                    if (confirm(`Add ${newData.length} new data points?`)) {
+                        data.push(...newData);
+                        populateDataTable();
+                        populateStats();
+                        document.getElementById('bulkInput').value = '';
+                    }
+                } else {
+                    alert('No valid data found. Please check your format.');
+                }
+            } catch (error) {
+                alert('Error processing data: ' + error.message);
+            }
+        }
+
+        function importCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv,.txt';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('bulkInput').value = e.target.result;
+                        processBulkInput();
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function exportCSV() {
+            if (data.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'X,Y,deltaZ\n';
+            data.forEach(row => {
+                csv += `${row[0]},${row[1]},${row[2]}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'coordinate_data.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Extract coordinates for plotting
+        function getCoordinates() {
+            return {
+                x: data.map(d => d[0]),
+                y: data.map(d => d[1]),
+                z: data.map(d => d[2])
+            };
+        }
+
+        // Calculate statistics
+        function calculateStats() {
+            if (data.length === 0) {
+                return {
+                    totalPoints: 0,
+                    xRange: 0,
+                    yRange: 0,
+                    minZ: 0,
+                    maxZ: 0,
+                    avgZ: 0
+                };
+            }
+            
+            const coords = getCoordinates();
+            return {
+                totalPoints: data.length,
+                xRange: (Math.max(...coords.x) - Math.min(...coords.x)).toFixed(2),
+                yRange: (Math.max(...coords.y) - Math.min(...coords.y)).toFixed(2),
+                minZ: Math.min(...coords.z).toFixed(3),
+                maxZ: Math.max(...coords.z).toFixed(3),
+                avgZ: (coords.z.reduce((a, b) => a + b, 0) / coords.z.length).toFixed(3)
+            };
+        }
+
+        // Populate statistics
+        function populateStats() {
+            const stats = calculateStats();
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalPoints}</div>
+                    <div class="stat-label">Total Points</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.xRange}m</div>
+                    <div class="stat-label">X Range</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.yRange}m</div>
+                    <div class="stat-label">Y Range</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.minZ}m</div>
+                    <div class="stat-label">Min ΔZ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.maxZ}m</div>
+                    <div class="stat-label">Max ΔZ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.avgZ}m</div>
+                    <div class="stat-label">Avg ΔZ</div>
+                </div>
+            `;
+        }
+
+        // Update plot based on selection
+        function updatePlot() {
+            if (data.length === 0) {
+                document.getElementById('plot').innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">No data to display. Please add some data points in the Data Input tab.</div>';
+                return;
+            }
+            
+            const coords = getCoordinates();
+            const plotType = document.getElementById('plotType').value;
+            const colorScale = document.getElementById('colorScale').value;
+            const markerSize = parseInt(document.getElementById('markerSize').value);
+
+            let plotData, layout;
+
+            switch(plotType) {
+                case 'scatter':
+                    plotData = [{
+                        x: coords.x,
+                        y: coords.y,
+                        mode: 'markers',
+                        type: 'scatter',
+                        marker: {
+                            size: markerSize,
+                            color: coords.z,
+                            colorscale: colorScale,
+                            colorbar: {
+                                title: 'Height Change (ΔZ)',
+                                titleside: 'right'
+                            },
+                            line: {
+                                width: 1,
+                                color: 'white'
+                            }
+                        },
+                        text: coords.z.map((val, i) => `X: ${coords.x[i]}<br>Y: ${coords.y[i]}<br>ΔZ: ${val}m`),
+                        hovertemplate: '%{text}<extra></extra>'
+                    }];
+                    
+                    layout = {
+                        title: '2D Scatter Plot of Coordinates with Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'surface':
+                    // Create a grid for surface plot
+                    const gridSize = 10;
+                    const xMin = Math.min(...coords.x), xMax = Math.max(...coords.x);
+                    const yMin = Math.min(...coords.y), yMax = Math.max(...coords.y);
+                    
+                    const xGrid = Array.from({length: gridSize}, (_, i) => xMin + (xMax - xMin) * i / (gridSize - 1));
+                    const yGrid = Array.from({length: gridSize}, (_, i) => yMin + (yMax - yMin) * i / (gridSize - 1));
+                    
+                    const zGrid = yGrid.map(yVal => 
+                        xGrid.map(xVal => {
+                            // Simple interpolation - find closest point
+                            let minDist = Infinity;
+                            let closestZ = 0;
+                            for (let i = 0; i < data.length; i++) {
+                                const dist = Math.sqrt(Math.pow(coords.x[i] - xVal, 2) + Math.pow(coords.y[i] - yVal, 2));
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    closestZ = coords.z[i];
+                                }
+                            }
+                            return closestZ;
+                        })
+                    );
+
+                    plotData = [{
+                        x: xGrid,
+                        y: yGrid,
+                        z: zGrid,
+                        type: 'surface',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        }
+                    }];
+                    
+                    layout = {
+                        title: '3D Surface Plot of Height Changes',
+                        scene: {
+                            xaxis: { title: 'X Coordinate (m)' },
+                            yaxis: { title: 'Y Coordinate (m)' },
+                            zaxis: { title: 'Height Change (ΔZ)' }
+                        },
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'contour':
+                    plotData = [{
+                        x: coords.x,
+                        y: coords.y,
+                        z: coords.z,
+                        type: 'contour',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        },
+                        contours: {
+                            showlabels: true,
+                            labelfont: {
+                                size: 10,
+                                color: 'white'
+                            }
+                        }
+                    }];
+                    
+                    layout = {
+                        title: 'Contour Plot of Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'heatmap':
+                    // Create a simple heatmap representation
+                    plotData = [{
+                        x: coords.x,
+                        y: coords.y,
+                        z: coords.z,
+                        type: 'heatmap',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        }
+                    }];
+                    
+                    layout = {
+                        title: 'Heatmap of Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+            }
+
+            Plotly.newPlot('plot', plotData, layout, {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                displaylogo: false
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            populateStats();
+            populateDataTable();
+            updatePlot();
+        });<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinate Visualization with Height Changes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .info-panel {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .plot-container {
+            margin-bottom: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .control-group label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        select, input {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .legend {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .color-scale {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .color-box {
+            width: 30px;
+            height: 20px;
+            border-radius: 5px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* Tab Styles */
+        .tab-container {
+            margin-bottom: 30px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 3px solid #4a5568;
+        }
+        
+        .tab-button:hover:not(.active) {
+            background: linear-gradient(135deg, #d0d0d0 0%, #e8e8e8 100%);
+            transform: translateY(-2px);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Data Input Styles */
+        .data-input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .input-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .add-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+        
+        .clear-btn {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+        }
+        
+        .import-btn, .export-btn {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .spreadsheet-container {
+            max-height: 400px;
+            overflow: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .data-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .data-table th.sortable:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        }
+        
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            position: relative;
+        }
+        
+        .data-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .data-table tr.selected {
+            background: #e6fffa;
+        }
+        
+        .data-table input[type="number"] {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        
+        .data-table input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .data-table input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        
+        .select-col {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .sort-icon {
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .bulk-input-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 15px;
+            border: 2px dashed #0ea5e9;
+        }
+        
+        .bulk-input-section h4 {
+            margin-top: 0;
+            color: #0369a1;
+        }
+        
+        .bulk-input-section textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #bae6fd;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+            background: white;
+        }
+        
+        .bulk-input-section textarea:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+        
+        .bulk-input-section .action-btn {
+            margin-top: 10px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Coordinate Visualization with Height Changes</h1>
+        
+        <div class="info-panel">
+            <h3>🎯 Dataset Overview</h3>
+            <p>This visualization shows the relationship between X,Y coordinates and height changes (deltaZ). 
+            Points are colored by their height change values, with interactive features for detailed exploration.</p>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('visualization')">📊 Visualization</button>
+                <button class="tab-button" onclick="showTab('data-input')">📝 Data Input</button>
+            </div>
+            
+            <div id="visualization-tab" class="tab-content active">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="plotType">Plot Type:</label>
+                        <select id="plotType" onchange="updatePlot()">
+                            <option value="scatter">2D Scatter Plot</option>
+                            <option value="surface">3D Surface Plot</option>
+                            <option value="contour">Contour Plot</option>
+                            <option value="heatmap">Heatmap</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="colorScale">Color Scale:</label>
+                        <select id="colorScale" onchange="updatePlot()">
+                            <option value="Viridis">Viridis</option>
+                            <option value="RdYlBu">Red-Yellow-Blue</option>
+                            <option value="Spectral">Spectral</option>
+                            <option value="Plasma">Plasma</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="markerSize">Marker Size:</label>
+                        <input type="range" id="markerSize" min="5" max="20" value="10" onchange="updatePlot()">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="data-input-tab" class="tab-content">
+                <div class="data-input-section">
+                    <div class="input-controls">
+                        <button class="action-btn add-btn" onclick="addRow()">➕ Add Row</button>
+                        <button class="action-btn delete-btn" onclick="deleteSelected()">🗑️ Delete Selected</button>
+                        <button class="action-btn clear-btn" onclick="clearData()">🧹 Clear All</button>
+                        <button class="action-btn import-btn" onclick="importCSV()">📥 Import CSV</button>
+                        <button class="action-btn export-btn" onclick="exportCSV()">📤 Export CSV</button>
+                    </div>
+                    
+                    <div class="spreadsheet-container">
+                        <table id="dataTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="select-col">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    </th>
+                                    <th class="sortable" onclick="sortTable(1)">X Coordinate <span class="sort-icon">↕️</span></th>
+                                    <th class="sortable" onclick="sortTable(2)">Y Coordinate <span class="sort-icon">↕️</span></th>
+                                    <th class="sortable" onclick="sortTable(3)">Delta Z <span class="sort-icon">↕️</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                                <!-- Data rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="bulk-input-section">
+                        <h4>🔄 Bulk Data Input</h4>
+                        <textarea id="bulkInput" placeholder="Paste your data here in CSV format:
+X,Y,deltaZ
+387714.218,6532500.978,-0.012
+387714.379,6532500.975,-0.011
+..."></textarea>
+                        <button class="action-btn" onclick="processBulkInput()">📋 Process Bulk Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="plot-container">
+            <div id="plot" style="width: 100%; height: 600px;"></div>
+        </div>
+        
+        <div class="legend">
+            <h4>🎨 Color Legend</h4>
+            <p>Height Change (deltaZ) Values</p>
+            <div class="color-scale">
+                <div class="color-box" style="background: #440154;"></div>
+                <span>Low (negative)</span>
+                <div class="color-box" style="background: #31688e;"></div>
+                <span>Medium</span>
+                <div class="color-box" style="background: #35b779;"></div>
+                <span>High (positive)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        const data = [
+            [387714.218, 6532500.978, -0.012],
+            [387714.379, 6532500.975, -0.011],
+            [387717.032, 6532498.243, -0.010],
+            [387717.034, 6532498.081, -0.009],
+            [387714.218, 6532495.345, -0.010],
+            [387711.401, 6532498.082, -0.011],
+            [387714.22, 6532067.301, -0.013],
+            [387717.035, 6532064.561, -0.011],
+            [387717.038, 6532064.401, -0.010],
+            [387713.736, 6532061.706, -0.012],
+            [387711.402, 6532064.403, -0.010],
+            [387711.402, 6532064.565, -0.010],
+            [387714.202, 6531567.296, -0.008],
+            [387714.372, 6531567.291, -0.008],
+            [387717.035, 6531564.562, -0.007],
+            [387717.019, 6531564.237, -0.007],
+            [387714.213, 6531561.664, -0.007],
+            [387714.054, 6531561.669, -0.008],
+            [387711.396, 6531564.401, -0.008],
+            [387711.398, 6531564.559, -0.008],
+            [387714.214, 6531067.296, -0.003],
+            [387714.375, 6531067.293, -0.007],
+            [387717.029, 6531064.560, -0.006],
+            [387717.029, 6531064.398, -0.006],
+            [387714.213, 6531061.660, -0.006],
+            [387714.053, 6531061.667, -0.006],
+            [387711.397, 6531064.399, -0.006],
+            [387711.395, 6531064.561, -0.006],
+            [387714.212, 6530567.300, -0.017],
+            [387714.373, 6530567.296, -0.023],
+            [387717.032, 6530564.566, -0.007],
+            [387717.035, 6530564.403, -0.010],
+            [387714.219, 6530561.662, -0.006],
+            [387714.058, 6530561.672, -0.007],
+            [387711.401, 6530564.400, 0.004],
+            [387711.4, 6530564.562, -0.001],
+            [387714.214, 6531067.296, -0.004],
+            [387714.375, 6530067.294, -0.005],
+            [387717.029, 6530064.563, -0.004],
+            [387717.029, 6530064.398, -0.005],
+            [387714.215, 6530061.663, -0.003],
+            [387714.053, 6530061.665, -0.004],
+            [387711.395, 6530064.398, -0.004],
+            [387711.397, 6531064.561, -0.004],
+            [387714.37, 6529567.298, -0.002],
+            [387717.031, 6529564.570, 0.002],
+            [387717.032, 6529564.407, 0.002],
+            [387714.053, 6529561.665, -0.001],
+            [387711.397, 6529564.398, 0.001],
+            [387711.398, 6529564.561, 0.000]
+        ];
+
+        // Extract coordinates
+        const x = data.map(d => d[0]);
+        const y = data.map(d => d[1]);
+        const z = data.map(d => d[2]);
+
+        // Calculate statistics
+        const stats = {
+            totalPoints: data.length,
+            xRange: (Math.max(...x) - Math.min(...x)).toFixed(2),
+            yRange: (Math.max(...y) - Math.min(...y)).toFixed(2),
+            minZ: Math.min(...z).toFixed(3),
+            maxZ: Math.max(...z).toFixed(3),
+            avgZ: (z.reduce((a, b) => a + b, 0) / z.length).toFixed(3)
+        };
+
+        // Populate statistics
+        function populateStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalPoints}</div>
+                    <div class="stat-label">Total Points</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.xRange}m</div>
+                    <div class="stat-label">X Range</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.yRange}m</div>
+                    <div class="stat-label">Y Range</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.minZ}m</div>
+                    <div class="stat-label">Min ΔZ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.maxZ}m</div>
+                    <div class="stat-label">Max ΔZ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.avgZ}m</div>
+                    <div class="stat-label">Avg ΔZ</div>
+                </div>
+            `;
+        }
+
+        // Update plot based on selection
+        function updatePlot() {
+            const plotType = document.getElementById('plotType').value;
+            const colorScale = document.getElementById('colorScale').value;
+            const markerSize = parseInt(document.getElementById('markerSize').value);
+
+            let plotData, layout;
+
+            switch(plotType) {
+                case 'scatter':
+                    plotData = [{
+                        x: x,
+                        y: y,
+                        mode: 'markers',
+                        type: 'scatter',
+                        marker: {
+                            size: markerSize,
+                            color: z,
+                            colorscale: colorScale,
+                            colorbar: {
+                                title: 'Height Change (ΔZ)',
+                                titleside: 'right'
+                            },
+                            line: {
+                                width: 1,
+                                color: 'white'
+                            }
+                        },
+                        text: z.map((val, i) => `X: ${x[i]}<br>Y: ${y[i]}<br>ΔZ: ${val}m`),
+                        hovertemplate: '%{text}<extra></extra>'
+                    }];
+                    
+                    layout = {
+                        title: '2D Scatter Plot of Coordinates with Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'surface':
+                    // Create a grid for surface plot
+                    const gridSize = 10;
+                    const xMin = Math.min(...x), xMax = Math.max(...x);
+                    const yMin = Math.min(...y), yMax = Math.max(...y);
+                    
+                    const xGrid = Array.from({length: gridSize}, (_, i) => xMin + (xMax - xMin) * i / (gridSize - 1));
+                    const yGrid = Array.from({length: gridSize}, (_, i) => yMin + (yMax - yMin) * i / (gridSize - 1));
+                    
+                    const zGrid = yGrid.map(yVal => 
+                        xGrid.map(xVal => {
+                            // Simple interpolation - find closest point
+                            let minDist = Infinity;
+                            let closestZ = 0;
+                            for (let i = 0; i < data.length; i++) {
+                                const dist = Math.sqrt(Math.pow(x[i] - xVal, 2) + Math.pow(y[i] - yVal, 2));
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    closestZ = z[i];
+                                }
+                            }
+                            return closestZ;
+                        })
+                    );
+
+                    plotData = [{
+                        x: xGrid,
+                        y: yGrid,
+                        z: zGrid,
+                        type: 'surface',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        }
+                    }];
+                    
+                    layout = {
+                        title: '3D Surface Plot of Height Changes',
+                        scene: {
+                            xaxis: { title: 'X Coordinate (m)' },
+                            yaxis: { title: 'Y Coordinate (m)' },
+                            zaxis: { title: 'Height Change (ΔZ)' }
+                        },
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'contour':
+                    plotData = [{
+                        x: x,
+                        y: y,
+                        z: z,
+                        type: 'contour',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        },
+                        contours: {
+                            showlabels: true,
+                            labelfont: {
+                                size: 10,
+                                color: 'white'
+                            }
+                        }
+                    }];
+                    
+                    layout = {
+                        title: 'Contour Plot of Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+
+                case 'heatmap':
+                    // Create a simple heatmap representation
+                    plotData = [{
+                        x: x,
+                        y: y,
+                        z: z,
+                        type: 'heatmap',
+                        colorscale: colorScale,
+                        colorbar: {
+                            title: 'Height Change (ΔZ)',
+                            titleside: 'right'
+                        }
+                    }];
+                    
+                    layout = {
+                        title: 'Heatmap of Height Changes',
+                        xaxis: { title: 'X Coordinate (m)' },
+                        yaxis: { title: 'Y Coordinate (m)' },
+                        plot_bgcolor: 'rgba(240,240,240,0.8)',
+                        paper_bgcolor: 'rgba(255,255,255,0.9)'
+                    };
+                    break;
+            }
+
+            Plotly.newPlot('plot', plotData, layout, {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                displaylogo: false
+            });
+        }
+
+        // Initialize
+        populateStats();
+        updatePlot();
+    </script>
+</body>
+</html>

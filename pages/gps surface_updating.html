@@ -1,0 +1,3804 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GNSS Surface Manager - Professional Edition</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Leaflet with fallback -->
+    <script>
+        // Try to load Leaflet from primary CDN
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+            script.crossOrigin = '';
+            script.onerror = function() {
+                // Fallback to cdnjs
+                console.log('Trying fallback CDN for Leaflet...');
+                var fallback = document.createElement('script');
+                fallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+                fallback.onerror = function() {
+                    console.error('All Leaflet CDNs failed - map features disabled');
+                    window.LEAFLET_DISABLED = true;
+                };
+                document.head.appendChild(fallback);
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+
+    <style>
+		/* Map overlay legend */
+		.map-legend {
+			position: absolute; bottom: 30px; right: 10px;
+			background: rgba(0,0,0,0.75); border: 1px solid var(--border);
+			border-radius: 6px; padding: 10px 14px; z-index: 500;
+			font-size: 11px; color: #eee; display: none;
+			backdrop-filter: blur(4px);
+		}
+		.map-legend.visible { display: block; }
+		.map-legend-bar {
+			width: 120px; height: 12px; border-radius: 3px;
+			background: linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
+			margin: 5px 0;
+		}
+		.map-legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #aaa; }
+
+		/* Leaflet heatmap image renders smoothly */
+		.gnss-heatmap { image-rendering: smooth; }
+        #nav-cube-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            /* Moved slightly left of the toggle buttons */
+            width: 50px;
+            height: 50px;
+            z-index: 999;
+            perspective: 400px;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .cube-face {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--primary);
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .cube-face:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* Unfolded Cube Layout (Simple Cross) */
+        .cube-top {
+            top: 0;
+            left: 20px;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .cube-front {
+            top: 40px;
+            left: 20px;
+        }
+
+        /* South */
+        .cube-back {
+            top: -40px;
+            left: 20px;
+            display: none;
+        }
+
+        /* Hidden in 2D UI mode usually, simplified below */
+        .cube-left {
+            top: 20px;
+            left: -20px;
+        }
+
+        /* West */
+        .cube-right {
+            top: 20px;
+            left: 60px;
+        }
+
+        /* East */
+
+        /* Better "Gizmo" Style Layout */
+        #nav-cube-container {
+            width: 80px;
+            height: 80px;
+            right: 80px;
+        }
+
+        .cube-face {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+
+        .cube-top {
+            top: 0;
+            left: 28px;
+        }
+
+        .cube-front {
+            top: 56px;
+            left: 28px;
+        }
+
+        /* South */
+        .cube-back {
+            top: 0;
+            left: 28px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* N/A in flat UI */
+        .cube-left {
+            top: 28px;
+            left: 0;
+        }
+
+        .cube-right {
+            top: 28px;
+            left: 56px;
+        }
+
+        .cube-center {
+            top: 28px;
+            left: 28px;
+            background: #333;
+        }
+
+        /* North is actually 'Back' in 3D but 'Top' visually on screen maps */
+
+        /* Let's relabel for intuitive Map usage */
+        .cube-top {
+            top: 0;
+            left: 28px;
+            content: 'N';
+        }
+
+        /* North is usually Up on screen */
+        .cube-front {
+            top: 56px;
+            left: 28px;
+        }
+
+        /* South */
+        .cube-left {
+            top: 28px;
+            left: 0;
+        }
+
+        /* West */
+        .cube-right {
+            top: 28px;
+            left: 56px;
+        }
+
+        /* East */
+        .cube-center {
+            position: absolute;
+            top: 28px;
+            left: 28px;
+            width: 24px;
+            height: 24px;
+            background: #222;
+            border: 1px solid #444;
+            color: #aaa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            cursor: pointer;
+        }
+
+        .point-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+            align-items: center;
+            background: #222;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .point-row input {
+            width: 100%;
+            padding: 4px;
+            font-size: 10px;
+            background: #111;
+            border: 1px solid #444;
+        }
+
+        .point-label {
+            font-size: 10px;
+            color: var(--primary);
+            width: 20px;
+            font-weight: bold;
+        }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: var(--panel-bg);
+            color: var(--text-main);
+            border-left: 4px solid var(--primary);
+            padding: 12px 20px;
+            margin-top: 10px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            font-size: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .mobile-only {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-only {
+                display: flex !important;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 0;
+            }
+
+            /* Adjust brand for mobile if needed */
+            .nav-brand {
+                display: none;
+            }
+        }
+
+        :root {
+            --bg-dark: #0f0f13;
+            --panel-bg: rgba(30, 30, 35, 0.95);
+            --rail-bg: #18181b;
+            --border: #333;
+            --primary: #03a9f4;
+            --primary-hover: #0288d1;
+            --danger: #ef5350;
+            --text-main: #ececec;
+            --text-dim: #a1a1aa;
+            --nav-width: 60px;
+            --panel-width: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* LAYOUT */
+        #app {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+
+        /* 1. NAV RAIL */
+        #nav-rail {
+            width: var(--nav-width);
+            background: var(--rail-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            z-index: 200;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-brand {
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        .nav-btn.active {
+            background: rgba(3, 169, 244, 0.15);
+            color: var(--primary);
+        }
+
+        .nav-label {
+            font-size: 9px;
+            margin-top: 2px;
+            display: none;
+        }
+
+        /* Show only on mobile or hover if needed */
+        .spacer {
+            flex: 1;
+        }
+
+        /* 2. FLOATING PANEL */
+        #settings-panel {
+            position: absolute;
+            left: var(--nav-width);
+            top: 0;
+            bottom: 0;
+            width: var(--panel-width);
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border);
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translateX(0);
+            /* Default Open */
+        }
+
+        #settings-panel.closed {
+            transform: translateX(-100%);
+        }
+
+        .panel-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .panel-header h2 {
+            margin: 0;
+            font-size: 14px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .close-panel:hover {
+            color: #fff;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .tab-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 3. VIEWPORT */
+        #viewport {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+
+        #canvas-container,
+        #map-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map-container {
+            display: none;
+            z-index: 10;
+        }
+
+        .viewport-controls {
+            position: absolute;
+            top: 20px;
+            left: 50%; /* Move to horizontal center */
+            transform: translateX(-50%); /* Adjust to be perfectly centered */
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5); /* Optional: distinct background */
+            padding: 5px 10px; /* Optional: padding for the background */
+            border-radius: 20px; /* Optional: rounded container */
+        }
+
+        .control-btn {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+
+        .control-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .control-btn.icon-only {
+            padding: 8px 12px;
+            font-size: 16px;
+        }
+
+        /* COMMON UI ELEMENTS */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-dim);
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            background: #111;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+
+        button.secondary {
+            background: #333;
+            color: #eee;
+        }
+
+        button.secondary:hover {
+            background: #444;
+        }
+
+        button.danger {
+            background: var(--danger);
+        }
+
+        .drop-zone {
+            border: 2px dashed #444;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: rgba(3, 169, 244, 0.05);
+        }
+
+        .file-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .viz-btn {
+            background: #333;
+            padding: 6px;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .viz-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            user-select: none;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #444;
+            border-radius: 2px;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+
+        .status-box {
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            margin-bottom: 10px;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #333;
+            margin: 15px 0;
+        }
+
+        /* LOADING */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            #app {
+                flex-direction: column-reverse;
+            }
+
+            /* Rail at bottom */
+            #nav-rail {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+                padding: 0 10px;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                justify-content: space-around;
+            }
+
+            .nav-brand,
+            .spacer {
+                display: none;
+            }
+
+            .nav-btn {
+                margin: 0;
+                width: auto;
+                flex: 1;
+                height: 100%;
+                border-radius: 0;
+                font-size: 20px;
+            }
+
+            .nav-label {
+                display: block;
+                font-size: 9px;
+            }
+
+            #settings-panel {
+                top: auto;
+                bottom: 60px;
+                left: 0;
+                width: 100%;
+                height: 50%;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                transform: translateY(100%);
+                /* Hidden downwards */
+            }
+
+            #settings-panel.open {
+                transform: translateY(0);
+            }
+
+            #settings-panel.closed {
+                transform: translateY(100%);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <div style="font-size: 14px; font-weight: bold;">Processing Geodetic Data...</div>
+        <div id="loading-text" style="font-size: 11px; color: #aaa; margin-top: 5px;">Wait</div>
+    </div>
+
+    <div id="app">
+        <div id="nav-cube-container">
+            <div class="cube-face cube-top" onclick="snapView('TOP')" title="Top (Plan)">TOP</div>
+            <div class="cube-face cube-front" onclick="snapView('SOUTH')" title="South Elevation">S</div>
+            <div class="cube-face cube-back" onclick="snapView('NORTH')" title="North Elevation">N</div>
+            <div class="cube-face cube-left" onclick="snapView('WEST')" title="West Elevation">W</div>
+            <div class="cube-face cube-right" onclick="snapView('EAST')" title="East Elevation">E</div>
+        </div>
+        <nav id="nav-rail">
+            <button id="menuToggle" class="nav-btn mobile-only" style="display: none; font-size: 24px;">
+                ☰
+            </button>
+
+            <div class="nav-brand">GNSS</div>
+
+            <button class="nav-btn active" onclick="switchTab('tab-files')" title="Datasets">
+                📁 <span class="nav-label">Files</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-viz')" title="Visualization">
+                🎨 <span class="nav-label">Viz</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-surface')" title="Surface & Contours">
+                ⛰️ <span class="nav-label">Surface</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-boreholes')" title="Boreholes">
+                🕳️ <span class="nav-label">Soils</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-kriging')" title="Kriging Analysis">
+                📊 <span class="nav-label">Kriging</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-structure')" title="Structures">
+                🏗️ <span class="nav-label">Build</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-settings')" title="Global Settings">
+                ⚙️ <span class="nav-label">Config</span>
+            </button>
+            <div class="spacer"></div>
+            <button class="nav-btn" onclick="switchTab('tab-export')" title="Export">
+                💾 <span class="nav-label">Export</span>
+            </button>
+        </nav>
+
+        <aside id="settings-panel">
+            <div class="panel-header">
+                <h2 id="panel-title">Datasets</h2>
+                <button class="close-panel" onclick="toggleMenu(false)">×</button>
+            </div>
+
+            <div class="panel-content">
+                <div id="tab-files" class="tab-section active">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-text">Drag & Drop CSV / TXT</div>
+                        <div class="drop-sub">Lat/Lon, UTM, Elev, Fix</div>
+                    </div>
+                    <input type="file" id="fileInput" multiple style="display:none" accept=".csv,.txt">
+                    <div id="fileList" class="file-list"></div>
+                    <button onclick="loadBothSamples()" class="secondary">Load Sample Data</button>
+                </div>
+
+                <div id="tab-viz" class="tab-section">
+                    <label class="section-label">Color Mode</label>
+                    <div class="viz-mode-grid">
+                        <button class="viz-btn active" data-mode="elevation">Elev</button>
+                        <button class="viz-btn" data-mode="fix">Fix</button>
+                        <button class="viz-btn" data-mode="sats">Sats</button>
+                        <button class="viz-btn" data-mode="speed">Speed</button>
+                        <button class="viz-btn" data-mode="pdop">PDOP</button>
+                        <button class="viz-btn" data-mode="dataset">File</button>
+                    </div>
+                    <div class="legend-box" id="legendContainer">
+                        <div class="legend-labels">
+                            <span id="legTitle">ELEVATION (m)</span>
+                        </div>
+                        <div class="gradient-bar" id="legendGradient"></div>
+                        <div class="legend-labels">
+                            <span id="legMin">0.00</span>
+                            <span id="legMid">50.00</span>
+                            <span id="legMax">100.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-surface" class="tab-section">
+                    <div class="form-group" style="background: rgba(3, 169, 244, 0.1); padding: 10px; border-radius: 4px; border: 1px solid var(--primary); margin-bottom: 20px;">
+                        <label class="checkbox-label" style="margin-bottom:0; color: var(--primary);">
+                            <input type="checkbox" id="filterFixedOnly" onchange="APP.filterFixedOnly = this.checked; refreshAll();">
+                            <b>Filter: RTK Fixed (4) Only</b>
+                        </label>
+                        <div style="font-size:10px; color: var(--text-dim); margin-top:4px;">Excludes Float/Single points from surface calc.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label"><input type="checkbox" id="showPoints" checked> Points</label>
+                        <label class="checkbox-label"><input type="checkbox" id="showSurface" checked> Surface</label>
+                        <label class="checkbox-label"><input type="checkbox" id="showWireframe"> Wireframe</label>
+                    </div>
+                    <div class="form-group">
+                        <label>Smoothing (Kriging Range) <span id="kRangeVal">25</span>m</label>
+                        <input type="range" id="krigingRange" min="5" max="100" step="1" value="25">
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showContours"> <b>Enable Contours</b>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Interval (<span id="cIntVal">0.5</span>m)</label>
+                        <input type="range" id="contourInterval" min="0.1" max="5.0" step="0.1" value="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <input type="color" id="contourColor" value="#ffffff" style="width:100%">
+                    </div>
+                </div>
+
+                <div id="tab-boreholes" class="tab-section">
+                    <textarea id="boreholeInput" rows="6" placeholder="Paste Borehole Data..."></textarea>
+                    <div class="btn-group">
+                        <button class="action-btn primary" onclick="parseBoreholes()">Parse</button>
+                        <button class="action-btn danger" onclick="clearBoreholes()">Clear</button>
+                    </div>
+                    <div id="boreholeStats" class="status-text">No boreholes loaded</div>
+                    <div id="krigingSurfaceList" style="margin-top: 10px;"></div>
+                    <button onclick="resetSoilColors()" class="secondary" style="margin-top:5px; font-size:10px; padding:5px;">Reset to Default Colors</button>
+                    <div id="toast-container"></div>
+                    <hr>
+                    <label class="checkbox-label"><input type="checkbox" id="showBoreholes" checked> <b>Show Borehole</b></label>
+                    <label class="checkbox-label"><input type="checkbox" id="showBHLabels" checked> Show Labels</label>
+
+                    <div class="form-group">
+                        <label>Width: <span id="bhRadiusVal">4.0</span>m</label>
+                        <input type="range" id="bhRadius" min="1" max="15" step="0.5" value="4">
+                    </div>
+                    <div class="form-group">
+                        <label>Opacity: <span id="bhOpacityVal">100</span>%</label>
+                        <input type="range" id="bhOpacity" min="10" max="100" step="5" value="100">
+                    </div>
+                </div>
+
+                <div id="tab-kriging" class="tab-section">
+                    <p class="helper-text">Interpolate soil layers across the site.</p>
+                    <div class="form-group">
+                        <label>Grid Res: <span id="kResVal">50</span>x<span id="kResVal2">50</span></label>
+                        <input type="range" id="krigingResolution" min="20" max="100" step="10" value="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Search Range: <span id="kRangeValKrig">50</span>m</label>
+                        <input type="range" id="krigingRangeBore" min="10" max="200" step="5" value="50">
+                    </div>
+                    <button onclick="generateKrigingSurfaces()" class="secondary" style="margin-bottom:5px">Generate Soil Layers</button>
+                    <button onclick="generateGWSurface()">Generate GW Table</button>
+                    <hr>
+                    <label class="checkbox-label"><input type="checkbox" id="showSoilLayers"> <b>Show Soil Layers</b></label>
+                    <label class="checkbox-label"><input type="checkbox" id="showGWSurface"> <b>Show GW Table</b></label>
+                    <div class="form-group">
+                        <label>Layer Opacity: <span id="soilOpacityVal">40</span>%</label>
+                        <input type="range" id="soilLayerOpacity" min="10" max="100" step="5" value="40">
+                    </div>
+                </div>
+
+                <div id="tab-structure" class="tab-section">
+                    <p class="helper-text">Import polygon coordinates or draw on map.</p>
+
+                    <div class="drop-zone" id="structDropZone" style="padding: 10px; border-style: dashed; border-color: var(--primary);">
+                        <div class="drop-text" style="font-size: 11px;">Drop Structure CSV</div>
+                        <div class="drop-sub" style="font-size: 9px;">Format: ID, East, North, (Elev)</div>
+                    </div>
+                    <input type="file" id="structFileInput" style="display:none" accept=".csv,.txt,.xlsx">
+
+                    <button id="drawBtn" class="secondary" style="margin-bottom: 15px;">Enter Draw Mode (Map)</button>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Base Elev (AHDm)</label>
+                            <input type="number" id="structBase" value="10.0" step="0.1" oninput="updateStructureMesh()">
+                        </div>
+                        <div class="form-group">
+                            <label>Height (m)</label>
+                            <input type="number" id="structHeight" value="5.0" step="0.1" oninput="updateStructureMesh()">
+                        </div>
+                    </div>
+
+                    <div id="structPointsList" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); margin-bottom: 10px; border: 1px solid #333; padding: 5px;">
+                        <div class="status-box">No points loaded</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showStructHandles" checked onchange="toggleStructHandles()">
+                            Show Drag Handles
+                        </label>
+                    </div>
+
+                    <button onclick="clearStructure()" class="danger">Clear Structure</button>
+                </div>
+
+                <div id="tab-settings" class="tab-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="useAHD74" checked> Apply AHD74 (+31.5m)
+                    </label>
+                    <div class="form-group">
+                        <label>Vertical Exaggeration (x<span id="zScaleVal">5.0</span>)</label>
+                        <input type="range" id="zScale" min="1" max="20" step="0.5" value="5">
+                    </div>
+                    <div class="status-box">
+                        <div class="stat-row"><span>Points:</span> <span id="statPoints">0</span></div>
+                        <div class="stat-row"><span>Min Elev:</span> <span id="statMin">-</span></div>
+                        <div class="stat-row"><span>Max Elev:</span> <span id="statMax">-</span></div>
+                        <div class="stat-row"><span>Files:</span> <span id="statFiles">0</span></div>
+                    </div>
+                    <button onclick="resetCamera()" class="secondary" style="margin-top:10px">Reset Camera</button>
+                </div>
+
+                <div id="tab-export" class="tab-section">
+                    <label>Export Format</label>
+                    <select id="exportFormat">
+                        <option value="csv">CSV (Raw Data)</option>
+                        <option value="geojson">GeoJSON</option>
+                        <option value="dxf">DXF (Points)</option>
+                    </select>
+                    <button onclick="performExport()" style="margin-top:10px">Download Data</button>
+                </div>
+            </div>
+        </aside>
+
+        <div id="viewport">
+            <div id="canvas-container"></div>
+            <div id="map-container"></div>
+			<!-- Map-view elevation legend (shown only in map mode) -->
+			<div id="mapLegend" class="map-legend">
+				<div style="font-size:10px; font-weight:bold; color:var(--primary); margin-bottom:4px;">ELEVATION (m)</div>
+				<div class="map-legend-bar"></div>
+				<div class="map-legend-labels">
+					<span id="mapLegMin">—</span>
+					<span id="mapLegMax">—</span>
+				</div>
+			</div>
+
+            <div class="viewport-controls">
+                <button id="viewToggleBtn" class="control-btn">Map View</button>
+                <button id="resetViewBtn" onclick="resetCamera()" class="control-btn icon-only" title="Reset View">⟲</button>
+            </div>
+        </div>
+    </div>
+	<script>
+    
+        // Standard Geotechnical Colors (USCS & Consistency)
+        const DEFAULT_SOIL_COLORS = {
+            // --- Consistency (Cohesionless - Sands/Gravels) ---
+            'L': '#FFCDD2',
+            'LOOSE': '#FFCDD2',
+            'MD': '#EF9A9A',
+            'MED DENSE': '#EF9A9A',
+            'MEDIUM DENSE': '#EF9A9A',
+            'MED_DENSE': '#EF9A9A',
+            'D': '#E53935',
+            'DENSE': '#E53935',
+            'VD': '#B71C1C',
+            'VERY DENSE': '#B71C1C',
+            'VERY_DENSE': '#B71C1C',
+
+            // --- Consistency (Cohesive - Clays/Silts) ---
+            'S': '#E1BEE7',
+            'SOFT': '#E1BEE7',
+            'VS': '#F3E5F5',
+            'VERY SOFT': '#F3E5F5',
+            'F': '#CE93D8',
+            'FIRM': '#CE93D8',
+            'ST': '#BA68C8',
+            'STIFF': '#BA68C8',
+            'VST': '#8E24AA',
+            'VERY STIFF': '#8E24AA',
+            'VERY_STIFF': '#8E24AA',
+            'H': '#4A148C',
+            'HARD': '#4A148C',
+
+            // --- USCS Soil Types (Unified Soil Classification System) ---
+            'GW': '#FFD700',
+            'GP': '#EEE8AA',
+            'GM': '#BDB76B',
+            'GC': '#8B4513',
+            'SW': '#FFFF00',
+            'SP': '#FFFACD',
+            'SM': '#F0E68C',
+            'SC': '#A52A2A',
+            'ML': '#D2B48C',
+            'CL': '#A0522D',
+            'OL': '#556B2F',
+            'MH': '#DEB887',
+            'CH': '#800000',
+            'OH': '#2F4F4F',
+            'PT': '#000000',
+            'CI': '#CD853F', // CI = Intermediate Clay
+
+            // --- Material / Other ---
+            'FILL': '#E91E63',
+            'ROCK': '#616161',
+            'LIMESTONE': '#BDBDBD',
+            'SANDSTONE': '#D7CCC8',
+            'SILTSTONE': '#795548',
+            'GRANITE': '#F48FB1',
+            'UNKNOWN': '#9E9E9E'
+        };
+
+        const APP = {
+            datasets: [],
+            nextId: 1,
+            view: '3D',
+            vizMode: 'elevation',
+            useAHD74: true,
+            ahdOffset: 31.5,
+            isDrawing: false,
+            drawPoints: [],
+            filterFixedOnly: false,
+            soilColors: {
+                ...DEFAULT_SOIL_COLORS
+            }, // Initialize with a copy
+            utmZone: 50,
+            isSouth: true
+        };
+
+        // NEW: Toast function to replace alert()
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function getProcessedPoints() {
+            const datumShift = APP.useAHD74 ? APP.ahdOffset : 0;
+
+            return APP.datasets
+                .filter(ds => ds.visible)
+                .flatMap(ds => {
+                    return ds.data
+                        // This is the key line that filters dynamically
+                        .filter(p => !APP.filterFixedOnly || p.fix === 4)
+                        .map(p => {
+                            const finalZ = p.z + ds.offset + datumShift;
+                            return {
+                                ...p,
+                                z_calc: finalZ,
+                                dsColor: ds.color
+                            };
+                        });
+                });
+        }
+
+        function resetSoilColors() {
+            APP.soilColors = {
+                ...DEFAULT_SOIL_COLORS
+            };
+            buildBoreholes3D();
+            if (APP.krigingSurfaces) renderKrigingSurfaces();
+            updateKrigingSurfaceList();
+            showToast("Colors reset to default");
+        }
+
+        function updateSoilColor(soilType, newHex) {
+            APP.soilColors[soilType] = newHex;
+            buildBoreholes3D();
+            if (APP.krigingSurfaces) renderKrigingSurfaces();
+            updateKrigingSurfaceList();
+        }
+
+        function updateKrigingSurfaceList() {
+            const list = document.getElementById('krigingSurfaceList');
+            if (!APP.boreholes || APP.boreholes.length === 0) {
+                list.innerHTML = '<div class="status-box">Load boreholes to edit colors</div>';
+                return;
+            }
+            const layers = extractSoilLayers();
+            let html = '<div style="background:#111; padding:10px; border-radius:4px; border:1px solid #333;">';
+            html += '<div style="font-weight:bold; margin-bottom:10px; font-size:11px; color:var(--primary);">SOIL COLOR EDITOR:</div>';
+            layers.forEach(layer => {
+                const color = APP.soilColors[layer] || '#666666';
+                html += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-family:monospace; font-size:11px;">${layer}</span>
+                        <input type="color" value="${color}" 
+                            style="width:35px; height:18px; border:none; background:none; cursor:pointer;"
+                            onchange="updateSoilColor('${layer}', this.value)">
+                    </div>`;
+            });
+            html += '</div>';
+            list.innerHTML = html;
+        }
+
+        // THREE.JS GLOBALS
+        let scene, camera, renderer, controls;
+        let objects = {
+            points: null,
+            surface: null,
+            contours: null,
+            structure: null,
+            grid: null,
+            boreholes: null,
+            bhLabels: null,
+            soilLayers: null, // Group for kriged soil layer surfaces
+            gwSurface: null // Kriged groundwater surface
+        };
+
+        // LEAFLET GLOBALS
+        let map, layers = {
+			osm: null,
+			sat: null,
+			points: null,
+			draw: null,
+			heatmap: null,
+			contourLines: null
+
+		};
+
+        /**
+         * ============================================================================
+         * INITIALIZATION
+         * ============================================================================
+         */
+
+        // --- UI LOGIC FOR NEW MENU ---
+        let currentTab = 'tab-files';
+
+        function switchTab(tabId) {
+            const panel = document.getElementById('settings-panel');
+            const isMobile = window.innerWidth <= 768;
+
+            // If clicking the same tab, toggle the panel visibility
+            if (currentTab === tabId && !panel.classList.contains('closed')) {
+                toggleMenu(false);
+                return;
+            }
+
+            // Update this section in your switchTab function
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+
+                // Get the attribute once
+                const onClickAttr = btn.getAttribute('onclick');
+
+                // Check if it exists AND if it contains the tabId
+                if (onClickAttr && onClickAttr.includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Hide all sections, show requested one
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            // Update Title
+            const titles = {
+                'tab-files': 'Datasets',
+                'tab-viz': 'Visualization',
+                'tab-surface': 'Surface Tools',
+                'tab-boreholes': 'Borehole Data',
+                'tab-kriging': 'Kriging Analysis',
+                'tab-structure': 'Structure Builder',
+                'tab-settings': 'Configuration',
+                'tab-export': 'Export Data'
+            };
+            document.getElementById('panel-title').innerText = titles[tabId];
+
+            // Ensure panel is open
+            toggleMenu(true);
+            currentTab = tabId;
+        }
+
+        function toggleMenu(show) {
+            const panel = document.getElementById('settings-panel');
+            if (show) {
+                panel.classList.remove('closed');
+                if (window.innerWidth <= 768) panel.classList.add('open');
+            } else {
+                panel.classList.add('closed');
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                if (window.innerWidth <= 768) panel.classList.remove('open');
+            }
+
+            if (window.animateThree) window.dispatchEvent(new Event('resize'));
+        }
+        350;
+
+
+        window.onload = function() {
+            console.log("Initializing GNSS Surface Manager...");
+
+            
+            // 1. Setup 3D Environment
+            initThreeJS();
+
+            // 2. Setup Map Environment (check if Leaflet loaded)
+            setTimeout(() => {
+                if (typeof L !== 'undefined') {
+                    initLeaflet();
+                    console.log("Map functionality enabled");
+                } else {
+                    console.warn("Map features disabled - Leaflet library not available");
+                    window.LEAFLET_DISABLED = true;
+                    // Hide map toggle button if Leaflet failed
+                    const btn = document.getElementById('viewToggleBtn');
+                    if (btn) {
+                        btn.style.display = 'none';
+                    }
+                }
+            }, 500);
+
+            // 3. Bind UI Events
+            bindEvents();
+
+            // 4. Initial Render
+            renderFileList();
+            updateStats();
+        };
+
+        function bindEvents() {
+            // --- NEW: Structure File I/O ---
+            const sDz = document.getElementById('structDropZone');
+            sDz.onclick = () => document.getElementById('structFileInput').click();
+            document.getElementById('structFileInput').onchange = (e) => loadStructureFile(e.target.files[0]);
+
+            sDz.ondragover = (e) => {
+                e.preventDefault();
+                sDz.style.background = 'rgba(3, 169, 244, 0.2)';
+            };
+            sDz.ondragleave = (e) => {
+                e.preventDefault();
+                sDz.style.background = 'transparent';
+            };
+            sDz.ondrop = (e) => {
+                e.preventDefault();
+                sDz.style.background = 'transparent';
+                if (e.dataTransfer.files.length > 0) loadStructureFile(e.dataTransfer.files[0]);
+            };
+
+            // Init Interaction Raycaster
+            initInteraction();
+            // Mobile Menu Toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const panel = document.getElementById('settings-panel');
+
+            // Safe check: Only bind if the element exists
+            if (menuToggle) {
+                menuToggle.onclick = () => {
+                    // Check if it's currently closed or open
+                    const isClosed = panel.classList.contains('closed');
+                    toggleMenu(isClosed); // If closed, open it. If open, close it.
+                };
+            }
+
+            // Viewport click to close menu on mobile
+            document.getElementById('viewport').onclick = (e) => {
+                if (window.innerWidth <= 768 && !panel.classList.contains('closed')) {
+                    if (e.target.closest('#settings-panel') === null && e.target !== menuToggle) {
+                        toggleMenu(false);
+                    }
+                }
+            };
+
+            // View Toggle
+            document.getElementById('viewToggleBtn').onclick = toggleView;
+
+            // File I/O
+            document.getElementById('dropZone').onclick = () => document.getElementById('fileInput').click();
+            document.getElementById('fileInput').onchange = (e) => loadFiles(e.target.files);
+
+            // Drag & Drop
+            const dz = document.getElementById('dropZone');
+            dz.ondragover = (e) => {
+                e.preventDefault();
+                dz.style.borderColor = 'var(--primary)';
+            };
+            dz.ondragleave = (e) => {
+                e.preventDefault();
+                dz.style.borderColor = '#444';
+            };
+            dz.ondrop = (e) => {
+                e.preventDefault();
+                dz.style.borderColor = '#444';
+                loadFiles(e.dataTransfer.files);
+            };
+
+            // Global Settings
+            document.getElementById('useAHD74').onchange = (e) => {
+                APP.useAHD74 = e.target.checked;
+                refreshAll();
+            };
+            document.getElementById('zScale').oninput = (e) => {
+                document.getElementById('zScaleVal').innerText = parseFloat(e.target.value).toFixed(1);
+                debounceRefresh();
+            };
+
+            // Viz Modes
+            document.querySelectorAll('.viz-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    APP.vizMode = btn.dataset.mode;
+                    refreshAll();
+                };
+            });
+
+            // Surface & Contours
+            ['showPoints', 'showSurface', 'showWireframe', 'showContours'].forEach(id => {
+                document.getElementById(id).onchange = refreshAll;
+            });
+
+            document.getElementById('krigingRange').oninput = (e) => {
+                document.getElementById('kRangeVal').innerText = e.target.value;
+                debounceRefresh();
+            };
+
+            document.getElementById('contourInterval').oninput = (e) => {
+                document.getElementById('cIntVal').innerText = e.target.value;
+                debounceRefresh();
+            };
+            document.getElementById('contourColor').oninput = refreshAll;
+
+            // Structure Drawing
+            document.getElementById('drawBtn').onclick = toggleDrawingMode;
+
+            // Borehole Controls
+            document.getElementById('showBoreholes').onchange = refreshAll;
+            document.getElementById('showBHLabels').onchange = refreshAll;
+            document.getElementById('bhRadius').oninput = (e) => {
+                document.getElementById('bhRadiusVal').innerText = parseFloat(e.target.value).toFixed(1);
+                debounceRefresh();
+            };
+            document.getElementById('bhOpacity').oninput = (e) => {
+                document.getElementById('bhOpacityVal').innerText = e.target.value;
+                debounceRefresh();
+            };
+
+            // Soil Layer Kriging Controls
+            document.getElementById('showSoilLayers').onchange = renderKrigingSurfaces;
+            document.getElementById('showGWSurface').onchange = renderGWSurface;
+            document.getElementById('soilLayerOpacity').oninput = (e) => {
+                document.getElementById('soilOpacityVal').innerText = e.target.value;
+                renderKrigingSurfaces();
+                renderGWSurface();
+            };
+            // Change 'krigingRange' to 'krigingRangeBore'
+            document.getElementById('krigingRangeBore').oninput = (e) => {
+                document.getElementById('kRangeValKrig').innerText = e.target.value;
+                if (APP.krigingSurfaces && Object.keys(APP.krigingSurfaces).length > 0) {
+                    debounceKrigingUpdate();
+                }
+            };
+            document.getElementById('krigingResolution').oninput = (e) => {
+                document.getElementById('kResVal').innerText = e.target.value;
+                document.getElementById('kResVal2').innerText = e.target.value;
+                // Regenerate surfaces dynamically when resolution changes
+                if (APP.krigingSurfaces && Object.keys(APP.krigingSurfaces).length > 0) {
+                    debounceKrigingUpdate();
+                }
+            };
+        }
+
+        let krigingUpdateTimer;
+
+        function debounceKrigingUpdate() {
+            clearTimeout(krigingUpdateTimer);
+            krigingUpdateTimer = setTimeout(() => {
+                // Regenerate soil layers if they exist
+                if (APP.krigingSurfaces && Object.keys(APP.krigingSurfaces).length > 0) {
+                    console.log('Regenerating soil surfaces with new settings...');
+                    generateKrigingSurfaces(true); // silent = true
+                }
+                // Regenerate GW surface if it exists
+                if (APP.gwSurface) {
+                    console.log('Regenerating GW surface with new settings...');
+                    generateGWSurface(true); // silent = true
+                }
+            }, 300);
+        }
+
+        let debounceTimer;
+
+        function debounceRefresh() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(refreshAll, 100);
+        }
+
+        function resetCamera() {
+            // 1. Check if we have data
+            const points = getProcessedPoints();
+            if (points.length === 0) {
+                if (camera && controls) {
+                    camera.position.set(200, 200, 200);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+                }
+                return;
+            }
+
+            // 2. Calculate Bounds
+            const xs = points.map(p => p.x);
+            const ys = points.map(p => p.y);
+            const maxDim = Math.max(
+                Math.max(...xs) - Math.min(...xs),
+                Math.max(...ys) - Math.min(...ys)
+            );
+
+            // 3. Position Camera "Southwest" 
+            const distance = maxDim * 1.2;
+            const height = maxDim * 0.8;
+
+            if (camera && controls) {
+                camera.position.set(-distance, height, -distance);
+                controls.target.set(0, 0, 0);
+                controls.update();
+            }
+
+            // 4. Also center the Map if we are in Map Mode
+            if (map && APP.view === 'MAP') {
+                const group = new L.featureGroup(points.map(p => L.marker([p.lat, p.lon])));
+                map.fitBounds(group.getBounds(), {
+                    padding: [50, 50]
+                });
+            }
+        }
+
+        /**
+         * ============================================================================
+         * DATA MANAGEMENT (CORE LOGIC)
+         * ============================================================================
+         */
+        async function loadFiles(fileList) {
+            if (fileList.length === 0) return;
+
+            showLoading(true, "Parsing Files...");
+
+            try {
+                for (let file of fileList) {
+                    try {
+                        const text = await file.text();
+                        const dataset = parseCSV(text, file.name);
+                        if (dataset.data.length > 0) {
+                            APP.datasets.push(dataset);
+                        } else {
+                            console.warn(`File ${file.name} contained no valid data.`);
+                        }
+                    } catch (err) {
+                        console.error("Error parsing file:", err);
+                        alert("Error reading " + file.name);
+                    }
+                }
+
+                renderFileList();
+
+                // Force center recalculation on new data load
+                APP.currentCenter = null;
+                refreshAll();
+
+                if (APP.datasets.length === 1 || APP.datasets.length === fileList.length) {
+                    resetCamera();
+                }
+
+            } catch (globalErr) {
+                console.error("Critical Error:", globalErr);
+                alert("A critical error occurred while loading files.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function parseCSV(text, filename) {
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) return {
+                data: []
+            };
+
+            const header = lines[0].toLowerCase();
+            const cols = header.split(/[,\t;]/).map(s => s.trim().replace(/"/g, ''));
+
+            // Find coordinate columns - supports both Lat/Lon (WGS84) and UTM
+            const idx = {
+                lat: cols.findIndex(c => c.includes('lat')),
+                lon: cols.findIndex(c => c.includes('lon') || c.includes('lng')),
+                easting: cols.findIndex(c => c.includes('east') || c === 'x'),
+                northing: cols.findIndex(c => c.includes('north') || c === 'y'),
+                z: cols.findIndex(c => c.includes('elev') || c.includes('ortho') || c === 'z' || c.includes('height')),
+                fix: cols.findIndex(c => c.includes('fix') || c.includes('qual')),
+                sats: cols.findIndex(c => c.includes('sat')),
+                pdop: cols.findIndex(c => c.includes('pdop')),
+                speed: cols.findIndex(c => c.includes('speed'))
+            };
+
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(/[,\t;]/);
+                if (row.length < 2) continue;
+
+                let p = {
+                    lat: 0,
+                    lon: 0,
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    fix: 0,
+                    sats: 0,
+                    pdop: 0,
+                    speed: 0
+                };
+
+                // Handle Lat/Lon input → convert to UTM Zone 50S
+                if (idx.lat > -1 && idx.lon > -1) {
+                    p.lat = parseFloat(row[idx.lat]);
+                    p.lon = parseFloat(row[idx.lon]);
+                    if (isNaN(p.lat) || isNaN(p.lon)) continue;
+
+                    const utm = latLonToUTM(p.lat, p.lon);
+                    p.x = utm.x;
+                    p.y = utm.y;
+                }
+                // Handle UTM input → convert to Lat/Lon
+                else if (idx.easting > -1 && idx.northing > -1) {
+                    p.x = parseFloat(row[idx.easting]);
+                    p.y = parseFloat(row[idx.northing]);
+                    if (isNaN(p.x) || isNaN(p.y)) continue;
+
+                    const ll = utmToLatLon(p.x, p.y);
+                    p.lat = ll.lat;
+                    p.lon = ll.lon;
+                } else {
+                    continue;
+                }
+
+                if (idx.z > -1) p.z = parseFloat(row[idx.z]) || 0;
+                if (idx.fix > -1) p.fix = parseInt(row[idx.fix]) || 0;
+                if (idx.sats > -1) p.sats = parseInt(row[idx.sats]) || 0;
+                if (idx.pdop > -1) p.pdop = parseFloat(row[idx.pdop]) || 0;
+                if (idx.speed > -1) p.speed = parseFloat(row[idx.speed]) || 0;
+
+                data.push(p);
+            }
+
+            return {
+                id: APP.nextId++,
+                name: filename,
+                data: data,
+                visible: true,
+                offset: 0.0,
+                color: getRandomColor()
+            };
+        }
+
+
+
+        /**
+         * ============================================================================
+         * UI RENDERING (SIDEBAR)
+         * ============================================================================
+         */
+        function renderFileList() {
+            const container = document.getElementById('fileList');
+            container.innerHTML = '';
+
+            if (APP.datasets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:15px; color:#555; font-style:italic;">No files loaded.</div>';
+                return;
+            }
+
+            APP.datasets.forEach(ds => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+            <div class="file-header">
+                <span class="file-name" title="${ds.name}">
+                    <input type="checkbox" ${ds.visible ? 'checked' : ''} onchange="toggleDs(${ds.id})">
+                    ${ds.name}
+                </span>
+                <button class="danger small-btn" onclick="removeDs(${ds.id})">×</button>
+            </div>
+            <div class="file-meta">${ds.data.length.toLocaleString()} points</div>
+            <div class="file-controls">
+                <div class="form-group" style="margin:0">
+                    <label style="font-size:10px">Offset (m)</label>
+                    <input type="number" step="0.1" value="${ds.offset}" onchange="updateDsOffset(${ds.id}, this.value)">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label style="font-size:10px">Color</label>
+                    <input type="color" value="${ds.color}" onchange="updateDsColor(${ds.id}, this.value)" style="width:100%; height:26px; border:none; padding:0;">
+                </div>
+            </div>
+        `;
+                container.appendChild(div);
+            });
+        }
+
+        window.toggleDs = (id) => {
+            const d = APP.datasets.find(x => x.id === id);
+            if (d) d.visible = !d.visible;
+            refreshAll();
+        };
+        window.removeDs = (id) => {
+            APP.datasets = APP.datasets.filter(x => x.id !== id);
+            renderFileList();
+            refreshAll();
+        };
+        window.updateDsOffset = (id, v) => {
+            const d = APP.datasets.find(x => x.id === id);
+            if (d) d.offset = parseFloat(v);
+            refreshAll();
+        };
+        window.updateDsColor = (id, v) => {
+            const d = APP.datasets.find(x => x.id === id);
+            if (d) d.color = v;
+            refreshAll();
+        };
+
+        function updateStats() {
+            const pts = getProcessedPoints();
+            document.getElementById('statPoints').innerText = pts.length.toLocaleString();
+            document.getElementById('statFiles').innerText = APP.datasets.filter(d => d.visible).length;
+
+            if (pts.length > 0) {
+                const zs = pts.map(p => p.z_calc);
+                document.getElementById('statMin').innerText = Math.min(...zs).toFixed(2) + ' m';
+                document.getElementById('statMax').innerText = Math.max(...zs).toFixed(2) + ' m';
+            } else {
+                document.getElementById('statMin').innerText = '-';
+                document.getElementById('statMax').innerText = '-';
+            }
+        }
+
+        /**
+         * ============================================================================
+         * MATHEMATICAL CORE: KRIGING & CONTOURS & PROJECTIONS
+         * ============================================================================
+         */
+
+        // --- 1. PROJECTION (UTM Zone 50S <-> LatLon) ---
+        function latLonToUTM(lat, lon) {
+            // Perth is in UTM Zone 50 South
+            // Zone 50 central meridian: 117° E
+            const zone = 50;
+            const centralMeridian = 117; // degrees
+            const isSouth = true;
+
+            const a = 6378137.0; // WGS84 semi-major axis
+            const f = 1 / 298.257223563; // WGS84 flattening
+            const k0 = 0.9996; // UTM scale factor
+
+            const phi = lat * (Math.PI / 180);
+            const lam = lon * (Math.PI / 180);
+            const lam0 = centralMeridian * (Math.PI / 180);
+
+            const e2 = 2 * f - f * f;
+            const eps = e2 / (1 - e2);
+            const N = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2);
+            const T = Math.tan(phi) ** 2;
+            const C = eps * Math.cos(phi) ** 2;
+            const A = (lam - lam0) * Math.cos(phi);
+
+            const M = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * phi -
+                (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * phi) +
+                (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * phi) -
+                (35 * e2 ** 3 / 3072) * Math.sin(6 * phi));
+
+            const x = 500000 + k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T ** 2 + 72 * C - 58 * eps) * A ** 5 / 120);
+            const y = (isSouth ? 10000000 : 0) + k0 * (M + N * Math.tan(phi) * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A ** 4 / 24 + (61 - 58 * T + T ** 2 + 600 * C - 330 * eps) * A ** 6 / 720));
+
+            return {
+                x,
+                y
+            };
+        }
+
+        function utmToLatLon(x, y) {
+            // Perth is in UTM Zone 50 South
+            const zone = 50;
+            const centralMeridian = 117;
+            const isSouth = true;
+
+            const a = 6378137.0;
+            const f = 1 / 298.257223563;
+            const k0 = 0.9996;
+            const e2 = 2 * f - f * f;
+            const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+
+            const M = (y - (isSouth ? 10000000 : 0)) / k0;
+            const mu = M / (a * (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256));
+
+            const phi1 = mu + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu) +
+                (21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu) +
+                (151 * e1 ** 3 / 96) * Math.sin(6 * mu);
+
+            const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1) ** 2);
+            const T1 = Math.tan(phi1) ** 2;
+            const C1 = (e2 / (1 - e2)) * Math.cos(phi1) ** 2;
+            const R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1) ** 2, 1.5);
+            const D = (x - 500000) / (N1 * k0);
+
+            const lat = phi1 - (N1 * Math.tan(phi1) / R1) * (D ** 2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * e2) * D ** 4 / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * e2 - 3 * C1 ** 2) * D ** 6 / 720);
+            const lam0 = centralMeridian * (Math.PI / 180);
+            const lon = lam0 + (D - (1 + 2 * T1 + C1) * D ** 3 / 6 + (5 - 2 * C1 + 28 * T1 - 3 * C1 ** 2 + 8 * e2 + 24 * T1 ** 2) * D ** 5 / 120) / Math.cos(phi1);
+
+            return {
+                lat: lat * (180 / Math.PI),
+                lon: lon * (180 / Math.PI)
+            };
+        }
+
+        // --- 2. GENERATE GRID & IDW INTERPOLATION (Simplified Kriging) ---
+        function generateSurfaceGrid(points, resolution = 70) {
+            if (points.length === 0) return null;
+
+            const xs = points.map(p => p.x);
+            const ys = points.map(p => p.y);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+
+            const padding = Math.max((maxX - minX), (maxY - minY)) * 0.05;
+            const bMinX = minX - padding;
+            const bMaxX = maxX + padding;
+            const bMinY = minY - padding;
+            const bMaxY = maxY + padding;
+
+            const grid = [];
+            const stepX = (bMaxX - bMinX) / (resolution - 1);
+            const stepY = (bMaxY - bMinY) / (resolution - 1);
+            const rangeSq = Math.pow(parseFloat(document.getElementById('krigingRange').value), 2);
+
+            let gridMinZ = Infinity;
+            let gridMaxZ = -Infinity;
+
+            for (let i = 0; i < resolution; i++) {
+                const row = [];
+                const wy = bMinY + i * stepY;
+
+                for (let j = 0; j < resolution; j++) {
+                    const wx = bMinX + j * stepX;
+
+                    let num = 0;
+                    let den = 0;
+                    let inRange = false;
+
+                    for (let k = 0; k < points.length; k++) {
+                        const p = points[k];
+                        const d2 = Math.pow(p.x - wx, 2) + Math.pow(p.y - wy, 2);
+
+                        if (d2 < rangeSq) {
+                            const w = 1.0 / (d2 + 0.0001);
+                            num += w * p.z_calc;
+                            den += w;
+                            inRange = true;
+                        }
+                    }
+
+                    const zVal = inRange ? num / den : null;
+
+                    row.push(zVal);
+                    if (zVal !== null) {
+                        gridMinZ = Math.min(gridMinZ, zVal);
+                        gridMaxZ = Math.max(gridMaxZ, zVal);
+                    }
+                }
+                grid.push(row);
+            }
+
+            return {
+                grid,
+                resolution,
+                stepX,
+                stepY,
+                minX: bMinX,
+                minY: bMinY,
+                minZ: gridMinZ,
+                maxZ: gridMaxZ
+            };
+        }
+
+        // --- 3. MARCHING SQUARES (Full Implementation) ---
+        function generateContours(gridData, interval) {
+            if (!gridData || gridData.minZ === Infinity) return [];
+
+            const {
+                grid,
+                resolution,
+                stepX,
+                stepY,
+                minX,
+                minY,
+                minZ,
+                maxZ
+            } = gridData;
+            const lines = [];
+
+            const startLevel = Math.ceil(minZ / interval) * interval;
+            const levels = [];
+            for (let l = startLevel; l <= maxZ; l += interval) levels.push(l);
+
+            function getOffset(v1, v2, level) {
+                return (level - v1) / (v2 - v1);
+            }
+
+            for (let y = 0; y < resolution - 1; y++) {
+                for (let x = 0; x < resolution - 1; x++) {
+
+                    const val0 = grid[y][x];
+                    const val1 = grid[y][x + 1];
+                    const val2 = grid[y + 1][x + 1];
+                    const val3 = grid[y + 1][x];
+
+                    if (val0 === null || val1 === null || val2 === null || val3 === null) continue;
+
+                    levels.forEach(lvl => {
+                        let caseIdx = 0;
+                        if (val0 >= lvl) caseIdx |= 1;
+                        if (val1 >= lvl) caseIdx |= 2;
+                        if (val2 >= lvl) caseIdx |= 4;
+                        if (val3 >= lvl) caseIdx |= 8;
+
+                        if (caseIdx === 0 || caseIdx === 15) return;
+
+                        const pBottom = {
+                            x: x + getOffset(val0, val1, lvl),
+                            y: y
+                        };
+                        const pRight = {
+                            x: x + 1,
+                            y: y + getOffset(val1, val2, lvl)
+                        };
+                        const pTop = {
+                            x: x + getOffset(val3, val2, lvl),
+                            y: y + 1
+                        };
+                        const pLeft = {
+                            x: x,
+                            y: y + getOffset(val0, val3, lvl)
+                        };
+
+                        const toWorld = (pt) => ({
+                            x: minX + pt.x * stepX,
+                            y: minY + pt.y * stepY,
+                            z: lvl
+                        });
+
+                        switch (caseIdx) {
+                            case 1:
+                                pushLine(toWorld(pLeft), toWorld(pBottom));
+                                break;
+                            case 2:
+                                pushLine(toWorld(pBottom), toWorld(pRight));
+                                break;
+                            case 3:
+                                pushLine(toWorld(pLeft), toWorld(pRight));
+                                break;
+                            case 4:
+                                pushLine(toWorld(pTop), toWorld(pRight));
+                                break;
+                            case 5:
+                                pushLine(toWorld(pLeft), toWorld(pTop));
+                                pushLine(toWorld(pBottom), toWorld(pRight));
+                                break;
+                            case 6:
+                                pushLine(toWorld(pTop), toWorld(pBottom));
+                                break;
+                            case 7:
+                                pushLine(toWorld(pLeft), toWorld(pTop));
+                                break;
+                            case 8:
+                                pushLine(toWorld(pLeft), toWorld(pTop));
+                                break;
+                            case 9:
+                                pushLine(toWorld(pTop), toWorld(pBottom));
+                                break;
+                            case 10:
+                                pushLine(toWorld(pLeft), toWorld(pBottom));
+                                pushLine(toWorld(pTop), toWorld(pRight));
+                                break;
+                            case 11:
+                                pushLine(toWorld(pTop), toWorld(pRight));
+                                break;
+                            case 12:
+                                pushLine(toWorld(pLeft), toWorld(pRight));
+                                break;
+                            case 13:
+                                pushLine(toWorld(pBottom), toWorld(pRight));
+                                break;
+                            case 14:
+                                pushLine(toWorld(pLeft), toWorld(pBottom));
+                                break;
+                        }
+                    });
+                }
+            }
+
+            function pushLine(p1, p2) {
+                lines.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+            }
+
+            return lines;
+        }
+
+        /**
+         * Get interpolated elevation at a specific X,Y point using IDW
+         */
+        function getElevationAtPoint(x, y, points, range = 50) {
+            if (!points || points.length === 0) return null;
+
+            const rangeSq = range * range;
+            let num = 0;
+            let den = 0;
+            let found = false;
+
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const d2 = Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2);
+
+                if (d2 < rangeSq) {
+                    const w = 1.0 / (d2 + 0.0001);
+                    num += w * p.z_calc;
+                    den += w;
+                    found = true;
+                }
+            }
+
+            return found ? num / den : null;
+        }
+
+        /**
+         * ============================================================================
+         * VISUALIZATION: THREE.JS
+         * ============================================================================
+         */
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 50000);
+            camera.position.set(200, 200, 200);
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: false
+            });
+            renderer.setSize(document.getElementById('viewport').offsetWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Handle window resize (important for mobile orientation changes)
+            window.addEventListener('resize', () => {
+                const width = document.getElementById('viewport').offsetWidth;
+                const height = window.innerHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Better touch controls for mobile
+            controls.touches = {
+                ONE: THREE.TOUCH.ROTATE,
+                TWO: THREE.TOUCH.DOLLY_PAN
+            };
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambient);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.5);
+            directional.position.set(100, 300, 100);
+            scene.add(directional);
+
+            objects.grid = new THREE.GridHelper(2000, 50, 0x333333, 0x111111);
+            scene.add(objects.grid);
+
+            animateThree();
+        }
+
+        /* =========================================
+           BOREHOLE MODULE
+           ========================================= */
+
+        APP.boreholes = [];
+
+        function parseBoreholes() {
+            const input = document.getElementById('boreholeInput').value.trim();
+            if (!input) return;
+
+            APP.boreholes = [];
+            const lines = input.split('\n');
+
+            lines.forEach(line => {
+                const p = line.trim().split(/\s+/);
+                if (p.length < 6) return;
+
+                const bh = {
+                    id: p[0],
+                    x: parseFloat(p[1]), // UTM Easting (Zone 50S for Perth)
+                    y: parseFloat(p[2]), // UTM Northing (Zone 50S for Perth)
+                    z: parseFloat(p[3]), // Ground Level elevation (m)
+                    depth: parseFloat(p[4]), // Total depth (m)
+                    gw: parseFloat(p[5]), // Groundwater depth (m)
+                    units: []
+                };
+
+                // Validate UTM coordinates (Zone 50S Perth range check)
+                if (bh.x < 200000 || bh.x > 800000 || bh.y < 6000000 || bh.y > 7000000) {
+                    console.warn(`Borehole ${bh.id} has suspicious coordinates:`, bh.x, bh.y, '- may not be UTM Zone 50S');
+                }
+
+                for (let i = 6; i < p.length; i += 2) {
+                    if (i + 1 < p.length) {
+                        bh.units.push({
+                            name: p[i],
+                            bottom: parseFloat(p[i + 1])
+                        });
+                    }
+                }
+                APP.boreholes.push(bh);
+            });
+
+            document.getElementById('boreholeStats').innerText = `Loaded ${APP.boreholes.length} boreholes (UTM Zone 50S).`;
+
+            // Update the kriging surface list
+            updateKrigingSurfaceList();
+
+            // Update resolution display
+            const res = document.getElementById('krigingResolution').value;
+            document.getElementById('kResVal').innerText = res;
+            document.getElementById('kResVal2').innerText = res;
+
+            // Force center recalculation to include boreholes
+            APP.currentCenter = null;
+            refreshAll();
+        }
+
+        function buildBoreholes3D() {
+            if (objects.boreholes) {
+                scene.remove(objects.boreholes);
+                objects.boreholes = null;
+            }
+            if (objects.bhLabels) {
+                scene.remove(objects.bhLabels);
+                objects.bhLabels = null;
+            }
+
+            const showBH = document.getElementById('showBoreholes').checked;
+            if (!showBH || !APP.boreholes || APP.boreholes.length === 0 || !APP.currentCenter) return;
+
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const bhRadius = parseFloat(document.getElementById('bhRadius').value);
+            const bhOpacity = parseInt(document.getElementById('bhOpacity').value) / 100;
+            const showLabels = document.getElementById('showBHLabels').checked;
+
+            objects.boreholes = new THREE.Group();
+            if (showLabels) objects.bhLabels = new THREE.Group();
+
+            const surfacePoints = getProcessedPoints();
+
+            APP.boreholes.forEach(bh => {
+                const posX = bh.x - APP.currentCenter.x;
+                // [FIX] Negate Z for Borehole placement
+                const posZ = -(bh.y - APP.currentCenter.y);
+
+                let groundY = bh.z;
+                if (surfacePoints.length > 0) {
+                    const interpElev = getElevationAtPoint(bh.x, bh.y, surfacePoints, 100);
+                    if (interpElev !== null) groundY = interpElev;
+                }
+                const drawGroundY = groundY * zScale;
+                let currentDepth = 0;
+
+                bh.units.forEach(unit => {
+                    const thickness = (unit.bottom - currentDepth);
+                    if (thickness <= 0) return;
+                    const height = thickness * zScale;
+                    const yPos = drawGroundY - (currentDepth * zScale) - (height / 2);
+                    const cleanName = unit.name.toUpperCase();
+                    const displayColor = APP.soilColors[cleanName] || APP.soilColors[cleanName.replace(/_/g, ' ')] || '#666666';
+
+                    const geo = new THREE.CylinderGeometry(bhRadius, bhRadius, height, 12);
+                    const mat = new THREE.MeshPhongMaterial({
+                        color: displayColor,
+                        transparent: bhOpacity < 1,
+                        opacity: bhOpacity,
+                        depthTest: true,
+                        depthWrite: true,
+                        side: THREE.DoubleSide,
+                        polygonOffset: true,
+                        polygonOffsetFactor: -1
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(posX, yPos, posZ);
+                    objects.boreholes.add(mesh);
+                    currentDepth = unit.bottom;
+                });
+
+                // Groundwater
+                if (bh.gw > 0) {
+                    const gwY = drawGroundY - (bh.gw * zScale);
+                    const gwMarker = new THREE.Mesh(
+                        new THREE.CylinderGeometry(bhRadius * 1.5, bhRadius * 1.5, 0.5, 12),
+                        new THREE.MeshBasicMaterial({
+                            color: '#00ffff',
+                            transparent: true,
+                            opacity: 0.8,
+                            side: THREE.DoubleSide
+                        })
+                    );
+                    gwMarker.position.set(posX, gwY, posZ);
+                    objects.boreholes.add(gwMarker);
+                }
+
+                // Labels
+                if (showLabels) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(0, 0, 256, 64);
+                    ctx.fillStyle = '#00ffff';
+                    ctx.font = 'bold 32px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bh.id, 128, 32);
+                    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: new THREE.Texture(canvas),
+                        transparent: true,
+                        opacity: bhOpacity,
+                        depthTest: false
+                    }));
+                    sprite.material.map.needsUpdate = true;
+                    sprite.position.set(posX, drawGroundY + (bhRadius * 4), posZ);
+                    sprite.scale.set(bhRadius * 8, bhRadius * 2, 1);
+                    objects.bhLabels.add(sprite);
+                }
+            });
+            scene.add(objects.boreholes);
+            if (objects.bhLabels) scene.add(objects.bhLabels);
+        }
+
+        function refreshAll() {
+            const points = getProcessedPoints();
+
+            // 1. Scene Cleanup
+            if (objects.points) scene.remove(objects.points);
+            if (objects.surface) scene.remove(objects.surface);
+            if (objects.contours) scene.remove(objects.contours);
+
+            // Optional: Only clear boreholes if they depend on surface elevation
+            if (objects.boreholes) scene.remove(objects.boreholes);
+            if (objects.bhLabels) scene.remove(objects.bhLabels);
+
+            if (points.length === 0) return;
+
+            // 2. Establish Center (if first time)
+            if (!APP.currentCenter) {
+                APP.currentCenter = {
+                    x: (Math.min(...points.map(p => p.x)) + Math.max(...points.map(p => p.x))) / 2,
+                    y: (Math.min(...points.map(p => p.y)) + Math.max(...points.map(p => p.y))) / 2
+                };
+            }
+
+            // 3. Rebuild 3D Objects with FILTERED points
+            if (document.getElementById('showPoints').checked) {
+                buildPointsMesh(points, APP.currentCenter.x, APP.currentCenter.y);
+            }
+
+            // This generates the grid used for the Surface and Contours
+            const gridData = points.length > 3 ? generateSurfaceGrid(points, 70) : null;
+
+            if (gridData) {
+                if (document.getElementById('showSurface').checked) buildSurfaceMesh(gridData);
+                if (document.getElementById('showContours').checked) buildContourLines(gridData);
+            }
+
+            buildBoreholes3D();
+            updateLegend(points);
+            updateStats();
+
+            if (APP.view === 'MAP') updateMapLayers(points);
+        }
+
+        function loadSampleBoreholes() {
+            // The 4 borehole points from your image
+            const bhs = [
+                { id: 'BH-1', lat: -31.77888935, lon: 115.7677385 },
+                { id: 'BH-2', lat: -31.77890777, lon: 115.7676457 },
+                { id: 'BH-3', lat: -31.77876834, lon: 115.7676936 },
+                { id: 'BH-4', lat: -31.77877623, lon: 115.7676054 }
+            ];
+            
+            const center = { lat: -31.778833, lon: 115.767663 };
+            let sample = "";
+            
+            bhs.forEach((b, i) => {
+                // Convert Lat/Lon to UTM Zone 50S directly in memory
+                const utm = latLonToUTM(b.lat, b.lon);
+                
+                // Keep ground elevation flush with the generated surface above
+                const z = 20 - ((b.lon - center.lon) * 8000) + ((b.lat - center.lat) * 8000);
+                
+                // Add slight variations to GW table for visual appeal in the kriging viewer
+                const gw = 6.0 + (i * 0.5); 
+                
+                // Format: ID Easting Northing Ground_Elev Total_Depth GW_Level [Unit_Name Unit_Bottom ...]
+                sample += `${b.id} ${utm.x.toFixed(2)} ${utm.y.toFixed(2)} ${z.toFixed(2)} 30.0 ${gw.toFixed(1)} FILL 1.5 L 4.0 MD 8.0 D 15.0 SC 22.0 CLAY 28.0 ROCK 30.0\n`;
+            });
+
+            // Populate the text area so the user can verify the converted UTMs
+            document.getElementById('boreholeInput').value = sample.trim();
+            parseBoreholes();
+        }
+
+        function clearBoreholes() {
+            APP.boreholes = [];
+            if (objects.boreholes) {
+                scene.remove(objects.boreholes);
+                objects.boreholes = null;
+            }
+            if (objects.bhLabels) {
+                scene.remove(objects.bhLabels);
+                objects.bhLabels = null;
+            }
+            document.getElementById('boreholeInput').value = '';
+            document.getElementById('boreholeStats').innerText = 'No boreholes loaded';
+            document.getElementById('krigingSurfaceList').innerHTML = '<span style="font-style:italic;">Load boreholes to see available surfaces</span>';
+            refreshAll();
+        }
+
+        /**
+         * Extract unique soil layer names and groundwater from boreholes
+         */
+        function extractSoilLayers() {
+            if (!APP.boreholes || APP.boreholes.length === 0) return [];
+
+            const layerNames = new Set();
+            APP.boreholes.forEach(bh => {
+                bh.units.forEach(unit => {
+                    layerNames.add(unit.name);
+                });
+            });
+
+            return Array.from(layerNames).sort();
+        }
+        /**
+         * SOIL COLOR EDITING
+         */
+        function updateSoilColor(soilType, newHex) {
+            APP.soilColors[soilType] = newHex;
+            // Update 3D models and surfaces immediately
+            buildBoreholes3D();
+            if (APP.krigingSurfaces) renderKrigingSurfaces();
+            updateKrigingSurfaceList(); // Refresh list to show current hex
+        }
+
+        function updateKrigingSurfaceList() {
+            const list = document.getElementById('krigingSurfaceList');
+            if (!APP.boreholes || APP.boreholes.length === 0) {
+                list.innerHTML = '<div class="status-box">Load boreholes to see available surfaces</div>';
+                return;
+            }
+
+            const layers = extractSoilLayers();
+            let html = '<div style="background:#111; padding:10px; border-radius:4px; border:1px solid #333;">';
+            html += '<div style="font-weight:bold; margin-bottom:10px; font-size:11px; color:var(--primary);">SOIL COLOR EDITOR:</div>';
+
+            layers.forEach(layer => {
+                const color = APP.soilColors[layer] || '#666666';
+                html += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-family:monospace; font-size:11px;">${layer}</span>
+                        <input type="color" value="${color}" 
+                            style="width:35px; height:18px; border:none; background:none; cursor:pointer;"
+                            onchange="updateSoilColor('${layer}', this.value)">
+                    </div>`;
+            });
+
+            html += '</div>';
+            list.innerHTML = html;
+        }
+
+        function generateKrigingSurfaces(silent = false) {
+            if (!APP.boreholes || APP.boreholes.length === 0) {
+                if (!silent) showToast('No boreholes loaded');
+                return;
+            }
+
+            const layers = extractSoilLayers();
+            if (layers.length === 0) {
+                if (!silent) showToast('No soil layers found');
+                return;
+            }
+
+            console.log('Generating kriging surfaces for layers:', layers);
+
+            // For each unique soil layer, extract its top elevation from each borehole
+            const layerData = {};
+
+            layers.forEach(layerName => {
+                const points = [];
+
+                APP.boreholes.forEach(bh => {
+                    // Find this layer in the borehole
+                    let depth = 0;
+                    for (let i = 0; i < bh.units.length; i++) {
+                        if (bh.units[i].name === layerName) {
+                            // Top of this layer = GL - depth
+                            const surfacePoints = getProcessedPoints();
+                            let gl = bh.z;
+                            if (surfacePoints.length > 0) {
+                                const interpElev = getElevationAtPoint(bh.x, bh.y, surfacePoints, 100);
+                                if (interpElev !== null) gl = interpElev;
+                            }
+
+                            points.push({
+                                x: bh.x,
+                                y: bh.y,
+                                z_calc: gl - depth // Top elevation of this layer
+                            });
+                            break;
+                        }
+                        depth = bh.units[i].bottom;
+                    }
+                });
+
+                if (points.length > 0) {
+                    layerData[layerName] = points;
+                }
+            });
+
+            // Generate surfaces using kriging settings
+            const resolution = parseInt(document.getElementById('krigingResolution').value);
+            const range = parseFloat(document.getElementById('krigingRangeBore').value);
+            let surfacesGenerated = 0;
+
+            console.log(`Using kriging settings: resolution=${resolution}, range=${range}m`);
+
+            Object.keys(layerData).forEach(layerName => {
+                const gridData = generateSurfaceGridWithRange(layerData[layerName], resolution, range);
+                if (gridData) {
+                    // Store for later rendering
+                    if (!APP.krigingSurfaces) APP.krigingSurfaces = {};
+                    APP.krigingSurfaces[layerName] = gridData;
+                    surfacesGenerated++;
+                }
+            });
+
+            // Only auto-check checkbox on first generation (not silent)
+            if (!silent) {
+                document.getElementById('showSoilLayers').checked = true;
+            }
+
+            // Always render if surfaces exist
+            renderKrigingSurfaces();
+
+            if (!silent) {
+                alert(`Generated ${surfacesGenerated} soil layer surfaces!\n\nLayers: ${Object.keys(layerData).join(', ')}\n\nResolution: ${resolution}x${resolution}\nRange: ${range}m\n\nToggle visibility with the "Show Soil Layer Surfaces" checkbox.`);
+            }
+        }
+
+        function generateGWSurface(silent = false) {
+            if (!APP.boreholes || APP.boreholes.length === 0) {
+                if (!silent) showToast('No boreholes loaded');
+                return;
+            }
+
+            const bhWithGW = APP.boreholes.filter(bh => bh.gw > 0);
+            if (bhWithGW.length === 0) {
+                if (!silent) showToast('No groundwater data in boreholes');
+                return;
+            }
+
+            // Extract GW elevation points
+            const gwPoints = [];
+            const surfacePoints = getProcessedPoints();
+
+            bhWithGW.forEach(bh => {
+                // GW elevation = GL - GW depth
+                let gl = bh.z;
+                if (surfacePoints.length > 0) {
+                    const interpElev = getElevationAtPoint(bh.x, bh.y, surfacePoints, 100);
+                    if (interpElev !== null) gl = interpElev;
+                }
+
+                gwPoints.push({
+                    x: bh.x,
+                    y: bh.y,
+                    z_calc: gl - bh.gw // GW table elevation
+                });
+            });
+
+            // Generate GW surface grid using kriging settings
+            const resolution = parseInt(document.getElementById('krigingResolution').value);
+            const range = parseFloat(document.getElementById('krigingRangeBore').value);
+
+            console.log(`Using kriging settings for GW: resolution=${resolution}, range=${range}m`);
+
+            const gwGrid = generateSurfaceGridWithRange(gwPoints, resolution, range);
+
+            if (gwGrid) {
+                // Store for later rendering
+                APP.gwSurface = gwGrid;
+
+                const minGW = Math.min(...gwPoints.map(p => p.z_calc));
+                const maxGW = Math.max(...gwPoints.map(p => p.z_calc));
+
+                // Only auto-check checkbox on first generation (not silent)
+                if (!silent) {
+                    document.getElementById('showGWSurface').checked = true;
+                }
+
+                // Always render if surface exists
+                renderGWSurface();
+
+                if (!silent) {
+                    alert(`Generated groundwater surface!\n\n${bhWithGW.length} boreholes with GW data\nGW elevation range: ${minGW.toFixed(2)}m to ${maxGW.toFixed(2)}m\nResolution: ${resolution}x${resolution}\nRange: ${range}m\n\nToggle visibility with the "Show Groundwater Surface" checkbox.`);
+                }
+            }
+        }
+
+        /**
+         * Generate surface grid with custom interpolation range
+         */
+        function generateSurfaceGridWithRange(points, resolution = 70, range = 50) {
+            if (points.length === 0) return null;
+
+            const xs = points.map(p => p.x);
+            const ys = points.map(p => p.y);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+
+            const padding = Math.max((maxX - minX), (maxY - minY)) * 0.05;
+            const bMinX = minX - padding;
+            const bMaxX = maxX + padding;
+            const bMinY = minY - padding;
+            const bMaxY = maxY + padding;
+
+            const grid = [];
+            const stepX = (bMaxX - bMinX) / (resolution - 1);
+            const stepY = (bMaxY - bMinY) / (resolution - 1);
+            const rangeSq = Math.pow(range, 2);
+
+            let gridMinZ = Infinity;
+            let gridMaxZ = -Infinity;
+
+            for (let i = 0; i < resolution; i++) {
+                const row = [];
+                const wy = bMinY + i * stepY;
+
+                for (let j = 0; j < resolution; j++) {
+                    const wx = bMinX + j * stepX;
+
+                    let num = 0;
+                    let den = 0;
+                    let inRange = false;
+
+                    for (let k = 0; k < points.length; k++) {
+                        const p = points[k];
+                        const d2 = Math.pow(p.x - wx, 2) + Math.pow(p.y - wy, 2);
+
+                        if (d2 < rangeSq) {
+                            const w = 1.0 / (d2 + 0.0001);
+                            num += w * p.z_calc;
+                            den += w;
+                            inRange = true;
+                        }
+                    }
+
+                    const zVal = inRange ? num / den : null;
+
+                    row.push(zVal);
+                    if (zVal !== null) {
+                        gridMinZ = Math.min(gridMinZ, zVal);
+                        gridMaxZ = Math.max(gridMaxZ, zVal);
+                    }
+                }
+                grid.push(row);
+            }
+
+            return {
+                grid,
+                resolution,
+                stepX,
+                stepY,
+                minX: bMinX,
+                minY: bMinY,
+                minZ: gridMinZ,
+                maxZ: gridMaxZ
+            };
+        }
+
+        function renderKrigingSurfaces() {
+            // Remove existing
+            if (objects.soilLayers) {
+                scene.remove(objects.soilLayers);
+                objects.soilLayers = null;
+            }
+
+            const showLayers = document.getElementById('showSoilLayers').checked;
+            if (!showLayers || !APP.krigingSurfaces || Object.keys(APP.krigingSurfaces).length === 0) {
+                return;
+            }
+
+            objects.soilLayers = new THREE.Group();
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const opacity = parseInt(document.getElementById('soilLayerOpacity').value) / 100;
+
+            Object.keys(APP.krigingSurfaces).forEach(layerName => {
+                const gridData = APP.krigingSurfaces[layerName];
+                const mesh = buildKrigingSurfaceMesh(gridData, APP.soilColors[layerName] || '#888', opacity, zScale);
+                if (mesh) {
+                    objects.soilLayers.add(mesh);
+                }
+            });
+
+            scene.add(objects.soilLayers);
+            console.log(`Rendered ${Object.keys(APP.krigingSurfaces).length} soil layer surfaces`);
+        }
+
+        function renderGWSurface() {
+            // Remove existing
+            if (objects.gwSurface) {
+                scene.remove(objects.gwSurface);
+                objects.gwSurface = null;
+            }
+
+            const showGW = document.getElementById('showGWSurface').checked;
+            if (!showGW || !APP.gwSurface) {
+                return;
+            }
+
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const mesh = buildKrigingSurfaceMesh(APP.gwSurface, '#00BFFF', 0.6, zScale);
+
+            if (mesh) {
+                objects.gwSurface = mesh;
+                scene.add(objects.gwSurface);
+                console.log('Rendered groundwater surface');
+            }
+        }
+
+        // A. MAIN SURFACE
+        function buildSurfaceMesh(gridData) {
+            const {
+                grid,
+                minX,
+                minY,
+                stepX,
+                stepY,
+                minZ,
+                maxZ
+            } = gridData;
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const resolution = grid.length;
+            const positions = [],
+                colors = [],
+                indices = [];
+            let vertexCount = 0;
+            const vertexMap = new Array(resolution * resolution).fill(-1);
+
+            for (let iy = 0; iy < resolution - 1; iy++) {
+                for (let ix = 0; ix < resolution - 1; ix++) {
+                    const v00 = grid[iy][ix];
+                    const v10 = grid[iy][ix + 1];
+                    const v01 = grid[iy + 1][ix];
+                    const v11 = grid[iy + 1][ix + 1];
+                    const hasT1 = (v00 !== null && v10 !== null && v01 !== null);
+                    const hasT2 = (v10 !== null && v11 !== null && v01 !== null);
+
+                    const addVert = (xIdx, yIdx) => {
+                        const gIdx = yIdx * resolution + xIdx;
+                        if (vertexMap[gIdx] === -1) {
+                            const zVal = grid[yIdx][xIdx];
+                            const wX = minX + xIdx * stepX - APP.currentCenter.x;
+                            // [FIX] Negate World Z
+                            const wZ = -(minY + yIdx * stepY - APP.currentCenter.y);
+
+                            positions.push(wX, zVal * zScale, wZ);
+                            const c = new THREE.Color().setHSL(((zVal - minZ) / (maxZ - minZ || 1)) * 0.7, 1, 0.5);
+                            colors.push(c.r, c.g, c.b);
+                            vertexMap[gIdx] = vertexCount++;
+                        }
+                        return vertexMap[gIdx];
+                    };
+
+                    if (hasT1) {
+                        indices.push(addVert(ix, iy), addVert(ix + 1, iy), addVert(ix, iy + 1));
+                    }
+                    if (hasT2) {
+                        indices.push(addVert(ix + 1, iy), addVert(ix + 1, iy + 1), addVert(ix, iy + 1));
+                    }
+                }
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geo.setIndex(indices);
+            geo.computeVertexNormals();
+
+            const showBH = document.getElementById('showBoreholes').checked;
+            const op = (showBH && APP.boreholes.length > 0) ? 0.85 : 1.0;
+            const mat = new THREE.MeshPhongMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                wireframe: document.getElementById('showWireframe').checked,
+                transparent: op < 1,
+                opacity: op,
+                flatShading: true
+            });
+
+            objects.surface = new THREE.Mesh(geo, mat);
+            scene.add(objects.surface);
+        }
+
+        // B. KRIGING SURFACES (Soil Layers)
+        function buildKrigingSurfaceMesh(gridData, color, opacity, zScale) {
+            const {
+                grid,
+                minX,
+                minY,
+                stepX,
+                stepY,
+                resolution
+            } = gridData;
+            const positions = [],
+                indices = [];
+            let vertexCount = 0;
+            const vertexMap = new Array(resolution * resolution).fill(-1);
+
+            for (let iy = 0; iy < resolution - 1; iy++) {
+                for (let ix = 0; ix < resolution - 1; ix++) {
+                    const v00 = grid[iy][ix];
+                    const v10 = grid[iy][ix + 1];
+                    const v01 = grid[iy + 1][ix];
+                    const v11 = grid[iy + 1][ix + 1];
+                    const hasT1 = (v00 !== null && v10 !== null && v01 !== null);
+                    const hasT2 = (v10 !== null && v11 !== null && v01 !== null);
+
+                    const addVert = (xIdx, yIdx) => {
+                        const gIdx = yIdx * resolution + xIdx;
+                        if (vertexMap[gIdx] === -1) {
+                            const zVal = grid[yIdx][xIdx];
+                            const wX = minX + xIdx * stepX - APP.currentCenter.x;
+                            // [FIX] Negate World Z
+                            const wZ = -(minY + yIdx * stepY - APP.currentCenter.y);
+                            positions.push(wX, zVal * zScale, wZ);
+                            vertexMap[gIdx] = vertexCount++;
+                        }
+                        return vertexMap[gIdx];
+                    };
+                    if (hasT1) {
+                        indices.push(addVert(ix, iy), addVert(ix + 1, iy), addVert(ix, iy + 1));
+                    }
+                    if (hasT2) {
+                        indices.push(addVert(ix + 1, iy), addVert(ix + 1, iy + 1), addVert(ix, iy + 1));
+                    }
+                }
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setIndex(indices);
+            geo.computeVertexNormals();
+            return new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+                color: color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: opacity,
+                flatShading: false
+            }));
+        }
+
+        function buildPointsMesh(points, midX, midY) {
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            const cols = [];
+            const zScale = parseFloat(document.getElementById('zScale').value);
+
+            const zs = points.map(p => p.z_calc);
+            const minZ = Math.min(...zs);
+            const maxZ = Math.max(...zs);
+
+            console.log('Building points mesh - center:', midX, midY);
+
+            points.forEach(p => {
+                // [FIX] Negate Z: -(p.y - midY)
+                // Maps GIS North (+Y) to 3D North (-Z)
+                pos.push(p.x - midX, p.z_calc * zScale, -(p.y - midY));
+
+                const c = getPointColor(p, minZ, maxZ);
+                cols.push(c.r, c.g, c.b);
+            });
+
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 3,
+                vertexColors: true,
+                sizeAttenuation: true
+            });
+            objects.points = new THREE.Points(geo, mat);
+            scene.add(objects.points);
+        }
+        
+
+        function buildContourLines(gridData) {
+            const interval = parseFloat(document.getElementById('contourInterval').value);
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const colorHex = document.getElementById('contourColor').value;
+            const lines = generateContours(gridData, interval);
+            if (lines.length === 0) return;
+
+            const positions = [];
+            for (let i = 0; i < lines.length; i += 6) {
+                // [FIX] Negate Z coordinates: -(lines[i+1] - CenterY)
+                positions.push(
+                    lines[i] - APP.currentCenter.x, lines[i + 2] * zScale + 0.5, -(lines[i + 1] - APP.currentCenter.y),
+                    lines[i + 3] - APP.currentCenter.x, lines[i + 5] * zScale + 0.5, -(lines[i + 4] - APP.currentCenter.y)
+                );
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            objects.contours = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+                color: colorHex,
+                opacity: 0.8,
+                transparent: true
+            }));
+            scene.add(objects.contours);
+        }
+
+        function getPointColor(p, min, max) {
+            switch (APP.vizMode) {
+                case 'elevation':
+                    const t = (p.z_calc - min) / (max - min || 1);
+                    return new THREE.Color().setHSL((1.0 - t) * 0.66, 1.0, 0.5);
+                case 'fix':
+                    if (p.fix === 4) return new THREE.Color(0x00ff00);
+                    if (p.fix === 5) return new THREE.Color(0xffff00);
+                    if (p.fix === 2) return new THREE.Color(0xffaa00);
+                    return new THREE.Color(0xff0000);
+                case 'sats':
+                    return new THREE.Color().setHSL((Math.min(p.sats, 20) / 20) * 0.3, 1, 0.5);
+                case 'dataset':
+                    return new THREE.Color(p.dsColor);
+                default:
+                    return new THREE.Color(0xffffff);
+            }
+        }
+
+        function animateThree() {
+            requestAnimationFrame(animateThree);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        /**
+         * ============================================================================
+         * VISUALIZATION: LEAFLET MAP
+         * ============================================================================
+         */
+        function initLeaflet() {
+            if (typeof L === 'undefined') {
+                console.error("Leaflet not loaded");
+                return;
+            }
+
+            map = L.map('map-container').setView([-31.95, 115.86], 13);
+
+            layers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            layers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Esri'
+            });
+
+            layers.points = L.layerGroup().addTo(map);
+            layers.draw = L.layerGroup().addTo(map);
+			layers.heatmap = null;
+			layers.contourLines = null;
+			
+            const baseMaps = {
+                "Street": layers.osm,
+                "Satellite": layers.sat
+            };
+            L.control.layers(baseMaps).addTo(map);
+
+            map.on('click', onMapClick);
+            map.on('dblclick', onMapDblClick);
+        }
+
+        function updateMapLayers(points) {
+			if (typeof L === 'undefined'
+				|| !map || !layers.points) return;
+
+			// NEW: Render heatmap + contours before points
+			renderMapHeatmap(points);
+			renderMapContours(points);
+
+
+			layers.points.clearLayers();
+
+			// Optimise large datasets
+			const step = points.length > 5000
+				? Math.floor(points.length/5000) : 1;
+			const zs = points.map(p => p.z_calc);
+			const minZ = Math.min(...zs);
+			const maxZ = Math.max(...zs);
+
+			if (document.getElementById('showPoints').checked) {
+				for (let i=0; i < points.length; i+=step) {
+					const p = points[i];
+					const c = getPointColor(p, minZ, maxZ);
+					const hex = '#' + c.getHexString();
+					L.circleMarker([p.lat, p.lon], {
+						radius: 3, fillColor: hex,
+						color: '#000', weight: 0.5,
+						fillOpacity: 0.9
+					}).bindPopup(`...`)
+					 .addTo(layers.points);
+				}
+			}
+			renderMapBoreholes();
+			if (points.length > 0) {
+				const group = new L.featureGroup(
+					points.map(p => L.marker([p.lat, p.lon]))
+				);
+				map.fitBounds(group.getBounds(),
+					{ padding: [30, 30] });
+			}
+
+			// NEW: Toggle map legend
+			const showHeatmap =
+				document.getElementById('showSurface').checked
+				&& points.length > 3;
+			const legend = document.getElementById('mapLegend');
+			if (showHeatmap) {
+				legend.classList.add('visible');
+				document.getElementById('mapLegMin').innerText =
+					minZ.toFixed(1) + 'm';
+				document.getElementById('mapLegMax').innerText =
+					maxZ.toFixed(1) + 'm';
+			} else {
+				legend.classList.remove('visible');
+			}
+
+		}
+
+        function toggleView() {
+			if (typeof L === 'undefined' || !map) {
+				alert("Map view not available.");
+				return;
+			}
+			const btn = document.getElementById('viewToggleBtn');
+			const cc  = document.getElementById('canvas-container');
+			const mc  = document.getElementById('map-container');
+			const legend = document.getElementById('mapLegend');
+
+
+			if (APP.view === '3D') {
+				APP.view = 'MAP';
+				mc.style.display = 'block';
+				cc.style.display = 'none';
+				btn.innerText = 'Switch to 3D';
+				map.invalidateSize();
+				legend.style.zIndex = '500'; // ensure above tile layers
+
+			} else {
+				APP.view = '3D';
+				mc.style.display = 'none';
+				cc.style.display = 'block';
+				btn.innerText = 'Map View';
+				legend.classList.remove('visible'); // hide when back in 3D
+
+			}
+			refreshAll();
+		}
+
+        /**
+         * ============================================================================
+         * STRUCTURE DRAWING (Map -> 3D)
+         * ============================================================================
+         */
+        function toggleDrawingMode() {
+            if (typeof L === 'undefined' || !map) {
+                alert("Map functionality is not available.");
+                return;
+            }
+
+            if (APP.view !== 'MAP') {
+                alert("Please switch to MAP view to draw structures.");
+                return;
+            }
+
+            APP.isDrawing = !APP.isDrawing;
+            const btn = document.getElementById('drawBtn');
+
+            if (APP.isDrawing) {
+                APP.drawPoints = [];
+                layers.draw.clearLayers();
+                btn.innerText = "Double-Click Map to Finish";
+                btn.classList.add('danger');
+                map.doubleClickZoom.disable();
+            } else {
+                finishDrawing();
+            }
+        }
+
+        function onMapClick(e) {
+            if (!APP.isDrawing) return;
+
+            APP.drawPoints.push(e.latlng);
+
+            L.circleMarker(e.latlng, {
+                color: 'cyan',
+                radius: 3
+            }).addTo(layers.draw);
+            if (APP.drawPoints.length > 1) {
+                L.polyline(APP.drawPoints, {
+                    color: 'cyan',
+                    weight: 2
+                }).addTo(layers.draw);
+            }
+        }
+
+        function onMapDblClick(e) {
+            if (!APP.isDrawing) return;
+            finishDrawing();
+        }
+
+        function finishDrawing() {
+            APP.isDrawing = false;
+            map.doubleClickZoom.enable();
+
+            const btn = document.getElementById('drawBtn');
+            btn.innerText = "Enter Draw Mode (Map)";
+            btn.classList.remove('danger');
+
+            if (APP.drawPoints.length < 3) return;
+
+            L.polygon(APP.drawPoints, {
+                color: 'cyan',
+                fillColor: 'cyan',
+                fillOpacity: 0.3
+            }).addTo(layers.draw);
+
+            createStructure3D();
+        }
+
+        function createStructure3D() {
+            if (objects.structure) scene.remove(objects.structure);
+            if (!APP.currentCenter) return;
+
+            const baseZ = parseFloat(document.getElementById('structBase').value);
+            const height = parseFloat(document.getElementById('structHeight').value);
+            const zScale = parseFloat(document.getElementById('zScale').value);
+
+            const shape = new THREE.Shape();
+
+            APP.drawPoints.forEach((ll, i) => {
+                const utm = latLonToUTM(ll.lat, ll.lng);
+                const x = utm.x - APP.currentCenter.x;
+                const y = utm.y - APP.currentCenter.y;
+
+                if (i === 0) shape.moveTo(x, y);
+                else shape.lineTo(x, y);
+            });
+
+            const geometry = new THREE.ExtrudeGeometry(shape, {
+                depth: height * zScale,
+                bevelEnabled: false
+            });
+
+            geometry.rotateX(-Math.PI / 2);
+            geometry.translate(0, baseZ * zScale, 0);
+
+            const mat = new THREE.MeshPhongMaterial({
+                color: 0x00bcd4,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+
+            objects.structure = new THREE.Mesh(geometry, mat);
+            scene.add(objects.structure);
+
+            toggleView();
+        }
+
+        function clearStructure() {
+            if (objects.structure) {
+                scene.remove(objects.structure);
+                objects.structure = null;
+            }
+            layers.draw.clearLayers();
+            APP.drawPoints = [];
+        }
+
+        /**
+         * ============================================================================
+         * UTILITIES & EXPORT
+         * ============================================================================
+         */
+        function updateLegend(points) {
+            if (points.length === 0) return;
+            const zs = points.map(p => p.z_calc);
+            const min = Math.min(...zs);
+            const max = Math.max(...zs);
+
+            if (APP.vizMode === 'elevation') {
+                document.getElementById('legMin').innerText = min.toFixed(1);
+                document.getElementById('legMid').innerText = ((min + max) / 2).toFixed(1);
+                document.getElementById('legMax').innerText = max.toFixed(1);
+                document.getElementById('legendGradient').style.background = 'linear-gradient(to right, blue, cyan, green, yellow, red)';
+                document.getElementById('legTitle').innerText = 'ELEVATION (m)';
+            } else if (APP.vizMode === 'fix') {
+                document.getElementById('legMin').innerText = 'None';
+                document.getElementById('legMid').innerText = 'Float';
+                document.getElementById('legMax').innerText = 'Fixed';
+                document.getElementById('legendGradient').style.background = 'linear-gradient(to right, red, orange, yellow, green)';
+                document.getElementById('legTitle').innerText = 'RTK FIX STATUS';
+            }
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function showLoading(show, text = "Processing...") {
+            const el = document.getElementById('loading');
+            if (show) {
+                el.style.display = 'flex';
+                document.getElementById('loading-text').innerText = text;
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        function togglePanel(head) {
+            head.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        function loadSampleData() {
+            // Center of the site based on the provided coordinates
+            const center = {
+                lat: -31.778833,
+                lon: 115.767663
+            };
+
+            console.log('Loading sample data centered at:', center);
+
+            let csv = "Lat,Lon,Elev,Fix,Sats,PDOP\n";
+
+            // 1. Explicitly load the 6 exact surface points from the image
+            const explicitPoints = [
+                { lat: -31.77874335, lon: 115.7675373 },
+                { lat: -31.77871441, lon: 115.7677122 },
+                { lat: -31.77881175, lon: 115.7677509 },
+                { lat: -31.77886305, lon: 115.7675838 },
+                { lat: -31.77890514, lon: 115.7677896 },
+                { lat: -31.77895249, lon: 115.7676364 }
+            ];
+
+            explicitPoints.forEach(p => {
+                const z = 20 - ((p.lon - center.lon) * 8000) + ((p.lat - center.lat) * 8000);
+                csv += `${p.lat.toFixed(8)},${p.lon.toFixed(8)},${z.toFixed(3)},4,18,1.1\n`;
+            });
+
+            // 2. Generate a dense surrounding mesh (scaled down to fit this smaller site)
+            for (let i = 0; i < 600; i++) {
+                const r = Math.sqrt(i) * 0.00001; // Tiny radius for an accurate localized spread
+                const t = i * 0.5;
+                const lat = center.lat + r * Math.sin(t);
+                const lon = center.lon + r * Math.cos(t);
+
+                // Creates a natural-looking tilted terrain
+                const z = 20 - ((lon - center.lon) * 8000) + ((lat - center.lat) * 8000) + (Math.random() * 0.05);
+                
+                csv += `${lat.toFixed(8)},${lon.toFixed(8)},${z.toFixed(3)},4,18,1.1\n`;
+            }
+
+            // Trigger the actual file loader
+            loadFiles([new File([csv], "Site_Surface.csv", { type: "text/csv" })]);
+        }
+
+        function loadBothSamples() {
+            // Load surface first
+            loadSampleData();
+
+            // Load boreholes after a short delay to ensure surface loads first
+            setTimeout(() => {
+                loadSampleBoreholes();
+            }, 500);
+        }
+
+        function performExport() {
+            const pts = getProcessedPoints();
+            if (pts.length === 0) return alert("No data to export");
+
+            const format = document.getElementById('exportFormat').value;
+            let content = "";
+            let type = "text/plain";
+            let ext = "txt";
+
+            if (format === 'csv') {
+                content = "Latitude,Longitude,Easting,Northing,Elevation,Fix,Sats\n";
+                pts.forEach(p => {
+                 });
+                type = "text/csv";
+                ext = "csv";
+            } else if (format === 'geojson') {
+                const fc = {
+                    type: "FeatureCollection",
+                    features: pts.map(p => ({
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [p.lon, p.lat, p.z_calc]
+                        },
+                        properties: {
+                            fix: p.fix,
+                            sats: p.sats
+                        }
+                    }))
+                };
+                content = JSON.stringify(fc);
+                type = "application/json";
+                ext = "geojson";
+            } else if (format === 'dxf') {
+                content = "0\nSECTION\n2\nENTITIES\n";
+                pts.forEach(p => {
+                    content += "0\nPOINT\n8\nGPS_POINTS\n10\n" + p.x + "\n20\n" + p.y + "\n30\n" + p.z_calc + "\n";
+                });
+                content += "0\nENDSEC\n0\nEOF";
+                ext = "dxf";
+            }
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([content], {
+                type: type
+            }));
+            
+            a.click();
+        }
+        /* =========================================
+           INTERACTIVE STRUCTURE BUILDER MODULE
+           ========================================= */
+
+        APP.structPoints = []; // Stores {x, y, z, id} (UTM coords)
+        let dragObjects = []; // Array of THREE meshes to raycast against
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let isDragging = false;
+        let selectedHandle = null;
+        let planeIntersect = new THREE.Plane(); // Mathematical plane for dragging
+        let pNormal = new THREE.Vector3(0, 1, 0); // Up vector
+
+        function loadStructureFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.trim().split('\n');
+
+                APP.structPoints = [];
+                let baseElev = null;
+
+                // Skip header if exists (check if first char is number)
+                const startIdx = isNaN(parseFloat(lines[0][0])) ? 1 : 0;
+
+                for (let i = startIdx; i < lines.length; i++) {
+                    const row = lines[i].split(/[,\t;]/);
+                    if (row.length < 3) continue;
+
+                    // Assumes: ID, Easting, Northing, [Elevation]
+                    const id = row[0].trim();
+                    const x = parseFloat(row[1]);
+                    const y = parseFloat(row[2]);
+                    const z = row[3] ? parseFloat(row[3]) : 0;
+
+                    if (!isNaN(x) && !isNaN(y)) {
+                        
+                        if (baseElev === null && !isNaN(z) && z !== 0) baseElev = z;
+                    }
+                }
+
+                if (baseElev !== null) {
+                    document.getElementById('structBase').value = baseElev.toFixed(2);
+                }
+
+                // Ensure we have a center reference
+                if (!APP.currentCenter && APP.structPoints.length > 0) {
+                    APP.currentCenter = {
+                        x: APP.structPoints[0].x,
+                        y: APP.structPoints[0].y
+                    };
+                }
+
+                // Switch to 3D view to see it
+                if (APP.view === 'MAP') toggleView();
+
+                buildStructureFromPoints();
+                updateStructureList();
+            };
+            reader.readAsText(file);
+        }
+
+        function buildStructureFromPoints() {
+            if (APP.structPoints.length < 3) return;
+
+            // 1. Clean up old
+            if (objects.structure) scene.remove(objects.structure);
+            if (objects.structHandles) scene.remove(objects.structHandles);
+            objects.structHandles = new THREE.Group();
+            dragObjects = [];
+
+            const baseZ = parseFloat(document.getElementById('structBase').value);
+            const height = parseFloat(document.getElementById('structHeight').value);
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const center = APP.currentCenter;
+
+            // 2. Create Handles (Spheres)
+            APP.structPoints.forEach((p, index) => {
+                const geo = new THREE.SphereGeometry(2, 16, 16); // Size 2m
+                const mat = new THREE.MeshBasicMaterial({
+                    color: 0xffff00
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+
+                // Position relative to world center
+                mesh.position.set(
+                    p.x - center.x,
+                    (baseZ + height) * zScale, // Place handles at the TOP of the building
+                    p.y - center.y
+                );
+
+                mesh.userData = {
+                    id: index,
+                    isHandle: true
+                };
+                objects.structHandles.add(mesh);
+                dragObjects.push(mesh);
+            });
+
+            if (document.getElementById('showStructHandles').checked) {
+                scene.add(objects.structHandles);
+            }
+
+            // 3. Create Extruded Mesh
+            updateStructureMesh();
+        }
+
+         // Fix A: Logic for manual text input updates
+        window.updatePointCoord = (index, axis, value) => {
+            const val = parseFloat(value);
+            if (isNaN(val)) return;
+
+            APP.structPoints[index][axis] = val;
+            const handle = objects.structHandles.children[index];
+
+            if (axis === 'x') handle.position.x = val - APP.currentCenter.x;
+            // [FIX] Invert Z Logic: If User types Y=100, and Center=0, Z must be -100.
+            if (axis === 'y') handle.position.z = -(val - APP.currentCenter.y);
+
+            updateStructureMesh();
+        };
+
+        // Fix B: Logic for Mesh Generation and Map Sync
+        function updateStructureMesh() {
+            if (!objects.structHandles || APP.structPoints.length < 3) return;
+            if (objects.structure) scene.remove(objects.structure);
+
+            const baseZ = parseFloat(document.getElementById('structBase').value);
+            const height = parseFloat(document.getElementById('structHeight').value);
+            const zScale = parseFloat(document.getElementById('zScale').value);
+            const center = APP.currentCenter;
+            const topY = (baseZ + height) * zScale;
+            const bottomY = baseZ * zScale;
+
+            objects.structHandles.children.forEach(mesh => {
+                mesh.position.y = topY;
+            });
+
+            const shapePoints = [];
+            const mapLatLons = [];
+            const vertices = [];
+
+            // Extract positions from handles
+            objects.structHandles.children.forEach((mesh, i) => {
+                shapePoints.push(new THREE.Vector2(mesh.position.x, mesh.position.z));
+
+                // [FIX] Sync Data Model (Subtract Z to get GIS Y)
+                // If handle is at Z = -50, GIS Y = Center + 50
+                APP.structPoints[i].x = center.x + mesh.position.x;
+                APP.structPoints[i].y = center.y - mesh.position.z;
+
+                const ll = utmToLatLon(APP.structPoints[i].x, APP.structPoints[i].y);
+                mapLatLons.push([ll.lat, ll.lon]);
+            });
+
+            const triangles = THREE.ShapeUtils.triangulateShape(shapePoints, []);
+            const pushVert = (x, y, z) => vertices.push(x, y, z);
+
+            // Roof & Floor
+            triangles.forEach(face => {
+                const a = shapePoints[face[0]],
+                    b = shapePoints[face[1]],
+                    c = shapePoints[face[2]];
+                pushVert(a.x, topY, a.y);
+                pushVert(b.x, topY, b.y);
+                pushVert(c.x, topY, c.y);
+                pushVert(a.x, bottomY, a.y);
+                pushVert(c.x, bottomY, c.y);
+                pushVert(b.x, bottomY, b.y);
+            });
+
+            // Walls
+            for (let i = 0; i < shapePoints.length; i++) {
+                const curr = shapePoints[i],
+                    next = shapePoints[(i + 1) % shapePoints.length];
+                pushVert(curr.x, topY, curr.y);
+                pushVert(curr.x, bottomY, curr.y);
+                pushVert(next.x, topY, next.y);
+                pushVert(curr.x, bottomY, curr.y);
+                pushVert(next.x, bottomY, next.y);
+                pushVert(next.x, topY, next.y);
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geo.computeVertexNormals();
+            objects.structure = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+                color: 0x00bcd4,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide,
+                flatShading: true
+            }));
+            scene.add(objects.structure);
+
+            if (layers.draw) {
+                layers.draw.clearLayers();
+                if (mapLatLons.length > 2) {
+                    L.polygon(mapLatLons, {
+                        color: 'red',
+                        fillColor: '#00bcd4',
+                        fillOpacity: 0.5
+                    }).addTo(layers.draw);
+                    mapLatLons.forEach(ll => L.circleMarker(ll, {
+                        radius: 4,
+                        color: 'red',
+                        fillColor: 'yellow',
+                        fillOpacity: 1
+                    }).addTo(layers.draw));
+                }
+            }
+        }
+
+        function updateStructureList() {
+            const container = document.getElementById('structPointsList');
+            container.innerHTML = '';
+
+            APP.structPoints.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = 'point-row';
+                div.innerHTML = ` <
+        span class = "point-label" > $ {
+            i + 1
+        } < /span> <
+        input type = "text"
+        value = "${p.x.toFixed(2)}"
+        onchange = "updatePointCoord(${i}, 'x', this.value)" >
+            <
+            input type = "text"
+        value = "${p.y.toFixed(2)}"
+        onchange = "updatePointCoord(${i}, 'y', this.value)" >
+            `;
+                container.appendChild(div);
+            });
+        }
+
+        window.updatePointCoord = (index, axis, value) => {
+            const val = parseFloat(value);
+            if (isNaN(val)) return;
+
+            APP.structPoints[index][axis] = val;
+
+            // Update the visual handle position
+            const handle = objects.structHandles.children[index];
+            if (axis === 'x') handle.position.x = val - APP.currentCenter.x;
+            if (axis === 'y') handle.position.z = val - APP.currentCenter.y; // Y in UTM is Z in ThreeJS
+
+            updateStructureMesh();
+        };
+
+        window.toggleStructHandles = () => {
+            const show = document.getElementById('showStructHandles').checked;
+            if (objects.structHandles) {
+                if (show) scene.add(objects.structHandles);
+                else scene.remove(objects.structHandles);
+            }
+        }
+
+        // --- INTERACTION LOGIC (RAYCASTING) ---
+        function initInteraction() {
+            const canvas = renderer.domElement;
+
+            canvas.addEventListener('mousedown', onMouseDown, false);
+            canvas.addEventListener('mousemove', onMouseMove, false);
+            canvas.addEventListener('mouseup', onMouseUp, false);
+
+            // Mobile Touch Support
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                onMouseDown(e.touches[0]);
+            }, {
+                passive: false
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                onMouseMove(e.touches[0]);
+            }, {
+                passive: false
+            });
+
+            canvas.addEventListener('touchend', onMouseUp, false);
+        }
+
+        function onMouseDown(event) {
+            if (APP.view !== '3D' || !objects.structHandles) return;
+
+            // Get normalized mouse coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            const clientX = event.clientX || event.pageX; // handle touch vs mouse
+            const clientY = event.clientY || event.pageY;
+
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(dragObjects);
+
+            if (intersects.length > 0) {
+                isDragging = true;
+                controls.enabled = false; // Disable orbit controls while dragging
+                selectedHandle = intersects[0].object;
+
+                // Define a horizontal plane at the height of the handle
+                planeIntersect.setFromNormalAndCoplanarPoint(pNormal, selectedHandle.position);
+
+                // Highlight color
+                selectedHandle.material.color.set(0xff0000);
+            }
+        }
+
+        function onMouseMove(event) {
+            if (!isDragging || !selectedHandle) return;
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const clientX = event.clientX || event.pageX;
+            const clientY = event.clientY || event.pageY;
+
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const rayPoint = new THREE.Vector3();
+            raycaster.ray.intersectPlane(planeIntersect, rayPoint);
+
+            if (rayPoint) {
+                selectedHandle.position.x = rayPoint.x;
+                selectedHandle.position.z = rayPoint.z;
+
+                // Throttle updates for performance if needed, but mesh generation is fast enough for simple polygons
+                updateStructureMesh();
+            }
+        }
+
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                controls.enabled = true; // Re-enable orbit controls
+                if (selectedHandle) {
+                    selectedHandle.material.color.set(0xffff00); // Reset color
+                    selectedHandle = null;
+                    updateStructureList(); // Sync text inputs with new position
+                }
+            }
+        }
+        window.snapView = (view) => {
+            if (!controls) return;
+
+            // Reset Target
+            controls.target.set(0, 0, 0);
+
+            // Distance to zoom out
+            const dist = 300;
+
+            switch (view) {
+                case 'TOP': // Plan View
+                    // Camera at +Y, looking down
+                    tweenCamera(0, dist, 0);
+                    break;
+                case 'SOUTH': // South Elevation (Looking North)
+                    // Camera at +Z (South), looking at -Z
+                    tweenCamera(0, 0, dist);
+                    break;
+                case 'NORTH': // North Elevation (Looking South)
+                    // Camera at -Z (North), looking at +Z
+                    tweenCamera(0, 0, -dist);
+                    break;
+                case 'EAST': // East Elevation (Looking West)
+                    // Camera at +X (East)
+                    tweenCamera(dist, 0, 0);
+                    break;
+                case 'WEST': // West Elevation (Looking East)
+                    // Camera at -X (West)
+                    tweenCamera(-dist, 0, 0);
+                    break;
+            }
+        };
+
+        function tweenCamera(x, y, z) {
+            // Simple manual tween
+            const startPos = camera.position.clone();
+            const endPos = new THREE.Vector3(x, y, z);
+
+            let alpha = 0;
+            const duration = 500; // ms
+            const start = performance.now();
+
+            function animate() {
+                const now = performance.now();
+                alpha = Math.min((now - start) / duration, 1);
+
+                // Ease Out Cubic
+                const t = 1 - Math.pow(1 - alpha, 3);
+
+                camera.position.lerpVectors(startPos, endPos, t);
+                controls.update();
+
+                if (alpha < 1) requestAnimationFrame(animate);
+            }
+            animate();
+        }
+		// ============================================================
+		// MAP OVERLAY: HEATMAP + CONTOURS
+		// ============================================================
+		
+		/** Convert HSL (0–1 each) to [R, G, B] (0–255) */
+		function hslToRgb(h, s, l) {
+			let r, g, b;
+			if (s === 0) { r = g = b = l; }
+			else {
+				const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+				const p = 2*l - q;
+				const hue2rgb = (p, q, t) => {
+					if (t < 0) t += 1; if (t > 1) t -= 1;
+					if (t < 1/6) return p + (q-p)*6*t;
+					if (t < 1/2) return q;
+					if (t < 2/3) return p + (q-p)*(2/3-t)*6;
+					return p;
+				};
+				r = hue2rgb(p, q, h+1/3);
+				g = hue2rgb(p, q, h);
+				b = hue2rgb(p, q, h-1/3);
+			}
+			return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+		}
+		
+		/**
+		 * Render the IDW/kriging elevation surface as a canvas heatmap on the Leaflet map.
+		 * Reuses exactly the same grid generation as the 3D mesh — colours match the 3D view.
+		 */
+		function renderMapHeatmap(points) {
+			if (layers.heatmap) { map.removeLayer(layers.heatmap); layers.heatmap = null; }
+			if (!document.getElementById('showSurface').checked || points.length < 4) return;
+
+			const gridData = generateSurfaceGrid(points, 120); // higher res for map
+			if (!gridData) return;
+
+			const { grid, resolution, stepX, stepY, minX, minY, minZ, maxZ } = gridData;
+
+			// Build canvas pixel-by-pixel
+			const canvas = document.createElement('canvas');
+			canvas.width = resolution; canvas.height = resolution;
+			const ctx = canvas.getContext('2d');
+			const imageData = ctx.createImageData(resolution, resolution);
+			const zRange = maxZ - minZ || 1;
+
+			for (let iy = 0; iy < resolution; iy++) {
+				for (let ix = 0; ix < resolution; ix++) {
+					const zVal = grid[iy][ix];
+					// Flip Y: row 0 = south edge → pixel row 0 = top (north) of image
+					const pixelIdx = ((resolution - 1 - iy) * resolution + ix) * 4;
+
+					if (zVal === null) { imageData.data[pixelIdx + 3] = 0; continue; }
+
+					// Hue: 0.66=blue (low) → 0=red (high) — identical to Three.js HSL in 3D
+					const t = (zVal - minZ) / zRange;
+					const [r, g, b] = hslToRgb((1.0 - t) * 0.66, 1.0, 0.5);
+					imageData.data[pixelIdx]     = r;
+					imageData.data[pixelIdx + 1] = g;
+					imageData.data[pixelIdx + 2] = b;
+					imageData.data[pixelIdx + 3] = 185; // ~73% opacity
+				}
+			}
+			ctx.putImageData(imageData, 0, 0);
+
+			// Convert UTM grid extents → LatLon for Leaflet ImageOverlay bounds
+			const sw = utmToLatLon(minX,                        minY);
+			const ne = utmToLatLon(minX + stepX*(resolution-1), minY + stepY*(resolution-1));
+
+			layers.heatmap = L.imageOverlay(
+				canvas.toDataURL('image/png'),
+				[[sw.lat, sw.lon], [ne.lat, ne.lon]],
+				{ opacity: 0.75, zIndex: 5, className: 'gnss-heatmap' }
+			).addTo(map);
+		}
+		
+		/**
+		 * Render marching-squares contour lines on the Leaflet map.
+		 * Reuses generateContours() output, converting UTM segments → LatLon polylines.
+		 */
+		function renderMapContours(points) {
+			if (layers.contourLines) { map.removeLayer(layers.contourLines); layers.contourLines = null; }
+			if (!document.getElementById('showContours').checked || points.length < 4) return;
+
+			const gridData = generateSurfaceGrid(points, 70);
+			if (!gridData) return;
+
+			const interval = parseFloat(document.getElementById('contourInterval').value);
+			const colorHex = document.getElementById('contourColor').value;
+			const lines    = generateContours(gridData, interval);
+			if (!lines.length) return;
+
+			layers.contourLines = L.layerGroup().addTo(map);
+
+			// Format: [x1(easting), y1(northing), z1, x2, y2, z2, ...]
+			for (let i = 0; i < lines.length; i += 6) {
+				const p1 = utmToLatLon(lines[i],     lines[i + 1]);
+				const p2 = utmToLatLon(lines[i + 3], lines[i + 4]);
+				L.polyline(
+					[[p1.lat, p1.lon], [p2.lat, p2.lon]],
+					{ color: colorHex, weight: 1.5, opacity: 0.9 }
+				).addTo(layers.contourLines);
+			}
+		}
+		function renderMapBoreholes() {
+			if (!layers.points || !APP.boreholes || APP.boreholes.length === 0) return;
+			if (!document.getElementById('showBoreholes').checked) return;
+
+			APP.boreholes.forEach(bh => {
+				const ll = utmToLatLon(bh.x, bh.y);
+				const showLabels = document.getElementById('showBHLabels').checked;
+
+				L.circleMarker([ll.lat, ll.lon], {
+					radius: 8,
+					fillColor: '#00ffff',
+					color: '#000',
+					weight: 1.5,
+					fillOpacity: 0.9,
+					zIndexOffset: 1000
+				}).bindPopup(`
+					<b>${bh.id}</b><br>
+					GL: ${bh.z.toFixed(2)}m<br>
+					Depth: ${bh.depth}m<br>
+					GW: ${bh.gw > 0 ? bh.gw + 'm' : 'N/A'}<br>
+					<hr style="margin:4px 0">
+					${bh.units.map(u => `${u.name} → ${u.bottom}m`).join('<br>')}
+				`).addTo(layers.points);
+
+				if (showLabels) {
+					L.marker([ll.lat, ll.lon], {
+						icon: L.divIcon({
+							className: '',
+							html: `<div style="
+								background:rgba(0,0,0,0.7); color:#00ffff;
+								padding:2px 5px; border-radius:3px;
+								font-size:11px; font-weight:bold;
+								white-space:nowrap; margin-left:10px;
+								display:inline-block;">
+								${bh.id}
+							</div>`,
+							iconAnchor: [-4, 8],
+							iconSize: null
+						})
+					}).addTo(layers.points);
+				}
+			});
+		}
+    </script>
+</body>
+
+</html>

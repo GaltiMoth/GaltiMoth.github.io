@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluvial Cycle Viewer — Guilford Fmn</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Archivo+Black&family=Archivo:wght@300;400;500&display=swap');
+:root{
+  --bg:#0f1014;--panel:#16181e;--border:#2a2d38;--accent:#c8a85a;
+  --accent2:#5ac8a8;--text:#d4d8e8;--muted:#6b7080;
+  --CH:#4a2e6e;--CH-l:#9b69cc;--SC:#b8732a;--SC-l:#e8a85a;
+  --CL:#2a5a4a;--CL-l:#5ab88a;--SP:#3a5a2a;--SP-l:#88cc55;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Archivo',sans-serif;font-weight:300;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+header{border-bottom:1px solid var(--border);padding:10px 22px;display:flex;align-items:center;gap:14px;background:var(--panel);flex-shrink:0}
+header h1{font-family:'Archivo Black',sans-serif;font-size:.92rem;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+header span{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:.09em}
+.main{display:grid;grid-template-columns:262px 1fr 172px 318px;flex:1;overflow:hidden;min-height:0}
+
+/* ── CONTROLS ── */
+.ctrl{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.ctrl-header{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);line-height:1.65}
+.sec{border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.sec-hd{font-family:'IBM Plex Mono',monospace;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);padding:5px 9px;background:rgba(200,168,90,.06);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-hd-label{flex:1}
+.lb{padding:8px 9px;border-bottom:1px solid var(--border);position:relative;transition:background .2s}
+.lb:last-child{border-bottom:none}
+.lb.flash{background:rgba(90,200,168,.08)}
+.lh{display:flex;align-items:center;gap:5px;margin-bottom:7px}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:.67rem;font-weight:600;padding:1px 6px;border-radius:2px;cursor:default}
+.bCH{background:var(--CH);color:var(--CH-l)}.bSC{background:var(--SC);color:var(--SC-l)}
+.bCL{background:var(--CL);color:var(--CL-l)}.bSP{background:var(--SP);color:var(--SP-l)}
+.ln{font-size:.58rem;color:var(--muted);font-style:italic;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del-btn{font-family:'IBM Plex Mono',monospace;font-size:.65rem;background:transparent;border:1px solid rgba(200,80,80,.3);color:rgba(200,80,80,.6);cursor:pointer;border-radius:2px;padding:1px 5px;line-height:1;flex-shrink:0;transition:all .2s}
+.del-btn:hover{background:rgba(200,80,80,.15);border-color:rgba(200,80,80,.7);color:#c85a5a}
+.cr{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.cl{font-family:'IBM Plex Mono',monospace;font-size:.53rem;color:var(--muted);width:56px;flex-shrink:0}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;cursor:pointer;outline:none}
+input[type=range].rCH::-webkit-slider-thumb{background:var(--CH-l)}
+input[type=range].rSC::-webkit-slider-thumb{background:var(--SC-l)}
+input[type=range].rCL::-webkit-slider-thumb{background:var(--CL-l)}
+input[type=range].rSP::-webkit-slider-thumb{background:var(--SP-l)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;cursor:pointer}
+.ni{font-family:'IBM Plex Mono',monospace;font-size:.6rem;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:2px 4px;width:42px;border-radius:2px;text-align:right}
+.ni:focus{outline:1px solid var(--accent)}
+.unit{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--muted);width:20px}
+.add-row{display:flex;gap:4px;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.04)}
+.add-btn{font-family:'IBM Plex Mono',monospace;font-size:.52rem;padding:2px 6px;border-radius:2px;cursor:pointer;border:1px solid;background:transparent;transition:all .2s;letter-spacing:.04em}
+.add-btn.aCH{border-color:rgba(155,105,204,.4);color:rgba(155,105,204,.7)}.add-btn.aCH:hover{background:rgba(155,105,204,.1)}
+.add-btn.aSC{border-color:rgba(232,168,90,.4);color:rgba(232,168,90,.7)}.add-btn.aSC:hover{background:rgba(232,168,90,.1)}
+.add-btn.aCL{border-color:rgba(90,184,138,.4);color:rgba(90,184,138,.7)}.add-btn.aCL:hover{background:rgba(90,184,138,.1)}
+.add-btn.aSP{border-color:rgba(136,204,85,.4);color:rgba(136,204,85,.7)}.add-btn.aSP:hover{background:rgba(136,204,85,.1)}
+.tr{display:flex;align-items:center;gap:7px;padding:6px 9px;border-bottom:1px solid var(--border)}.tr:last-child{border-bottom:none}
+.tog{position:relative;width:27px;height:14px;cursor:pointer;flex-shrink:0}
+.tog input{display:none}
+.tt{position:absolute;inset:0;background:var(--border);border-radius:7px;transition:background .2s}
+.tog input:checked+.tt{background:var(--accent)}
+.tk{position:absolute;top:2px;left:2px;width:10px;height:10px;background:#fff;border-radius:50%;transition:transform .2s}
+.tog input:checked~.tk{transform:translateX(13px)}
+.tl{font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:var(--muted)}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;padding:5px 10px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;border-radius:2px;transition:all .2s}
+.btn:hover{background:var(--accent);color:var(--bg)}
+.btn.b2{border-color:var(--accent2);color:var(--accent2)}.btn.b2:hover{background:var(--accent2);color:var(--bg)}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap}
+.new-layer-row{display:flex;gap:4px;align-items:center;flex-wrap:wrap;padding:4px 0 2px}
+.new-lbl{font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:var(--muted)}
+
+/* ── DIAGRAM ── */
+.dia{position:relative;overflow:hidden;display:flex;align-items:flex-start;padding:22px 0 22px 28px;gap:0;background:var(--bg)}
+.ax{position:relative;flex-shrink:0;width:46px}
+.ax-lbl{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--muted);position:absolute;right:6px;transform:translateY(-50%)}
+.strat-wrap{position:relative;display:flex;align-items:flex-start;gap:0}
+.strat{position:relative;width:148px;flex-shrink:0}
+.layer{position:relative;width:100%;cursor:pointer}
+.lf{width:100%;height:100%;position:relative;border-left:3px solid transparent}
+.lf::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.1;background-image:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,.3) 4px,rgba(255,255,255,.3) 5px)}
+.layer.CH .lf{background:linear-gradient(180deg,var(--CH),#2a1840);border-left-color:var(--CH-l)}
+.layer.SC .lf{background:linear-gradient(180deg,var(--SC),#6b3a10);border-left-color:var(--SC-l)}
+.layer.CL .lf{background:linear-gradient(180deg,var(--CL),#142e22);border-left-color:var(--CL-l)}
+.layer.SP .lf{background:linear-gradient(180deg,var(--SP),#1a3010);border-left-color:var(--SP-l)}
+.layer.HL .lf{box-shadow:0 0 0 2px var(--accent) inset}
+.lbl-r{position:absolute;right:-98px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:var(--muted);white-space:nowrap;pointer-events:none;line-height:1.35}
+.lbl-r .sc{font-weight:600;font-size:.66rem;display:block}
+.sc-CH{color:var(--CH-l)}.sc-SC{color:var(--SC-l)}.sc-CL{color:var(--CL-l)}.sc-SP{color:var(--SP-l)}
+.hCH{background-image:repeating-linear-gradient(0deg,rgba(155,105,204,.18) 0,rgba(155,105,204,.18) 2px,transparent 2px,transparent 8px)}
+.hSC{background-image:repeating-linear-gradient(45deg,rgba(232,168,90,.18) 0,rgba(232,168,90,.18) 2px,transparent 2px,transparent 6px)}
+.hCL{background-image:repeating-linear-gradient(90deg,rgba(90,184,138,.18) 0,rgba(90,184,138,.18) 1px,transparent 1px,transparent 5px)}
+.hSP{background-image:repeating-linear-gradient(135deg,rgba(136,204,85,.18) 0,rgba(136,204,85,.18) 2px,transparent 2px,transparent 5px)}
+.cyc{position:absolute;left:-24px;border:1px dashed rgba(200,168,90,.3);border-radius:2px;pointer-events:none;display:flex;align-items:center}
+.cyc-lbl{font-family:'IBM Plex Mono',monospace;font-size:.46rem;color:var(--accent);letter-spacing:.1em;writing-mode:vertical-rl;transform:rotate(180deg);padding:2px;opacity:.6}
+.cb{position:absolute;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 6px,transparent 6px,transparent 10px);opacity:.85;pointer-events:none;z-index:10}
+.arsvg{position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+/* SBT overlay strip */
+#sbt-ov-wrap{display:none;flex-shrink:0;margin-left:2px;flex-direction:column;align-items:center}
+#sbt-ov-wrap.show{display:flex}
+.sbt-ov-hd{font-family:'IBM Plex Mono',monospace;font-size:.42rem;color:rgba(90,200,168,.55);letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;white-space:nowrap}
+#sbt-overlay{border-radius:2px;border:1px solid rgba(90,200,168,.14);display:block}
+/* CPT mismatch pulse */
+.layer.mismatch .lf{animation:pulse-mm 2s ease-in-out infinite}
+@keyframes pulse-mm{0%,100%{opacity:1}50%{opacity:.65}}
+
+/* ── RIVER ── */
+.river-wrap{padding:22px 4px 22px 3px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.river-title{font-family:'IBM Plex Mono',monospace;font-size:.48rem;color:var(--muted);text-align:center;margin-bottom:4px;letter-spacing:.08em;text-transform:uppercase}
+#river-canvas{border-radius:3px;border:1px solid var(--border);display:block}
+.e-legend{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+.e-item{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:.48rem;color:var(--muted)}
+.e-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── CPT PANEL ── */
+.cpt{background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:11px}
+.pt{font-family:'Archivo Black',sans-serif;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent2);margin-bottom:3px}
+.pb{font-size:.63rem;line-height:1.6;color:#9aa0b8}
+.uz{border:1.5px dashed var(--border);border-radius:3px;padding:12px 9px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(255,255,255,.01)}
+.uz:hover,.uz.drag{border-color:var(--accent);background:rgba(200,168,90,.04)}
+.uz-icon{font-size:1.3rem;margin-bottom:4px;opacity:.5}
+.uz-txt{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.6}
+.uz-txt strong{color:var(--accent);display:block;margin-bottom:2px}
+#file-input{display:none}
+.gwt-row{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
+.gwt-lbl{font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:var(--muted)}
+#cpt-chart-area{display:none}
+.chart-wrap{display:flex;gap:4px;align-items:flex-start}
+.si{border:1px solid var(--border);border-radius:3px;padding:9px;background:rgba(255,255,255,.02)}
+.st{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--accent);margin-bottom:5px;letter-spacing:.07em}
+.sr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);font-family:'IBM Plex Mono',monospace;font-size:.57rem}
+.sr:last-child{border-bottom:none}
+.sk{color:var(--muted)}.sv{color:var(--text)}.sv.good{color:var(--accent2)}.sv.warn{color:var(--SC-l)}
+.gcall{border-left:3px solid var(--accent);padding:8px 9px;background:rgba(200,168,90,.05);border-radius:0 3px 3px 0;font-size:.6rem;line-height:1.6;color:#b0b8cc}
+.corr-b{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:3px;border:1px solid var(--border)}
+.corr-n{font-family:'Archivo Black',sans-serif;font-size:1.8rem;line-height:1}
+.corr-l{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);line-height:1.7}
+.note-b{background:rgba(90,200,168,.05);border:1px solid rgba(90,200,168,.18);border-radius:3px;padding:7px 9px;font-size:.58rem;line-height:1.6;color:#7abcaa;font-family:'IBM Plex Mono',monospace}
+.cpt-leg{display:flex;gap:7px;flex-wrap:wrap;margin-top:3px}
+.ci{display:flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:var(--muted)}
+.cd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+#corr-area{display:none}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Fluvial Fining-Upward Cycle Viewer</h1>
+  <span>Guilford Fmn · Ancient River Geology · Robertson 1990</span>
+  <span id="hdr-layers" style="margin-left:auto;color:var(--accent);font-size:.54rem"></span>
+</header>
+<div class="main">
+
+<!-- CONTROLS (rebuilt dynamically) -->
+<div class="ctrl" id="ctrl-panel">
+  <div class="ctrl-header">Dynamic sections — edit, add or remove layers. Click diagram layers to inspect.</div>
+  <div id="layers-ctrl"></div>
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-hd-label">Add new layer at top</span></div>
+    <div class="lb">
+      <div class="new-layer-row">
+        <span class="new-lbl">Insert at top:</span>
+        <button class="add-btn aCH" onclick="addLayerAt(0,'CH')">+CH</button>
+        <button class="add-btn aSC" onclick="addLayerAt(0,'SC')">+SC</button>
+        <button class="add-btn aCL" onclick="addLayerAt(0,'CL')">+CL</button>
+        <button class="add-btn aSP" onclick="addLayerAt(0,'SP')">+SP</button>
+      </div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-hd-label">Display Options</span></div>
+    <div class="tr"><label class="tog"><input type="checkbox" id="tog-cyc" checked><div class="tt"></div><div class="tk"></div></label><span class="tl">Cycle brackets</span></div>
+    <div class="tr"><label class="tog"><input type="checkbox" id="tog-cb" checked><div class="tt"></div><div class="tk"></div></label><span class="tl">Cycle boundary markers</span></div>
+    <div class="tr"><label class="tog"><input type="checkbox" id="tog-gen"><div class="tt"></div><div class="tk"></div></label><span class="tl">Genetic link arrows</span></div>
+    <div class="tr"><label class="tog"><input type="checkbox" id="tog-mm"><div class="tt"></div><div class="tk"></div></label><span class="tl">Highlight CPT mismatches</span></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn" onclick="resetDef()">Reset</button>
+    <button class="btn" onclick="animCy()">Animate ↑</button>
+    <button class="btn b2" id="fit-btn" style="display:none" onclick="fitToCPT()">Fit to CPT ↓</button>
+  </div>
+</div>
+
+<!-- DIAGRAM -->
+<div class="dia" id="dia">
+  <div class="ax" id="ax"></div>
+  <div class="strat-wrap" id="strat-wrap">
+    <div class="strat" id="strat"></div>
+    <div id="sbt-ov-wrap">
+      <div class="sbt-ov-hd">CPT SBT</div>
+      <canvas id="sbt-overlay" width="26" height="100"></canvas>
+    </div>
+    <svg class="arsvg" id="arsvg"></svg>
+  </div>
+</div>
+
+<!-- RIVER ANIMATION -->
+<div class="river-wrap">
+  <div class="river-title">Depositional Energy</div>
+  <canvas id="river-canvas" width="155" height="400"></canvas>
+  <div class="e-legend">
+    <div class="e-item"><div class="e-dot" style="background:#c85a5a"></div>HIGH — thalweg</div>
+    <div class="e-item"><div class="e-dot" style="background:var(--SP-l)"></div>HIGH-MED — SP sand</div>
+    <div class="e-item"><div class="e-dot" style="background:var(--SC-l)"></div>MED — SC point bar</div>
+    <div class="e-item"><div class="e-dot" style="background:var(--CL-l)"></div>LOW — CL floodplain</div>
+    <div class="e-item"><div class="e-dot" style="background:var(--CH-l)"></div>V.LOW — CH overbank</div>
+    <div class="e-item" id="cpt-e-item" style="display:none"><div class="e-dot" style="background:rgba(90,200,168,.7);border-radius:1px"></div>CPT Ic energy</div>
+  </div>
+</div>
+
+<!-- CPT PANEL -->
+<div class="cpt">
+  <div>
+    <div class="pt">CPT Interpreter</div>
+    <div class="pb">Upload CSV with <strong style="color:var(--accent2);display:inline">depth, qc, fs</strong> columns. Robertson (1990) Iₓ classifies soil. <strong style="color:var(--accent);display:inline">Fit to CPT</strong> rebuilds the section to match.</div>
+    <div class="gwt-row">
+      <span class="gwt-lbl">GWT (m):</span>
+      <input type="number" id="gwt" class="ni" value="2.5" min="0" max="50" step="0.5">
+      <span class="gwt-lbl">γ (kN/m³):</span>
+      <input type="number" id="gamma" class="ni" value="18" min="14" max="22" step="0.5">
+    </div>
+  </div>
+  <div class="uz" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <div class="uz-icon">⛏</div>
+    <div class="uz-txt"><strong>Click or drag CPT CSV</strong>depth (m) · qc (MPa) · fs (kPa/MPa)<br>Auto-detects semicolons, EU decimals, unit rows</div>
+    <input type="file" id="file-input" accept=".csv,.txt">
+  </div>
+  <div id="cpt-status" style="font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:var(--muted);display:none;padding:1px 0"></div>
+
+  <div id="cpt-chart-area">
+    <div class="pt" style="font-size:.58rem;margin-bottom:5px">qt PROFILE + SBT COLUMN</div>
+    <div class="chart-wrap">
+      <canvas id="cpt-canvas" width="148" height="340"></canvas>
+      <canvas id="sbt-canvas" width="44" height="340"></canvas>
+    </div>
+    <div class="cpt-leg" id="cpt-leg"></div>
+  </div>
+
+  <div id="corr-area">
+    <div class="pt" style="font-size:.58rem;margin-bottom:5px">MODEL CORRELATION</div>
+    <div class="corr-b">
+      <div class="corr-n" id="corr-pct" style="color:var(--accent2)">—</div>
+      <div class="corr-l" id="corr-txt">Upload CPT to compare</div>
+    </div>
+    <div id="corr-detail" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:.53rem;color:var(--muted);line-height:1.7"></div>
+  </div>
+
+  <div class="si" id="sel-info">
+    <div class="st">← Click a layer to inspect</div>
+    <div class="pb" style="font-size:.58rem">Select any layer in the stratigraphic column.</div>
+  </div>
+
+  <div class="gcall">
+    <strong>SC → CH above (same cycle)</strong> — conformable contact, shared stress history.<br><br>
+    <strong>SC → CL below (different cycle)</strong> — cycle boundary, possible scour or unconformity.
+  </div>
+  <div class="note-b">Layers: <span id="tot-layers">—</span> · Total: <span id="tot-d">—</span> px</div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  LAYER DEFINITIONS — mutable array, top→bottom
+// ═══════════════════════════════════════════════
+const LAYER_DEFAULTS = {
+  CH:{ desc:'Fat Clay — Overbank',      energy:'vlow', ev:0.07, t:80,  ll:72, pi:38 },
+  SC:{ desc:'Clayey Sand — Ch. Margin', energy:'med',  ev:0.52, t:65,  f:28,  n:14  },
+  CL:{ desc:'Lean Clay — Cy. Boundary', energy:'low',  ev:0.22, t:70,  ll:38, pi:16 },
+  SP:{ desc:'Clean Sand — Channel',     energy:'high', ev:0.78, t:55,  n:20         },
+};
+const ENERGY_VALS = {CH:0.07, CL:0.22, SC:0.52, SP:0.78};
+
+let _lid = 0;
+function mkId(){ return 'l'+(++_lid); }
+
+let LAYERS = [
+  { id:'l1', type:'CH', ...LAYER_DEFAULTS.CH, t:80  },
+  { id:'l2', type:'SC', ...LAYER_DEFAULTS.SC, t:60  },
+  { id:'l3', type:'CL', ...LAYER_DEFAULTS.CL, t:70  },
+  { id:'l4', type:'SC', ...LAYER_DEFAULTS.SC, t:55, f:32, n:10 },
+  { id:'l5', type:'CH', ...LAYER_DEFAULTS.CH, t:65  },
+];
+_lid = 5;
+
+let selLayer=null, showCyc=true, showCB=true, showGen=false, showMM=false;
+let cptData=null, cptClassified=null;
+
+function getLayer(id){ return LAYERS.find(l=>l.id===id); }
+function thick(id){ return getLayer(id)?.t||0; }
+
+// ═══════════════════════════════════════════════
+//  CYCLE DETECTION  (top→bottom scan)
+// ═══════════════════════════════════════════════
+function detectCycles(){
+  LAYERS.forEach(l=>{ l.pair=null; l.cyc=1; });
+  // Pair each SC/SP with the nearest CH/CL above it
+  for(let i=0; i<LAYERS.length; i++){
+    const l=LAYERS[i];
+    if(l.type==='SC'||l.type==='SP'){
+      for(let j=i-1; j>=0; j--){
+        if((LAYERS[j].type==='CH'||LAYERS[j].type==='CL')&&!LAYERS[j].pair){
+          l.pair=LAYERS[j].id; LAYERS[j].pair=l.id; break;
+        }
+      }
+    }
+  }
+  // Assign cycle numbers bottom→top: increment at each CL
+  let cyc=1;
+  for(let i=LAYERS.length-1; i>=0; i--){
+    LAYERS[i].cyc=cyc;
+    if(LAYERS[i].type==='CL') cyc++;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  BUILD CONTROLS DYNAMICALLY
+// ═══════════════════════════════════════════════
+function buildControls(){
+  detectCycles();
+  const container=document.getElementById('layers-ctrl');
+  container.innerHTML='';
+
+  // Group into cycles for headers
+  let lastCyc=-1;
+  let currentSec=null;
+
+  LAYERS.forEach((l,idx)=>{
+    if(l.cyc!==lastCyc){
+      const sec=document.createElement('div'); sec.className='sec';
+      const maxCyc=Math.max(...LAYERS.map(x=>x.cyc));
+      const hd=document.createElement('div'); hd.className='sec-hd';
+      hd.innerHTML=`<span class="sec-hd-label">↑ Cycle ${l.cyc}${l.cyc===maxCyc?' (uppermost)':''}</span>`;
+      sec.appendChild(hd);
+      container.appendChild(sec);
+      currentSec=sec; lastCyc=l.cyc;
+    }
+
+    const lb=document.createElement('div'); lb.className='lb'; lb.id=`lb-${l.id}`;
+    const typeName={CH:'Fat Clay',SC:'Clayey Sand',CL:'Lean Clay',SP:'Clean Sand'}[l.type]||l.type;
+
+    // Header row
+    lb.innerHTML=`
+      <div class="lh">
+        <span class="badge b${l.type}">${l.type}</span>
+        <span class="ln" title="${l.desc}">${l.desc}</span>
+        <button class="del-btn" onclick="removeLayer('${l.id}')" title="Delete layer">×</button>
+      </div>
+      ${ctrlRow(l.id,l.type,'t',  'Thickness',20,250,l.t,'px')}
+      ${l.ll!==undefined ? ctrlRow(l.id,l.type,'ll','LL (%)',25,120,l.ll,'%'):''}
+      ${l.pi!==undefined ? ctrlRow(l.id,l.type,'pi','PI',    5, 70,l.pi,'—'):''}
+      ${l.f !==undefined ? ctrlRow(l.id,l.type,'f', 'Fines %',5,65,l.f,'%'):''}
+      ${l.n !==undefined ? ctrlRow(l.id,l.type,'n', 'N₆₀',  1,60,l.n,'bpf'):''}
+      <div class="add-row">
+        <span class="new-lbl">+ below:</span>
+        <button class="add-btn aCH" onclick="addLayerAt(${idx+1},'CH')">CH</button>
+        <button class="add-btn aSC" onclick="addLayerAt(${idx+1},'SC')">SC</button>
+        <button class="add-btn aCL" onclick="addLayerAt(${idx+1},'CL')">CL</button>
+        <button class="add-btn aSP" onclick="addLayerAt(${idx+1},'SP')">SP</button>
+      </div>
+    `;
+    currentSec.appendChild(lb);
+  });
+
+  document.getElementById('hdr-layers').textContent=`${LAYERS.length} layers · ${LAYERS.reduce((s,l)=>s+l.t,0)} px`;
+}
+
+function ctrlRow(id,type,prop,label,mn,mx,val,unit){
+  return `<div class="cr">
+    <span class="cl">${label}</span>
+    <input type="range" id="s-${id}-${prop}" class="r${type}" min="${mn}" max="${mx}" value="${val}"
+      oninput="setLP('${id}','${prop}',this.value,${mn},${mx})">
+    <input type="number" id="n-${id}-${prop}" class="ni" value="${val}" min="${mn}" max="${mx}"
+      oninput="setLP('${id}','${prop}',this.value,${mn},${mx})"
+      onchange="setLP('${id}','${prop}',this.value,${mn},${mx})">
+    <span class="unit">${unit}</span>
+  </div>`;
+}
+
+function setLP(id,prop,val,mn,mx){
+  const l=getLayer(id); if(!l) return;
+  val=Math.max(mn,Math.min(mx,+val));
+  l[prop]=val;
+  const s=document.getElementById(`s-${id}-${prop}`), n=document.getElementById(`n-${id}-${prop}`);
+  if(s) s.value=val; if(n) n.value=val;
+  render();
+}
+
+function addLayerAt(idx,type){
+  const defs=LAYER_DEFAULTS[type]||LAYER_DEFAULTS.CH;
+  const newL={id:mkId(), type, ...JSON.parse(JSON.stringify(defs))};
+  LAYERS.splice(idx,0,newL);
+  buildControls(); render();
+  // flash new layer block
+  setTimeout(()=>{
+    const el=document.getElementById(`lb-${newL.id}`);
+    if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),800);}
+  },50);
+}
+
+function removeLayer(id){
+  if(LAYERS.length<=1) return;
+  LAYERS=LAYERS.filter(l=>l.id!==id);
+  if(selLayer===id) selLayer=null;
+  buildControls(); render();
+}
+
+// Toggle listeners
+document.getElementById('tog-cyc').addEventListener('change',e=>{showCyc=e.target.checked;render();});
+document.getElementById('tog-cb').addEventListener('change',e=>{showCB=e.target.checked;render();});
+document.getElementById('tog-gen').addEventListener('change',e=>{showGen=e.target.checked;render();});
+document.getElementById('tog-mm').addEventListener('change',e=>{showMM=e.target.checked;render();});
+document.getElementById('gwt').addEventListener('change',()=>{if(cptData)drawCPT();});
+document.getElementById('gamma').addEventListener('change',()=>{if(cptData)drawCPT();});
+
+// ═══════════════════════════════════════════════
+//  RENDER STRAT COLUMN
+// ═══════════════════════════════════════════════
+function render(){
+  detectCycles();
+  const col=document.getElementById('strat'); col.innerHTML='';
+  const totalH=LAYERS.reduce((s,l)=>s+l.t,0);
+  document.getElementById('tot-d').textContent=totalH;
+  document.getElementById('tot-layers').textContent=LAYERS.length;
+
+  const tops={};
+  let cumY=0;
+
+  LAYERS.forEach((def,i)=>{
+    tops[def.id]=cumY;
+    // Compute CPT mismatch for this layer position
+    let mismatch=false;
+    if(showMM&&cptClassified){
+      const frac0=cumY/totalH, frac1=(cumY+def.t)/totalH;
+      const minD=cptClassified[0].depth, maxD=cptClassified[cptClassified.length-1].depth;
+      const dR=maxD-minD||1;
+      const pts=cptClassified.filter(r=>{
+        const f=(r.depth-minD)/dR; return f>=frac0&&f<frac1;
+      });
+      if(pts.length>0){
+        const dominant=pts.reduce((acc,r)=>{acc[r.sbtC.uscs]=(acc[r.sbtC.uscs]||0)+1;return acc;},{});
+        const best=Object.entries(dominant).sort((a,b)=>b[1]-a[1])[0][0];
+        const mapType={CH:'CH',CL:'CH',SC:'SC',SP:'SC',GW:'SC',PT:'CH'};
+        mismatch=(mapType[best]||best)!==def.type&&def.type!==mapType[best];
+      }
+    }
+
+    const div=document.createElement('div');
+    div.className=`layer ${def.type}${selLayer===def.id?' HL':''}${mismatch?' mismatch':''}`;
+    div.style.height=def.t+'px'; div.dataset.id=def.id;
+    const fill=document.createElement('div'); fill.className=`lf h${def.type}`; div.appendChild(fill);
+
+    // Cycle boundary marker (between consecutive CL-top and SC-base)
+    if(showCB&&i>0){
+      const prev=LAYERS[i-1];
+      if((prev.type==='SC'||prev.type==='SP')&&(def.type==='CL'||def.type==='CH')){
+        const cb=document.createElement('div');cb.className='cb';cb.style.top='0';div.appendChild(cb);
+      }
+    }
+
+    const lbl=document.createElement('div');lbl.className='lbl-r';
+    lbl.innerHTML=`<span class="sc sc-${def.type}">${def.type}</span>${def.desc.split('—')[1]?.trim()||''}`;
+    div.appendChild(lbl);
+    div.addEventListener('click',()=>{selLayer=(selLayer===def.id)?null:def.id;render();selLayer?showInfo(def):resetInfo();});
+    col.appendChild(div);
+    cumY+=def.t;
+  });
+
+  // Cycle brackets
+  document.querySelectorAll('.cyc').forEach(e=>e.remove());
+  if(showCyc){
+    const dia=document.getElementById('dia');
+    const cR=col.getBoundingClientRect(), dR=dia.getBoundingClientRect();
+    const cycNums=[...new Set(LAYERS.map(l=>l.cyc))];
+    cycNums.forEach(cn=>{
+      const inCycle=LAYERS.filter(l=>l.cyc===cn);
+      if(!inCycle.length) return;
+      const topLayer=inCycle[0], botLayer=inCycle[inCycle.length-1];
+      let cy=0;
+      LAYERS.forEach(l=>{ if(l.id===topLayer.id) return; if(!inCycle.includes(l)) cy+=l.t; });
+      const top=LAYERS.filter(l=>!inCycle.includes(l)&&LAYERS.indexOf(l)<LAYERS.indexOf(topLayer)).reduce((s,l)=>s+l.t,0);
+      const h=inCycle.reduce((s,l)=>s+l.t,0);
+      const el=document.createElement('div');el.className='cyc';
+      el.style.top=(top+22)+'px';el.style.height=h+'px';
+      el.style.left=(cR.left-dR.left-22)+'px';el.style.width=(cR.width+16)+'px';
+      const lb=document.createElement('div');lb.className='cyc-lbl';lb.textContent=`CYC-${cn}`;
+      el.appendChild(lb); dia.appendChild(el);
+    });
+  }
+
+  // Depth axis
+  const ax=document.getElementById('ax');
+  ax.innerHTML=''; ax.style.height=totalH+'px'; ax.style.position='relative';
+  for(let i=0;i<=5;i++){
+    const l=document.createElement('div');l.className='ax-lbl';
+    l.style.top=(i/5*totalH)+'px';l.textContent=Math.round(i/5*totalH);ax.appendChild(l);
+  }
+
+  // Genetic arrows
+  const svg=document.getElementById('arsvg'); svg.innerHTML='';
+  if(showGen){
+    const cR=col.getBoundingClientRect(), sR=svg.getBoundingClientRect();
+    const ox=cR.left-sR.left, oy=cR.top-sR.top;
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    const mk=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    mk.setAttribute('id','arr');mk.setAttribute('markerWidth','8');mk.setAttribute('markerHeight','6');
+    mk.setAttribute('refX','8');mk.setAttribute('refY','3');mk.setAttribute('orient','auto');
+    const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points','0 0,8 3,0 6');poly.setAttribute('fill','#c8a85a');
+    mk.appendChild(poly);defs.appendChild(mk);svg.appendChild(defs);
+    LAYERS.forEach(l=>{
+      if((l.type==='SC'||l.type==='SP')&&l.pair){
+        const paired=getLayer(l.pair);
+        if(!paired) return;
+        const fi=LAYERS.indexOf(l), ti=LAYERS.indexOf(paired);
+        const fy=oy+tops[l.id]+l.t/2, ty=oy+tops[paired.id]+paired.t/2, x=ox-48;
+        const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('d',`M${ox+76} ${fy} C${x} ${fy} ${x} ${ty} ${ox+76} ${ty}`);
+        p.setAttribute('stroke','#c8a85a');p.setAttribute('stroke-width','1.5');p.setAttribute('fill','none');
+        p.setAttribute('stroke-dasharray','5 3');p.setAttribute('marker-end','url(#arr)');p.setAttribute('opacity','0.75');
+        svg.appendChild(p);
+        const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x',x-2);t.setAttribute('y',(fy+ty)/2);t.setAttribute('text-anchor','middle');
+        t.setAttribute('font-family','IBM Plex Mono,monospace');t.setAttribute('font-size','8');
+        t.setAttribute('fill','#c8a85a');t.setAttribute('opacity','0.8');
+        t.setAttribute('transform',`rotate(-90,${x-2},${(fy+ty)/2})`);t.textContent='SAME CYCLE';
+        svg.appendChild(t);
+      }
+    });
+  }
+
+  updateRiver(tops, totalH);
+  drawSBTOverlay(totalH);
+  if(cptClassified) correlation(cptClassified, cptClassified[0].depth, cptClassified[cptClassified.length-1].depth);
+}
+
+// ═══════════════════════════════════════════════
+//  RIVER ANIMATION
+// ═══════════════════════════════════════════════
+const RC=document.getElementById('river-canvas');
+const RX=RC.getContext('2d');
+let rLayers=[], rParticles=[], rT=0;
+const RW=155, RDATA=138;
+
+const WCOLORS={CH:['#1a0f2e','#2c1e46'],CL:['#0a1f18','#152e22'],SC:['#261400','#3d2205'],SP:['#0e200a','#1a3510']};
+const PCFG={
+  CH:{count:18,sz:[1,2.5],spd:[0.06,0.2],col:'rgba(155,105,204,',al:[0.2,0.5]},
+  CL:{count:13,sz:[1.2,2.8],spd:[0.1,0.35],col:'rgba(90,184,138,',al:[0.18,0.42]},
+  SC:{count:28,sz:[2,4.5],spd:[0.5,1.3],col:'rgba(232,168,90,',al:[0.3,0.7]},
+  SP:{count:38,sz:[2.5,5],spd:[0.9,2.0],col:'rgba(136,204,85,',al:[0.3,0.7]},
+};
+
+function updateRiver(tops,totalH){
+  const maxH=400, scale=Math.min(maxH/totalH,1);
+  const H=Math.max(20,Math.round(totalH*scale));
+  if(RC.height!==H) RC.height=H;
+  rLayers=LAYERS.map(d=>({
+    id:d.id,type:d.type,ev:ENERGY_VALS[d.type]||0.1,
+    y:Math.round(tops[d.id]*scale), h:Math.max(4,Math.round(d.t*scale))
+  }));
+  rParticles=[];
+  rLayers.forEach(l=>spawnP(l));
+}
+
+function spawnP(l){
+  const c=PCFG[l.type]||PCFG.CH;
+  for(let i=0;i<c.count;i++){
+    const al=c.al[0]+Math.random()*(c.al[1]-c.al[0]);
+    rParticles.push({
+      lid:l.id,type:l.type,col:c.col,al,bAl:al,
+      x:Math.random()*RDATA, y:l.y+Math.random()*l.h,
+      vx:(c.spd[0]+Math.random()*(c.spd[1]-c.spd[0]))*(Math.random()<.5?1:-1),
+      r:c.sz[0]+Math.random()*(c.sz[1]-c.sz[0]),
+      ph:Math.random()*Math.PI*2, ly:l.y, lh:l.h
+    });
+  }
+}
+
+const ECOLS={CH:'#9b69cc',CL:'#5ab88a',SC:'#e8a85a',SP:'#88cc55'};
+
+function drawRiver(){
+  const W=RC.width, H=RC.height;
+  RX.clearRect(0,0,W,H); rT+=0.016;
+
+  rLayers.forEach(l=>{
+    const [c1,c2]=(WCOLORS[l.type]||WCOLORS.CH);
+    const g=RX.createLinearGradient(0,l.y,RDATA,l.y+l.h);
+    g.addColorStop(0,c1);g.addColorStop(1,c2);
+    RX.fillStyle=g; RX.fillRect(0,l.y,RDATA,l.h);
+    const eCol=ECOLS[l.type]||'#888';
+    const eH=Math.max(2,l.h*l.ev*0.85);
+    RX.fillStyle=eCol+'55'; RX.fillRect(0,l.y+(l.h-eH)/2,4,eH);
+
+    if(l.type==='CH'||l.type==='CL'){
+      const nL=Math.max(2,Math.floor(l.h/11));
+      for(let i=0;i<nL;i++){
+        const ly=l.y+(i+1)*(l.h/(nL+1)), amp=l.type==='CH'?0.35:0.9;
+        RX.beginPath();RX.strokeStyle=eCol+'12';RX.lineWidth=1;
+        for(let x=0;x<=RDATA;x+=2){const y2=ly+Math.sin(x*0.04+rT*0.4+i)*amp;x===0?RX.moveTo(x,y2):RX.lineTo(x,y2);}
+        RX.stroke();
+      }
+    }
+    if(l.type==='SC'||l.type==='SP'){
+      const spd=l.type==='SP'?2.2:1.5;
+      for(let i=0;i<4;i++){
+        const ly=l.y+(i+0.5)*(l.h/4), sv=spd+i*0.3;
+        RX.beginPath();RX.strokeStyle=eCol+(l.type==='SP'?'18':'10');RX.lineWidth=l.type==='SP'?2:1.5;
+        for(let x=0;x<=RDATA;x+=3){const y2=ly+Math.sin(x*0.08-rT*sv+i*2)*2;x===0?RX.moveTo(x,y2):RX.lineTo(x,y2);}
+        RX.stroke();
+      }
+      RX.beginPath();RX.strokeStyle=eCol+(l.type==='SP'?'30':'20');RX.lineWidth=1;
+      for(let x=0;x<=RDATA;x+=2){const y2=l.y+l.h-3+Math.sin(x*0.16-rT*1.6)*2;x===0?RX.moveTo(x,y2):RX.lineTo(x,y2);}
+      RX.stroke();
+    }
+    if(selLayer===l.id){RX.strokeStyle='rgba(200,168,90,.55)';RX.lineWidth=2;RX.strokeRect(1,l.y+1,RDATA-2,l.h-2);}
+    const eLbl={CH:'V.LOW',CL:'LOW',SC:'MED',SP:'MED-HI'}[l.type]||'—';
+    RX.font='500 7px IBM Plex Mono,monospace';RX.fillStyle=eCol+'68';
+    RX.fillText(eLbl,RDATA-38,l.y+l.h/2+3);
+    RX.strokeStyle='rgba(255,255,255,.06)';RX.lineWidth=1;
+    RX.beginPath();RX.moveTo(0,l.y);RX.lineTo(RDATA,l.y);RX.stroke();
+  });
+
+  RX.save();RX.beginPath();RX.rect(0,0,RDATA,H);RX.clip();
+  rParticles.forEach(p=>{
+    const l=rLayers.find(x=>x.id===p.lid); if(!l) return;
+    if(p.type==='SC'||p.type==='SP'){
+      p.x+=p.vx; p.y+=Math.sin(rT*2.2+p.ph)*0.28;
+      if(p.x<0)p.x=RDATA; if(p.x>RDATA)p.x=0;
+    } else {
+      p.y+=Math.abs(p.vx)*0.12; p.x+=Math.sin(rT*0.55+p.ph)*0.35;
+      if(p.y>l.ly+l.lh)p.y=l.ly; if(p.x<0)p.x=RDATA; if(p.x>RDATA)p.x=0;
+    }
+    p.y=Math.max(l.ly,Math.min(l.ly+l.lh,p.y));
+    const flicker=(p.type==='SC'||p.type==='SP')?0.16:0.04;
+    const a=Math.max(0.04,p.bAl+Math.sin(rT*3+p.ph)*flicker);
+    RX.beginPath();RX.arc(p.x,p.y,p.r,0,Math.PI*2);RX.fillStyle=p.col+a+')';RX.fill();
+  });
+  RX.restore();
+
+  // Divider
+  RX.strokeStyle='rgba(90,200,168,.16)';RX.lineWidth=1;
+  RX.beginPath();RX.moveTo(RDATA+1,0);RX.lineTo(RDATA+1,H);RX.stroke();
+
+  // CPT energy strip (right 15px)
+  const SW=W-RDATA-2, SX=RDATA+2;
+  if(cptClassified&&cptClassified.length>1){
+    const minD=cptClassified[0].depth, maxD=cptClassified[cptClassified.length-1].depth, dR=maxD-minD||1;
+    RX.fillStyle='#090b0e'; RX.fillRect(SX,0,SW,H);
+    cptClassified.forEach((r,i)=>{
+      if(i===0) return;
+      const prev=cptClassified[i-1];
+      const y1=(prev.depth-minD)/dR*H, y2=(r.depth-minD)/dR*H;
+      const h=Math.max(0.4,y2-y1);
+      let col;
+      if(r.Ic<1.5)      col='rgba(200,60,60,.8)';
+      else if(r.Ic<2.0) col='rgba(136,204,85,.75)';
+      else if(r.Ic<2.4) col='rgba(232,168,90,.75)';
+      else if(r.Ic<2.9) col='rgba(90,184,138,.75)';
+      else              col='rgba(155,105,204,.75)';
+      RX.fillStyle=col; RX.fillRect(SX,y1,SW,h);
+    });
+    // shimmer
+    RX.beginPath();
+    for(let y=0;y<H;y+=2){const x=SX+SW*.5+Math.sin(y*.1+rT*.8)*SW*.28;y===0?RX.moveTo(x,y):RX.lineTo(x,y);}
+    RX.strokeStyle='rgba(255,255,255,.05)';RX.lineWidth=1;RX.stroke();
+    RX.save();RX.translate(SX+SW/2,H/2);RX.rotate(-Math.PI/2);
+    RX.font='500 5.5px IBM Plex Mono,monospace';RX.fillStyle='rgba(90,200,168,.5)';
+    RX.textAlign='center';RX.fillText('CPT Ic',0,0);RX.restore();
+  } else {
+    RX.fillStyle='rgba(42,45,56,.35)';RX.fillRect(SX,0,SW,H);
+    RX.save();RX.translate(SX+SW/2,H/2);RX.rotate(-Math.PI/2);
+    RX.font='5px IBM Plex Mono,monospace';RX.fillStyle='rgba(107,112,128,.35)';
+    RX.textAlign='center';RX.fillText('NO CPT',0,0);RX.restore();
+  }
+
+  requestAnimationFrame(drawRiver);
+}
+requestAnimationFrame(drawRiver);
+
+// ═══════════════════════════════════════════════
+//  SBT OVERLAY STRIP IN DIAGRAM
+// ═══════════════════════════════════════════════
+function drawSBTOverlay(totalH){
+  const wrap=document.getElementById('sbt-ov-wrap');
+  const oc=document.getElementById('sbt-overlay');
+  if(!cptClassified||!cptClassified.length){wrap.classList.remove('show');return;}
+  wrap.classList.add('show');
+  oc.height=totalH;
+  const ctx=oc.getContext('2d'); const W=26,H=totalH;
+  ctx.fillStyle='#0a0c12'; ctx.fillRect(0,0,W,H);
+  const minD=cptClassified[0].depth, maxD=cptClassified[cptClassified.length-1].depth, dR=maxD-minD||1;
+  let prev=null, rs=cptClassified[0].depth;
+  function flush(end,clr){
+    const y1=(rs-minD)/dR*H, y2=(end-minD)/dR*H, bh=Math.max(1,y2-y1);
+    ctx.fillStyle=clr.color+'cc'; ctx.fillRect(0,y1,W,bh);
+    if(bh>12){ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='bold 6px IBM Plex Mono,monospace';ctx.fillText(clr.uscs,3,(y1+y2)/2+3);}
+    if(bh>22){ctx.fillStyle='rgba(255,255,255,.28)';ctx.font='5px IBM Plex Mono,monospace';ctx.fillText('Ic'+((prev||clr).avgIc||0).toFixed(1),3,(y1+y2)/2+11);}
+  }
+  let icSum=0,icN=0;
+  cptClassified.forEach((r,i)=>{
+    icSum+=r.Ic; icN++;
+    if(!prev){prev=r.sbtC;rs=r.depth;return;}
+    if(r.sbtC.uscs!==prev.uscs){
+      prev.avgIc=icN>0?icSum/icN:0; flush(r.depth,prev); rs=r.depth; prev=r.sbtC; icSum=0; icN=0;
+    }
+    if(i===cptClassified.length-1){prev.avgIc=icN>0?icSum/icN:0; flush(r.depth,prev);}
+  });
+  // Model boundary lines
+  ctx.strokeStyle='rgba(200,168,90,.45)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  let cumY=0;
+  LAYERS.forEach((l,i)=>{ if(i>0){ctx.beginPath();ctx.moveTo(0,cumY);ctx.lineTo(W,cumY);ctx.stroke();} cumY+=l.t; });
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════
+//  LAYER INFO
+// ═══════════════════════════════════════════════
+function showInfo(def){
+  const eLbls={vlow:'Very Low — overbank',low:'Low — floodplain',med:'Medium — ch. margin',high:'High — active channel'};
+  let h=`<div class="st">${def.type} — ${def.desc}</div>`;
+  const rows=[['Cycle',`Cycle ${def.cyc}`],['Energy',eLbls[def.energy]||def.energy,def.energy==='med'||def.energy==='high'?'warn':'good'],['Thickness',def.t+' px']];
+  if(def.ll!==undefined) rows.push(['Liquid Limit',def.ll+'%']);
+  if(def.pi!==undefined) rows.push(['PI',def.pi]);
+  if(def.f!==undefined)  rows.push(['Fines',def.f+'%','warn']);
+  if(def.n!==undefined)  rows.push(['N₆₀',def.n+' bpf','warn']);
+  if(def.pair){
+    const p=getLayer(def.pair);
+    rows.push(['Genetic pair',p?`${p.type} — same cycle`:'—','good']);
+  }
+  h+=rows.map(([k,v,c])=>`<div class="sr"><span class="sk">${k}</span><span class="sv${c?' '+c:''}">${v}</span></div>`).join('');
+  document.getElementById('sel-info').innerHTML=h;
+}
+function resetInfo(){
+  document.getElementById('sel-info').innerHTML='<div class="st">← Click a layer to inspect</div><div class="pb" style="font-size:.58rem">Select any layer for properties and genetic context.</div>';
+}
+
+// ═══════════════════════════════════════════════
+//  CPT PARSING
+// ═══════════════════════════════════════════════
+const UZ=document.getElementById('upload-zone'), FI=document.getElementById('file-input');
+UZ.addEventListener('dragover',e=>{e.preventDefault();UZ.classList.add('drag');});
+UZ.addEventListener('dragleave',()=>UZ.classList.remove('drag'));
+UZ.addEventListener('drop',e=>{e.preventDefault();UZ.classList.remove('drag');if(e.dataTransfer.files[0])parseCSV(e.dataTransfer.files[0]);});
+FI.addEventListener('change',e=>{if(e.target.files[0])parseCSV(e.target.files[0]);});
+
+function parseCSV(file){
+  const st=document.getElementById('cpt-status');
+  st.style.display='block'; st.textContent='Parsing…'; st.style.color='var(--muted)';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const raw=e.target.result;
+      const delim=raw.split('\n')[0].split(';').length>3?';':',';
+      const eu=delim===';';
+      const pn=s=>{if(!s||!s.trim())return NaN;let v=s.trim().replace(/['"]/g,'');if(eu)v=v.replace(',','.');return parseFloat(v);};
+      const lines=raw.trim().split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length<5) throw new Error('File too short');
+      let hIdx=-1, dStart=-1, di=0, qi=1, fi=2, ui=-1;
+      for(let i=0;i<Math.min(lines.length,60);i++){
+        const cols=lines[i].split(delim).map(s=>s.trim().toLowerCase().replace(/['"]/g,''));
+        if(cols.some(c=>/^dep/.test(c)||c==='tip'||/local.?fric/.test(c))){hIdx=i;continue;}
+        if(hIdx>=0&&dStart<0&&!isNaN(pn(lines[i].split(delim)[0]))){dStart=i;break;}
+      }
+      if(dStart<0){for(let i=0;i<lines.length;i++){const p=lines[i].split(delim);if(p.length>=2&&!isNaN(pn(p[0]))&&!isNaN(pn(p[1]))){hIdx=Math.max(0,i-1);dStart=i;break;}}}
+      if(dStart<0) throw new Error('Could not locate data rows');
+      if(hIdx>=0){
+        const hc=lines[hIdx].split(delim).map(s=>s.trim().toLowerCase().replace(/['"]/g,''));
+        hc.forEach((h,i)=>{
+          if(/^dep/.test(h)&&di===0)di=i;
+          if((h==='tip'||/^qc|^qt/.test(h))&&qi===1)qi=i;
+          if((/local.?fric/.test(h)||/^fs$|sleeve/.test(h))&&fi===2)fi=i;
+          if(/pore|shoulder|u2/.test(h)&&ui<0)ui=i;
+        });
+      }
+      let fsMPa=false;
+      for(let i=dStart;i<Math.min(dStart+10,lines.length);i++){const c=lines[i].split(delim);const v=pn(c[fi]);if(!isNaN(v)&&Math.abs(v)<2){fsMPa=true;break;}}
+      const rows=[];
+      for(let i=dStart;i<lines.length;i++){
+        const c=lines[i].split(delim); if(c.length<=Math.max(di,qi,fi))continue;
+        const depth=pn(c[di]), qc=pn(c[qi]); let fs=pn(c[fi]); const u2=ui>=0?pn(c[ui]):NaN;
+        if(isNaN(depth)||isNaN(qc)||depth<0)continue;
+        if(fsMPa)fs=fs*1000; fs=Math.max(0.5,isNaN(fs)?1:fs);
+        const qt=(!isNaN(u2)&&fsMPa)?qc+u2*(1-0.8):qc;
+        rows.push({depth,qc,qt,fs,u2:isNaN(u2)?null:u2});
+      }
+      if(rows.length<3) throw new Error(`Only ${rows.length} valid rows`);
+      cptData=rows;
+      st.textContent=`✓ ${rows.length} rows · ${rows[0].depth.toFixed(2)}–${rows[rows.length-1].depth.toFixed(1)} m${fsMPa?' · fs MPa→kPa':''}${rows.some(r=>r.u2!=null)?' · u₂ included':''}`;
+      st.style.color='var(--accent2)';
+      document.getElementById('cpt-chart-area').style.display='block';
+      document.getElementById('corr-area').style.display='block';
+      document.getElementById('fit-btn').style.display='inline-block';
+      document.getElementById('cpt-e-item').style.display='flex';
+      drawCPT();
+      render();
+    }catch(err){st.textContent='✗ '+err.message;st.style.color='#c85a5a';console.error(err);}
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════
+//  ROBERTSON 1990 Ic
+// ═══════════════════════════════════════════════
+function robertsonIc(depth,qcMPa,fskPa,qtMPa){
+  const gwt=+document.getElementById('gwt').value, gam=+document.getElementById('gamma').value;
+  const sv0=depth*gam, u0=Math.max(0,(depth-gwt)*9.81), sv0e=Math.max(0.5,sv0-u0);
+  const qMPa=(qtMPa!=null&&!isNaN(qtMPa))?qtMPa:qcMPa;
+  const qkPa=qMPa*1000;
+  const Qt=Math.max(0.1,(qkPa-sv0)/sv0e);
+  const Fr=Math.max(0.1,(fskPa/(qkPa-sv0+0.01))*100);
+  const Ic=Math.sqrt(Math.pow(3.47-Math.log10(Qt),2)+Math.pow(Math.log10(Fr)+1.22,2));
+  return {Ic,Qt,Fr};
+}
+const SBT_CLASSES=[
+  {max:1.31,uscs:'GW',color:'#3a4a6a'},{max:2.05,uscs:'SP',color:'#4a5a2e'},
+  {max:2.60,uscs:'SC',color:'#b8732a'},{max:2.95,uscs:'CL',color:'#2a5a4a'},
+  {max:3.60,uscs:'CH',color:'#4a2e6e'},{max:99, uscs:'PT',color:'#6b4040'}
+];
+function sbt(Ic){return SBT_CLASSES.find(c=>Ic<=c.max)||SBT_CLASSES[SBT_CLASSES.length-1];}
+
+// ═══════════════════════════════════════════════
+//  DRAW CPT CHART
+// ═══════════════════════════════════════════════
+function drawCPT(){
+  const CC=document.getElementById('cpt-canvas'), BC=document.getElementById('sbt-canvas');
+  const cx=CC.getContext('2d'), bx=BC.getContext('2d');
+  const W=148,H=340,BW=44; cx.clearRect(0,0,W,H); bx.clearRect(0,0,BW,H);
+  cx.fillStyle='#0a0c10';cx.fillRect(0,0,W,H); bx.fillStyle='#0a0c10';bx.fillRect(0,0,BW,H);
+  const rows=cptData;
+  const minD=rows[0].depth, maxD=rows[rows.length-1].depth, dR=maxD-minD||1;
+  const maxQ=Math.max(...rows.map(r=>r.qt||r.qc))*1.15||5;
+  const PAD=14;
+  cx.strokeStyle='rgba(255,255,255,.05)';cx.lineWidth=1;
+  for(let i=0;i<=4;i++){const x=PAD+i/4*(W-PAD*1.5);cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();cx.fillStyle='rgba(200,168,90,.35)';cx.font='6px IBM Plex Mono,monospace';cx.fillText((i/4*maxQ).toFixed(1),x-4,H-2);}
+  cx.fillStyle='rgba(200,168,90,.6)';cx.font='7px IBM Plex Mono,monospace';cx.fillText('qt (MPa)',2,9);
+  const cl=rows.map(r=>{const {Ic,Qt,Fr}=robertsonIc(r.depth,r.qc,r.fs,r.qt);return {...r,Ic,Qt,Fr,sbtC:sbt(Ic)};});
+  cptClassified=cl;
+  let prev=null,rs=cl[0].depth,icA=0,icN=0;
+  function flushR(end,clr){
+    const y1=PAD+(rs-minD)/dR*(H-PAD*2),y2=PAD+(end-minD)/dR*(H-PAD*2),rh=Math.max(1,y2-y1);
+    bx.fillStyle=clr.color+'dd';bx.fillRect(0,y1,BW,rh);
+    if(rh>13){bx.fillStyle='rgba(255,255,255,.8)';bx.font='bold 7px IBM Plex Mono,monospace';bx.fillText(clr.uscs,3,(y1+y2)/2+3);}
+    if(rh>23){bx.fillStyle='rgba(255,255,255,.3)';bx.font='5.5px IBM Plex Mono,monospace';bx.fillText('Ic'+(icN>0?icA/icN:0).toFixed(2),3,(y1+y2)/2+11);}
+  }
+  cl.forEach((r,i)=>{icA+=r.Ic;icN++;if(!prev){prev=r.sbtC;rs=r.depth;return;}if(r.sbtC.uscs!==prev.uscs){flushR(r.depth,prev);rs=r.depth;prev=r.sbtC;icA=0;icN=0;}if(i===cl.length-1)flushR(r.depth,prev);});
+  cx.beginPath();cl.forEach((r,i)=>{const y=PAD+(r.depth-minD)/dR*(H-PAD*2),x=PAD+(r.qt||r.qc)/maxQ*(W-PAD*1.5);if(i===0){cx.moveTo(PAD,y);cx.lineTo(x,y);}else cx.lineTo(x,y);});cx.lineTo(PAD,PAD+(cl[cl.length-1].depth-minD)/dR*(H-PAD*2));cx.closePath();cx.fillStyle='rgba(200,168,90,.08)';cx.fill();
+  cx.beginPath();cl.forEach((r,i)=>{const y=PAD+(r.depth-minD)/dR*(H-PAD*2),x=PAD+(r.qt||r.qc)/maxQ*(W-PAD*1.5);i===0?cx.moveTo(x,y):cx.lineTo(x,y);});cx.strokeStyle='rgba(200,168,90,.82)';cx.lineWidth=1.5;cx.stroke();
+  const hasU2=rows.some(r=>r.u2!=null&&r.u2!==0);
+  if(hasU2){
+    const gwt=+document.getElementById('gwt').value;
+    const midX=W*0.62; const du=rows.filter(r=>r.u2!=null).map(r=>r.u2*1000-Math.max(0,(r.depth-gwt)*9.81));
+    const maxDu=Math.max(...du.map(Math.abs),10)*1.2;
+    cx.beginPath();cx.setLineDash([3,5]);cx.strokeStyle='rgba(90,200,168,.18)';cx.lineWidth=1;cx.moveTo(midX,PAD);cx.lineTo(midX,H-PAD);cx.stroke();cx.setLineDash([]);
+    cx.beginPath();rows.forEach((r,i)=>{if(r.u2==null)return;const y=PAD+(r.depth-minD)/dR*(H-PAD*2);const duR=r.u2*1000-Math.max(0,(r.depth-gwt)*9.81);const x=Math.max(PAD+2,Math.min(W-3,midX+(duR/maxDu)*(W-midX-PAD)*.9));i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
+    cx.strokeStyle='rgba(90,200,168,.6)';cx.lineWidth=1;cx.setLineDash([2,3]);cx.stroke();cx.setLineDash([]);
+    cx.fillStyle='rgba(90,200,168,.5)';cx.font='6px IBM Plex Mono,monospace';cx.fillText('Δu₂',midX+2,9);
+  }
+  for(let i=0;i<=5;i++){const d=minD+i/5*dR,y=PAD+i/5*(H-PAD*2);cx.strokeStyle='rgba(255,255,255,.04)';cx.lineWidth=1;cx.beginPath();cx.moveTo(PAD,y);cx.lineTo(W,y);cx.stroke();cx.fillStyle='rgba(107,112,128,.62)';cx.font='6px IBM Plex Mono,monospace';cx.fillText(d.toFixed(2)+'m',1,y+3);}
+  bx.fillStyle='rgba(200,168,90,.5)';bx.font='6px IBM Plex Mono,monospace';bx.fillText('SBT',3,9);
+  const leg=document.getElementById('cpt-leg');
+  const seen=new Set(cl.map(r=>r.sbtC.uscs));
+  const ALL={GW:'#6688aa',SP:'#88aa55',SC:'#e8a85a',CL:'#5ab88a',CH:'#9b69cc',PT:'#bb7070'};
+  leg.innerHTML=[...seen].map(u=>`<div class="ci"><div class="cd" style="background:${ALL[u]||'#888'}"></div>${u}</div>`).join('');
+  if(hasU2)leg.innerHTML+=`<div class="ci"><div class="cd" style="background:rgba(90,200,168,.6);border-radius:1px"></div>Δu₂</div>`;
+  correlation(cl,minD,maxD);
+}
+
+// ═══════════════════════════════════════════════
+//  CORRELATION SCORE
+// ═══════════════════════════════════════════════
+function correlation(cl,minD,maxD){
+  const totalH=LAYERS.reduce((s,l)=>s+l.t,0), dR=maxD-minD;
+  let ok=0,tot=cl.length;
+  cl.forEach(r=>{
+    const frac=(r.depth-minD)/dR; const px=frac*totalH;
+    let cy=0,mt=null;
+    LAYERS.forEach(l=>{if(!mt&&px>=cy&&px<cy+l.t)mt=l.type;cy+=l.t;});
+    if(!mt)mt=LAYERS[LAYERS.length-1].type;
+    const cs=r.sbtC.uscs;
+    if(cs===mt)ok++;
+    else if((mt==='CH'||mt==='CL')&&(cs==='CH'||cs==='CL'))ok+=0.65;
+    else if((mt==='SC'||mt==='SP')&&(cs==='SC'||cs==='SP'||cs==='GW'))ok+=0.55;
+  });
+  const pct=Math.round(ok/tot*100);
+  const pEl=document.getElementById('corr-pct');
+  pEl.textContent=pct+'%';
+  pEl.style.color=pct>72?'var(--accent2)':pct>48?'var(--SC-l)':'#c85a5a';
+  document.getElementById('corr-txt').innerHTML=`SBT vs. stratigraphic model<br>${ok.toFixed(0)} / ${tot} depth pts<br><span style="font-size:.5rem;color:var(--muted)">Robertson 1990 Iₓ · partial credit clay/sand sub-types</span>`;
+  const byType={};
+  cl.forEach(r=>{byType[r.sbtC.uscs]=(byType[r.sbtC.uscs]||0)+1;});
+  document.getElementById('corr-detail').innerHTML=Object.entries(byType).map(([t,n])=>`${t}: ${n} pts (${Math.round(n/tot*100)}%)`).join(' · ');
+}
+
+// ═══════════════════════════════════════════════
+//  FIT TO CPT — rebuilds LAYERS from CPT runs
+// ═══════════════════════════════════════════════
+function fitToCPT(){
+  if(!cptClassified||!cptClassified.length) return;
+
+  // 1. Smooth Ic (median filter window 5)
+  const WIN=5;
+  const smoothed=cptClassified.map((r,i)=>{
+    const win=cptClassified.slice(Math.max(0,i-WIN),Math.min(cptClassified.length,i+WIN+1));
+    const s=[...win.map(w=>w.Ic)].sort((a,b)=>a-b);
+    return {...r,Ic:s[Math.floor(s.length/2)],sbtC:sbt(s[Math.floor(s.length/2)])};
+  });
+
+  // 2. Build raw runs
+  const rawRuns=[];
+  let cur={uscs:smoothed[0].sbtC.uscs,sbtC:smoothed[0].sbtC,start:smoothed[0].depth,end:smoothed[0].depth,icVals:[]};
+  smoothed.forEach((r,i)=>{
+    cur.icVals.push(r.Ic);
+    if(r.sbtC.uscs!==cur.uscs){
+      cur.end=r.depth; rawRuns.push({...cur}); 
+      cur={uscs:r.sbtC.uscs,sbtC:r.sbtC,start:r.depth,end:r.depth,icVals:[r.Ic]};
+    }
+    if(i===smoothed.length-1){cur.end=r.depth;rawRuns.push({...cur});}
+  });
+
+  // 3. Merge thin runs (<0.1m) into neighbours
+  let merged=[...rawRuns];
+  for(let pass=0;pass<3;pass++){
+    const out=[];
+    merged.forEach((r,i)=>{
+      if(r.end-r.start<0.1&&out.length>0){
+        out[out.length-1].end=r.end;
+        out[out.length-1].icVals=[...out[out.length-1].icVals,...r.icVals];
+      } else out.push({...r});
+    });
+    merged=out;
+  }
+
+  // 4. Map USCS → geology type (SP/GW → SC or SP based on Ic)
+  const mapped=merged.map(r=>{
+    const medIc=r.icVals.sort((a,b)=>a-b)[Math.floor(r.icVals.length/2)];
+    r.avgIc=medIc;
+    let type;
+    if(medIc>3.6)      type='CH';
+    else if(medIc>2.9) type='CH';
+    else if(medIc>2.55)type='CL';
+    else if(medIc>1.9) type='SC';
+    else               type='SP';
+    return {...r,type};
+  });
+
+  // 5. Merge adjacent same-type
+  const coarse=[];
+  mapped.forEach(r=>{
+    if(coarse.length>0&&coarse[coarse.length-1].type===r.type){
+      coarse[coarse.length-1].end=r.end;
+      coarse[coarse.length-1].icVals=[...coarse[coarse.length-1].icVals,...r.icVals];
+    } else coarse.push({...r});
+  });
+
+  // 6. Recompute avgIc per merged run
+  coarse.forEach(r=>{
+    const s=[...r.icVals].sort((a,b)=>a-b);
+    r.avgIc=s[Math.floor(s.length/2)];
+  });
+
+  // 7. Convert to pixel thicknesses
+  const totalDepth=coarse.reduce((s,r)=>s+(r.end-r.start),0)||1;
+  const TARGET_PX=Math.max(280, Math.min(480, coarse.length*70));
+  const newLayers=coarse.map(r=>{
+    const frac=(r.end-r.start)/totalDepth;
+    const px=Math.max(28, Math.round(frac*TARGET_PX));
+    const type=r.type;
+    const base=JSON.parse(JSON.stringify(LAYER_DEFAULTS[type]||LAYER_DEFAULTS.CH));
+    // Estimate index properties from Ic
+    if(type==='CH'){ base.ll=Math.round(50+r.avgIc*8); base.pi=Math.round(25+r.avgIc*4); }
+    else if(type==='CL'){ base.ll=Math.round(28+r.avgIc*4); base.pi=Math.round(8+r.avgIc*3); }
+    else if(type==='SC'){ base.f=Math.round(15+(r.avgIc-1.9)*30); base.n=Math.round(20-(r.avgIc-1.9)*8); }
+    else if(type==='SP'){ base.n=Math.round(30-(r.avgIc)*5); }
+    return {id:mkId(), type, ...base, t:px, desc:LAYER_DEFAULTS[type].desc};
+  });
+
+  if(newLayers.length===0) return;
+
+  // 8. Flash strat column, swap layers, animate thicknesses
+  const col=document.getElementById('strat');
+  col.style.transition='opacity .2s';
+  col.style.opacity='0';
+  setTimeout(()=>{
+    LAYERS=newLayers;
+    buildControls();
+    render();
+    col.style.opacity='0';
+    requestAnimationFrame(()=>{
+      // Animate thicknesses from 4px to target
+      const targets={};
+      LAYERS.forEach(l=>{targets[l.id]=l.t; l.t=4;});
+      buildControls(); render();
+      col.style.opacity='1'; col.style.transition='opacity .15s';
+      // Stagger animation per layer
+      animateFitLayers(targets);
+    });
+  },220);
+}
+
+function animateFitLayers(targets){
+  const starts={};
+  LAYERS.forEach(l=>starts[l.id]=l.t);
+  const dur=900, t0=performance.now();
+  function step(now){
+    const p=Math.min(1,(now-t0)/dur);
+    const ease=1-Math.pow(1-p,3);
+    LAYERS.forEach(l=>{
+      if(targets[l.id]===undefined)return;
+      const v=Math.max(4,Math.round((starts[l.id]||4)+(targets[l.id]-(starts[l.id]||4))*ease));
+      l.t=v;
+      const s=document.getElementById(`s-${l.id}-t`), n=document.getElementById(`n-${l.id}-t`);
+      if(s)s.value=v; if(n)n.value=v;
+    });
+    render();
+    if(p<1) requestAnimationFrame(step);
+    else {buildControls();render();}
+  }
+  requestAnimationFrame(step);
+}
+
+// ═══════════════════════════════════════════════
+//  RESET / ANIMATE
+// ═══════════════════════════════════════════════
+function resetDef(){
+  LAYERS=[
+    {id:mkId(),type:'CH',...JSON.parse(JSON.stringify(LAYER_DEFAULTS.CH)),t:80},
+    {id:mkId(),type:'SC',...JSON.parse(JSON.stringify(LAYER_DEFAULTS.SC)),t:60},
+    {id:mkId(),type:'CL',...JSON.parse(JSON.stringify(LAYER_DEFAULTS.CL)),t:70},
+    {id:mkId(),type:'SC',...JSON.parse(JSON.stringify(LAYER_DEFAULTS.SC)),t:55,f:32,n:10},
+    {id:mkId(),type:'CH',...JSON.parse(JSON.stringify(LAYER_DEFAULTS.CH)),t:65},
+  ];
+  selLayer=null;
+  buildControls(); render();
+}
+
+function animCy(){
+  let i=0;
+  function step(){
+    selLayer=null; render();
+    if(i>=LAYERS.length)return;
+    selLayer=LAYERS[i].id; showInfo(LAYERS[i]); render(); i++;
+    setTimeout(step,650);
+  }
+  step();
+}
+
+// ─── INIT ───
+buildControls();
+render();
+window.addEventListener('resize',render);
+</script>
+</body>
+</html>

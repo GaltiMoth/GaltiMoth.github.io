@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groundwater Monitoring Well Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 60px 30px;
+            margin: 30px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .drop-zone i {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .drop-zone p {
+            font-size: 1.2em;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .wells-container {
+            padding: 30px;
+        }
+
+        .spreadsheet-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .spreadsheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        .spreadsheet-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .spreadsheet-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+            white-space: nowrap;
+        }
+
+        .spreadsheet-table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.2s;
+        }
+
+        .spreadsheet-table tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .spreadsheet-table td {
+            padding: 12px 15px;
+        }
+
+        .cell-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            font-size: 0.95em;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .cell-input:hover {
+            background: #f0f0f0;
+            border-color: #ddd;
+        }
+
+        .cell-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .cell-input[type="number"] {
+            text-align: right;
+        }
+
+        .cell-readonly {
+            background: #f8f9fa;
+            cursor: default;
+        }
+
+        .color-cell {
+            width: 40px;
+            text-align: center;
+        }
+
+        .stat-cell {
+            text-align: right;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .remove-cell {
+            text-align: center;
+            width: 80px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .chart-container {
+            margin: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .paste-area-container {
+            background: #f8f9ff;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .paste-area-container code {
+            background: #e8ebff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .well-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-wrapper {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 Groundwater Monitoring Well Analysis</h1>
+            <p>Drag & drop CSV files to analyze pressure and groundwater elevation data</p>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <p style="font-size: 3em;">📁</p>
+            <p><strong>Drag & Drop CSV Files Here</strong></p>
+            <p>or click to browse</p>
+            <input type="file" id="fileInput" multiple accept=".csv">
+        </div>
+
+        <div id="wellsContainer" class="wells-container"></div>
+
+        <div class="chart-container" id="chartContainer">
+            <div class="paste-area-container" id="pasteAreaContainer" style="display: none;">
+                <h3 style="margin-bottom: 15px; color: #333;">📋 Bulk Paste Data</h3>
+                <p style="margin-bottom: 10px; color: #666;">
+                    Paste data with headers. Automatically matches test names and fills ATM pressure, RL at surface, and depth of hole.
+                </p>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">
+                    GW Elevation will be calculated as: <strong>RL at surface - Depth of hole + Water height (from pressure)</strong>
+                </p>
+                <textarea id="pasteInput" 
+                          rows="10" 
+                          placeholder="Paste your data here (with or without headers)...
+Example:
+test name	ATM pressure	RL at surface	depth of hole
+BH01	101	6.43	10
+BH02	101	6.76	3
+BH03	101	6.92	4"
+                          style="width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1em; resize: vertical;"></textarea>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="applyPastedData()">Apply Data</button>
+                    <button class="btn" style="background: #6c757d; color: white;" onclick="clearPasteArea()">Clear</button>
+                </div>
+                <div id="pasteStatus" style="margin-top: 10px; padding: 10px; border-radius: 4px; display: none;"></div>
+            </div>
+        </div>
+
+        <div class="chart-container" id="chartContainer2">
+            <div class="actions">
+                <button class="btn btn-primary" onclick="updateCharts()">Update Charts</button>
+                <button class="btn btn-primary" onclick="togglePasteArea()" style="background: #28a745;">📋 Bulk Paste Data</button>
+                <button class="btn btn-primary" onclick="exportGWElevationData()" style="background: #17a2b8;">📊 Copy GW Data (Date Rows)</button>
+                <button class="btn btn-primary" onclick="exportGWElevationTransposed()" style="background: #6f42c1;">📊 Copy GW Data (Test Rows)</button>
+                <button class="btn btn-danger" onclick="clearAll()">Clear All Data</button>
+            </div>
+
+            <div class="chart-title">Pressure vs Time</div>
+            <div class="chart-wrapper">
+                <canvas id="pressureChart"></canvas>
+            </div>
+
+            <div class="chart-title">Groundwater Elevation vs Time</div>
+            <div class="chart-wrapper">
+                <canvas id="elevationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let wells = [];
+        let pressureChart = null;
+        let elevationChart = null;
+
+        const colors = [
+            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+            '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+            '#a8edea', '#fed6e3', '#c471f5', '#12c2e9'
+        ];
+
+        // Drag and drop handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            console.log('Files dropped:', files.length);
+            const fileArray = Array.from(files);
+            console.log('File names:', fileArray.map(f => f.name));
+            
+            fileArray.forEach(file => {
+                console.log('Processing file:', file.name);
+                if (file.name.endsWith('.csv')) {
+                    readCSV(file);
+                } else {
+                    console.log('Skipping non-CSV file:', file.name);
+                }
+            });
+        }
+
+        function readCSV(file) {
+            console.log('Reading CSV:', file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                console.log('File loaded, length:', e.target.result.length);
+                const content = e.target.result;
+                parseCSV(content, file.name);
+            };
+            reader.onerror = (e) => {
+                console.error('Error reading file:', e);
+                alert('Error reading file: ' + file.name);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content, filename) {
+            console.log('Parsing CSV:', filename);
+            const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+            console.log('Total lines:', lines.length);
+            
+            // Find the header line (contains "Date Time" or similar)
+            let headerIndex = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes('date') && 
+                    (lines[i].toLowerCase().includes('time') || lines[i].toLowerCase().includes('pressure'))) {
+                    headerIndex = i;
+                    console.log('Found header at line:', i, lines[i]);
+                    break;
+                }
+            }
+            
+            if (headerIndex === -1) {
+                console.error('Could not find header in', filename);
+                alert('Could not find data header in ' + filename);
+                return;
+            }
+            
+            // Parse CSV with quoted values
+            function parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim());
+                return result;
+            }
+            
+            const headers = parseCSVLine(lines[headerIndex]).map(h => h.replace(/"/g, '').trim());
+            console.log('Headers:', headers);
+            
+            // Find column indices
+            const dateIndex = headers.findIndex(h => h.toLowerCase().includes('date'));
+            const pressureIndex = headers.findIndex(h => h.toLowerCase().includes('pressure'));
+            const tempIndex = headers.findIndex(h => h.toLowerCase().includes('temp'));
+            const depthIndex = headers.findIndex(h => h.toLowerCase().includes('depth'));
+            
+            console.log('Column indices - Date:', dateIndex, 'Pressure:', pressureIndex, 'Temp:', tempIndex, 'Depth:', depthIndex);
+
+            const data = [];
+            for (let i = headerIndex + 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length > 1) {
+                    const pressureStr = values[pressureIndex] || '';
+                    const pressure = parseFloat(pressureStr.replace(/"/g, ''));
+                    
+                    if (!isNaN(pressure) && pressure > 0) {
+                        const dateStr = values[dateIndex] ? values[dateIndex].replace(/"/g, '') : '';
+                        
+                        const entry = {
+                            date: dateStr,
+                            pressure: pressure,
+                            temperature: tempIndex >= 0 ? parseFloat(values[tempIndex].replace(/"/g, '')) : null,
+                            depth: depthIndex >= 0 ? parseFloat(values[depthIndex].replace(/"/g, '')) : null
+                        };
+                        
+                        // Parse date
+                        if (entry.date) {
+                            entry.dateObj = new Date(entry.date);
+                            if (isNaN(entry.dateObj.getTime())) {
+                                // Try alternative date format
+                                const parts = entry.date.split(/[-_\s:]/);
+                                if (parts.length >= 6) {
+                                    entry.dateObj = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
+                                }
+                            }
+                        }
+                        
+                        data.push(entry);
+                    }
+                }
+            }
+            
+            console.log('Parsed data points:', data.length);
+
+            if (data.length > 0) {
+                // Extract log name from metadata (around line 20)
+                let locationName = filename.replace('.csv', '');
+                const logLine = lines.find(l => l.toLowerCase().includes('log name'));
+                if (logLine) {
+                    const match = logLine.match(/=\s*"?([^"]+)"?/);
+                    if (match) {
+                        locationName = match[1].trim();
+                        console.log('Found Log Name:', locationName);
+                    }
+                }
+                
+                console.log('Using name:', locationName);
+                
+                const well = {
+                    id: Date.now() + Math.random(),
+                    filename: filename,
+                    name: locationName,
+                    atmPressure: 101.325, // kPa default
+                    groundRL: 0, // m AHD
+                    depthOfHole: null, // Optional depth of hole
+                    data: data,
+                    color: colors[wells.length % colors.length]
+                };
+                wells.push(well);
+                console.log('Well added, total wells:', wells.length);
+                updateUI();
+            } else {
+                console.error('No valid data found');
+                alert('No valid data found in ' + filename);
+            }
+        }
+
+        function updateUI() {
+            console.log('Updating UI, wells count:', wells.length);
+            const container = document.getElementById('wellsContainer');
+            const pasteArea = document.getElementById('pasteAreaContainer');
+            
+            container.innerHTML = '';
+            if (wells.length > 0) {
+                const table = createSpreadsheetTable();
+                container.appendChild(table);
+                console.log('Updating charts...');
+                updateCharts();
+            }
+        }
+
+        function createSpreadsheetTable() {
+            const container = document.createElement('div');
+            container.className = 'spreadsheet-container';
+            
+            const table = document.createElement('table');
+            table.className = 'spreadsheet-table';
+            
+            // Create header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th class="color-cell"></th>
+                    <th>Test Name</th>
+                    <th>ATM Pressure (kPa)</th>
+                    <th>RL at Surface (m AHD)</th>
+                    <th>Depth of Hole (m)</th>
+                    <th>Data Points</th>
+                    <th>Avg Pressure (kPa)</th>
+                    <th>Avg Water Height (m)</th>
+                    <th>Calc GW Elevation (m AHD)</th>
+                    <th class="remove-cell">Action</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // Create body - sort wells alphabetically by name
+            const tbody = document.createElement('tbody');
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+            
+            sortedWells.forEach((well, displayIndex) => {
+                // Find original index for callbacks
+                const originalIndex = wells.findIndex(w => w.id === well.id);
+                const row = createTableRow(well, originalIndex, displayIndex);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            
+            // Add paste event listener to table
+            table.addEventListener('paste', handleTablePaste);
+            
+            container.appendChild(table);
+            return container;
+        }
+
+        function handleTablePaste(event) {
+            // Get the focused cell
+            const activeElement = document.activeElement;
+            if (!activeElement || !activeElement.classList.contains('cell-input')) {
+                return; // Not in a cell, let default paste happen
+            }
+
+            const pastedText = event.clipboardData.getData('text');
+            if (!pastedText) return;
+
+            // Check if it's multi-cell data (contains tabs or newlines)
+            if (pastedText.includes('\t') || pastedText.includes('\n')) {
+                event.preventDefault();
+                
+                const startRow = parseInt(activeElement.dataset.row);
+                const startCol = parseInt(activeElement.dataset.col);
+                
+                // Parse pasted data
+                const rows = pastedText.trim().split('\n');
+                const data = rows.map(row => row.split('\t'));
+                
+                console.log('Pasting data:', data);
+                
+                // Get sorted wells for proper display order mapping
+                const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Apply data to cells
+                data.forEach((rowData, rowOffset) => {
+                    const targetRow = startRow + rowOffset;
+                    if (targetRow >= sortedWells.length) return; // Out of bounds
+                    
+                    rowData.forEach((cellValue, colOffset) => {
+                        const targetCol = startCol + colOffset;
+                        if (targetCol > 3) return; // Only 4 editable columns (0-3)
+                        
+                        const well = sortedWells[targetRow];
+                        const originalIndex = wells.findIndex(w => w.id === well.id);
+                        
+                        // Update the appropriate field
+                        switch(targetCol) {
+                            case 0: // Test name
+                                wells[originalIndex].name = cellValue;
+                                break;
+                            case 1: // ATM Pressure
+                                const atm = parseFloat(cellValue);
+                                if (!isNaN(atm)) wells[originalIndex].atmPressure = atm;
+                                break;
+                            case 2: // RL at Surface
+                                const rl = parseFloat(cellValue);
+                                if (!isNaN(rl)) wells[originalIndex].groundRL = rl;
+                                break;
+                            case 3: // Depth of Hole
+                                const depth = parseFloat(cellValue);
+                                wells[originalIndex].depthOfHole = isNaN(depth) ? null : depth;
+                                break;
+                        }
+                    });
+                });
+                
+                // Refresh the UI
+                updateUI();
+                
+                // Try to focus back to where we started
+                setTimeout(() => focusCell(startRow, startCol), 50);
+            }
+            // If single cell, let default paste happen
+        }
+
+        function createTableRow(well, index, displayIndex) {
+            const row = document.createElement('tr');
+            
+            const avgPressure = well.data.reduce((sum, d) => sum + d.pressure, 0) / well.data.length;
+            const avgWaterHeight = calculateWaterHeight(avgPressure, well.atmPressure);
+            const gwElevation = calculateGWElevation(well, avgPressure);
+            
+            row.innerHTML = `
+                <td class="color-cell">
+                    <span class="color-indicator" style="background: ${well.color}"></span>
+                </td>
+                <td>
+                    <input type="text" 
+                           class="cell-input" 
+                           id="well-name-${displayIndex}" 
+                           name="well-name-${displayIndex}"
+                           data-row="${displayIndex}"
+                           data-col="0"
+                           value="${well.name}" 
+                           onchange="updateWellName(${index}, this.value)"
+                           onkeydown="handleCellKeydown(event, ${displayIndex}, 0)">
+                </td>
+                <td>
+                    <input type="number" 
+                           class="cell-input" 
+                           id="atm-pressure-${displayIndex}" 
+                           name="atm-pressure-${displayIndex}"
+                           data-row="${displayIndex}"
+                           data-col="1"
+                           step="0.01" 
+                           value="${well.atmPressure}" 
+                           oninput="updateAtmPressure(${index}, this.value)"
+                           onkeydown="handleCellKeydown(event, ${displayIndex}, 1)">
+                </td>
+                <td>
+                    <input type="number" 
+                           class="cell-input" 
+                           id="ground-rl-${displayIndex}" 
+                           name="ground-rl-${displayIndex}"
+                           data-row="${displayIndex}"
+                           data-col="2"
+                           step="0.01" 
+                           value="${well.groundRL}" 
+                           oninput="updateGroundRL(${index}, this.value)"
+                           onkeydown="handleCellKeydown(event, ${displayIndex}, 2)">
+                </td>
+                <td>
+                    <input type="number" 
+                           class="cell-input" 
+                           id="depth-hole-${displayIndex}" 
+                           name="depth-hole-${displayIndex}"
+                           data-row="${displayIndex}"
+                           data-col="3"
+                           step="0.01" 
+                           value="${well.depthOfHole || ''}" 
+                           oninput="updateDepthOfHole(${index}, this.value)"
+                           onkeydown="handleCellKeydown(event, ${displayIndex}, 3)"
+                           placeholder="Optional">
+                </td>
+                <td class="stat-cell">${well.data.length}</td>
+                <td class="stat-cell">${avgPressure.toFixed(2)}</td>
+                <td class="stat-cell">${avgWaterHeight.toFixed(3)}</td>
+                <td class="stat-cell" style="font-weight: bold; color: #667eea;">${gwElevation.toFixed(3)}</td>
+                <td class="remove-cell">
+                    <button class="btn btn-danger" onclick="removeWell(${index})">Remove</button>
+                </td>
+            `;
+            
+            return row;
+        }
+
+        function handleCellKeydown(event, row, col) {
+            const key = event.key;
+            
+            // Get sorted wells count for proper bounds
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+            const maxRow = sortedWells.length - 1;
+            
+            // Handle arrow keys, Tab, and Enter for navigation
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Tab'].includes(key)) {
+                let newRow = row;
+                let newCol = col;
+                
+                switch(key) {
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        newRow = Math.max(0, row - 1);
+                        break;
+                    case 'ArrowDown':
+                    case 'Enter':
+                        event.preventDefault();
+                        newRow = Math.min(maxRow, row + 1);
+                        break;
+                    case 'ArrowLeft':
+                        if (event.target.selectionStart === 0 || event.target.type === 'number') {
+                            event.preventDefault();
+                            newCol = Math.max(0, col - 1);
+                        }
+                        break;
+                    case 'ArrowRight':
+                        if (event.target.selectionStart === event.target.value.length || event.target.type === 'number') {
+                            event.preventDefault();
+                            newCol = Math.min(3, col + 1);
+                        }
+                        break;
+                    case 'Tab':
+                        event.preventDefault();
+                        if (event.shiftKey) {
+                            // Tab backwards
+                            newCol = col - 1;
+                            if (newCol < 0) {
+                                newCol = 3;
+                                newRow = Math.max(0, row - 1);
+                            }
+                        } else {
+                            // Tab forwards
+                            newCol = col + 1;
+                            if (newCol > 3) {
+                                newCol = 0;
+                                newRow = Math.min(maxRow, row + 1);
+                            }
+                        }
+                        break;
+                }
+                
+                // Focus the new cell
+                focusCell(newRow, newCol);
+            }
+        }
+
+        function focusCell(row, col) {
+            const colIds = ['well-name-', 'atm-pressure-', 'ground-rl-', 'depth-hole-'];
+            const cellId = colIds[col] + row;
+            const cell = document.getElementById(cellId);
+            if (cell) {
+                cell.focus();
+                cell.select();
+            }
+        }
+
+        function calculateWaterHeight(pressureKPa, atmPressureKPa) {
+            // Water height above sensor (gauge pressure converted to meters)
+            const gaugePressure = pressureKPa - atmPressureKPa;
+            // Convert to meters of water (9.81 kPa per meter)
+            const waterHeight = gaugePressure / 9.81;
+            return Math.max(0, waterHeight);
+        }
+
+        function calculateGWElevation(well, avgPressure) {
+            // GW Elevation = RL at surface - Depth of hole + Water height from pressure
+            const waterHeight = calculateWaterHeight(avgPressure, well.atmPressure);
+            const depthOfHole = well.depthOfHole || 0;
+            const gwElevation = well.groundRL - depthOfHole + waterHeight;
+            return gwElevation;
+        }
+
+        function updateWellName(index, value) {
+            wells[index].name = value;
+            updateCharts();
+        }
+
+        function updateAtmPressure(index, value) {
+            wells[index].atmPressure = parseFloat(value) || 101.325;
+            updateUI();
+        }
+
+        function updateGroundRL(index, value) {
+            wells[index].groundRL = parseFloat(value) || 0;
+            updateUI();
+        }
+
+        function updateDepthOfHole(index, value) {
+            wells[index].depthOfHole = value ? parseFloat(value) : null;
+            updateUI();
+        }
+
+        function togglePasteArea() {
+            const pasteArea = document.getElementById('pasteAreaContainer');
+            if (pasteArea.style.display === 'none') {
+                pasteArea.style.display = 'block';
+            } else {
+                pasteArea.style.display = 'none';
+            }
+        }
+
+        function clearPasteArea() {
+            document.getElementById('pasteInput').value = '';
+        }
+
+        function applyPastedData() {
+            const input = document.getElementById('pasteInput').value.trim();
+            const statusDiv = document.getElementById('pasteStatus');
+            
+            if (!input) {
+                showPasteStatus('Please paste some data first', 'error');
+                return;
+            }
+
+            // Parse the pasted data
+            const lines = input.split('\n').filter(line => line.trim());
+            if (lines.length < 2) {
+                showPasteStatus('Need at least a header row and one data row', 'error');
+                return;
+            }
+
+            // Parse first line to find column indices
+            const headerLine = lines[0];
+            const headers = headerLine.split(/[\t]+/).map(h => h.trim().toLowerCase());
+            
+            console.log('Detected headers:', headers);
+            
+            // Find column indices (flexible matching)
+            const nameIndex = headers.findIndex(h => 
+                h.includes('test') || h.includes('name') || h.includes('bh') || h.includes('bore')
+            );
+            const atmIndex = headers.findIndex(h => 
+                h.includes('atm') || h.includes('pressure')
+            );
+            const elevationIndex = headers.findIndex(h => 
+                h.includes('elev') || h.includes('rl') || h.includes('surface') || h.includes('level')
+            );
+            const depthIndex = headers.findIndex(h => 
+                h.includes('depth') || h.includes('hole')
+            );
+
+            console.log('Column indices - Name:', nameIndex, 'ATM:', atmIndex, 'Elevation:', elevationIndex, 'Depth:', depthIndex);
+
+            if (nameIndex === -1) {
+                showPasteStatus('Could not find test name column. Headers should include "test name" or similar.', 'error');
+                return;
+            }
+
+            // Parse data rows
+            const parsedData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split(/[\t]+/).map(p => p.trim());
+                
+                if (parts.length > nameIndex) {
+                    const entry = {
+                        name: parts[nameIndex],
+                        atm: atmIndex >= 0 && parts[atmIndex] ? parseFloat(parts[atmIndex]) : null,
+                        elevation: elevationIndex >= 0 && parts[elevationIndex] ? parseFloat(parts[elevationIndex]) : null,
+                        depth: depthIndex >= 0 && parts[depthIndex] ? parseFloat(parts[depthIndex]) : null
+                    };
+                    
+                    if (entry.name) {
+                        parsedData.push(entry);
+                    }
+                }
+            }
+
+            console.log('Parsed data:', parsedData);
+
+            if (parsedData.length === 0) {
+                showPasteStatus('No valid data rows found', 'error');
+                return;
+            }
+
+            // Match and apply data to wells
+            let matchedCount = 0;
+            let unmatchedPasted = [];
+            let unmatchedWells = [];
+            let updatedWells = [];
+
+            for (const data of parsedData) {
+                // Try to find matching well (case-insensitive, flexible matching)
+                const matchedWellIndex = wells.findIndex(w => {
+                    const wellName = w.name.toLowerCase().trim();
+                    const dataName = data.name.toLowerCase().trim();
+                    return wellName === dataName || 
+                           wellName.replace(/\s+/g, '') === dataName.replace(/\s+/g, '');
+                });
+
+                if (matchedWellIndex >= 0) {
+                    const well = wells[matchedWellIndex];
+                    let updated = false;
+                    
+                    if (data.atm !== null && !isNaN(data.atm)) {
+                        well.atmPressure = data.atm;
+                        updated = true;
+                    }
+                    if (data.elevation !== null && !isNaN(data.elevation)) {
+                        well.groundRL = data.elevation;
+                        updated = true;
+                    }
+                    if (data.depth !== null && !isNaN(data.depth)) {
+                        well.depthOfHole = data.depth;
+                        updated = true;
+                    }
+                    
+                    if (updated) {
+                        matchedCount++;
+                        updatedWells.push(well.name);
+                    }
+                } else {
+                    unmatchedPasted.push(data.name);
+                }
+            }
+
+            // Find wells that weren't matched
+            for (const well of wells) {
+                const wasMatched = parsedData.some(data => {
+                    const wellName = well.name.toLowerCase().trim();
+                    const dataName = data.name.toLowerCase().trim();
+                    return wellName === dataName || 
+                           wellName.replace(/\s+/g, '') === dataName.replace(/\s+/g, '');
+                });
+                if (!wasMatched) {
+                    unmatchedWells.push(well.name);
+                }
+            }
+
+            console.log('Updated wells:', updatedWells);
+            console.log('Unmatched pasted:', unmatchedPasted);
+            console.log('Unmatched wells:', unmatchedWells);
+
+            // Update UI - THIS IS CRITICAL!
+            updateUI();
+            
+            // Show detailed status
+            let statusMessage = `✅ Successfully matched and updated ${matchedCount} of ${parsedData.length} pasted rows`;
+            
+            if (unmatchedPasted.length > 0) {
+                statusMessage += `\n\n⚠️ Could not match these pasted names:\n${unmatchedPasted.join(', ')}`;
+            }
+            
+            if (unmatchedWells.length > 0) {
+                statusMessage += `\n\n⚠️ These wells were not updated:\n${unmatchedWells.join(', ')}`;
+            }
+            
+            showPasteStatus(statusMessage, matchedCount > 0 ? 'success' : 'warning');
+            
+            if (matchedCount > 0) {
+                // Auto-hide after success
+                setTimeout(() => {
+                    clearPasteArea();
+                    togglePasteArea();
+                }, 3000);
+            }
+        }
+
+        function showPasteStatus(message, type) {
+            const statusDiv = document.getElementById('pasteStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.whiteSpace = 'pre-line';
+            
+            if (type === 'success') {
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.color = '#155724';
+                statusDiv.style.border = '1px solid #c3e6cb';
+            } else if (type === 'error') {
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.border = '1px solid #f5c6cb';
+            } else if (type === 'warning') {
+                statusDiv.style.background = '#fff3cd';
+                statusDiv.style.color = '#856404';
+                statusDiv.style.border = '1px solid #ffeaa7';
+            }
+            
+            statusDiv.textContent = message;
+        }
+
+        function removeWell(index) {
+            wells.splice(index, 1);
+            updateUI();
+        }
+
+        function clearAll() {
+            if (confirm('Clear all monitoring well data?')) {
+                wells = [];
+                updateUI();
+            }
+        }
+
+        function exportGWElevationData() {
+            if (wells.length === 0) {
+                alert('No well data to export');
+                return;
+            }
+
+            // Sort wells alphabetically
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+
+            // Collect all unique dates across all wells
+            const allDates = new Set();
+            sortedWells.forEach(well => {
+                well.data.forEach(d => {
+                    if (d.dateObj) {
+                        const dateStr = formatDateForExport(d.dateObj);
+                        allDates.add(dateStr);
+                    }
+                });
+            });
+
+            // Sort dates chronologically
+            const sortedDates = Array.from(allDates).sort((a, b) => {
+                return parseExportDate(a) - parseExportDate(b);
+            });
+
+            // Build header row
+            const headers = ['date', ...sortedWells.map(w => w.name)];
+            const headerRow = headers.join('\t');
+
+            // Build data rows
+            const dataRows = [];
+            sortedDates.forEach(dateStr => {
+                const row = [dateStr];
+                
+                sortedWells.forEach(well => {
+                    // Find data point for this date
+                    const dataPoint = well.data.find(d => {
+                        if (!d.dateObj) return false;
+                        return formatDateForExport(d.dateObj) === dateStr;
+                    });
+
+                    if (dataPoint) {
+                        // Calculate GW elevation for this data point
+                        const waterHeight = calculateWaterHeight(dataPoint.pressure, well.atmPressure);
+                        const depthOfHole = well.depthOfHole || 0;
+                        const gwElevation = well.groundRL - depthOfHole + waterHeight;
+                        row.push(gwElevation.toFixed(3));
+                    } else {
+                        row.push(''); // No data for this date
+                    }
+                });
+
+                dataRows.push(row.join('\t'));
+            });
+
+            // Combine everything
+            const exportText = [headerRow, ...dataRows].join('\n');
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(exportText).then(() => {
+                alert(`✅ Copied ${dataRows.length} rows x ${sortedWells.length} wells to clipboard!\n\nReady to paste into Excel or spreadsheet.`);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback - show in a text area
+                showExportDialog(exportText);
+            });
+        }
+
+        function formatDateForExport(date) {
+            // Format as d-MMM-yy (e.g., 17-Apr-25)
+            const day = date.getDate();
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            const year = date.getFullYear().toString().slice(-2);
+            return `${day}-${month}-${year}`;
+        }
+
+        function parseExportDate(dateStr) {
+            // Parse d-MMM-yy back to Date for sorting
+            const months = {
+                'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+            };
+            const parts = dateStr.split('-');
+            const day = parseInt(parts[0]);
+            const month = months[parts[1]];
+            const year = 2000 + parseInt(parts[2]);
+            return new Date(year, month, day);
+        }
+
+        function showExportDialog(text) {
+            // Fallback if clipboard API fails
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10000; max-width: 90%; max-height: 80%;';
+            
+            dialog.innerHTML = `
+                <h3 style="margin-bottom: 15px;">Export Data</h3>
+                <p style="margin-bottom: 10px;">Copy this data and paste into Excel:</p>
+                <textarea readonly style="width: 600px; height: 400px; font-family: monospace; padding: 10px; border: 2px solid #ddd; border-radius: 4px;">${text}</textarea>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Close</button>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            dialog.querySelector('textarea').select();
+        }
+
+        function exportGWElevationTransposed() {
+            if (wells.length === 0) {
+                alert('No well data to export');
+                return;
+            }
+
+            // Sort wells alphabetically
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+
+            // Collect all unique dates across all wells
+            const allDates = new Set();
+            sortedWells.forEach(well => {
+                well.data.forEach(d => {
+                    if (d.dateObj) {
+                        const dateStr = formatDateDDMMYYYY(d.dateObj);
+                        allDates.add(dateStr);
+                    }
+                });
+            });
+
+            // Sort dates chronologically
+            const sortedDates = Array.from(allDates).sort((a, b) => {
+                return parseDDMMYYYYDate(a) - parseDDMMYYYYDate(b);
+            });
+
+            // Build header row: test, date1, date2, date3...
+            const headers = ['test', ...sortedDates];
+            const headerRow = headers.join('\t');
+
+            // Build data rows - one row per well
+            const dataRows = [];
+            sortedWells.forEach(well => {
+                const row = [well.name];
+                
+                sortedDates.forEach(dateStr => {
+                    // Find data point for this date
+                    const dataPoint = well.data.find(d => {
+                        if (!d.dateObj) return false;
+                        return formatDateDDMMYYYY(d.dateObj) === dateStr;
+                    });
+
+                    if (dataPoint) {
+                        // Calculate GW elevation for this data point
+                        const waterHeight = calculateWaterHeight(dataPoint.pressure, well.atmPressure);
+                        const depthOfHole = well.depthOfHole || 0;
+                        const gwElevation = well.groundRL - depthOfHole + waterHeight;
+                        row.push(gwElevation.toFixed(9)); // High precision like your example
+                    } else {
+                        row.push(''); // No data for this date
+                    }
+                });
+
+                dataRows.push(row.join('\t'));
+            });
+
+            // Combine everything
+            const exportText = [headerRow, ...dataRows].join('\n');
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(exportText).then(() => {
+                alert(`✅ Copied ${sortedWells.length} wells x ${sortedDates.length} dates to clipboard!\n\nTransposed format: Each row is a test, each column is a date.\nReady to paste into Excel.`);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback - show in a text area
+                showExportDialog(exportText);
+            });
+        }
+
+        function formatDateDDMMYYYY(date) {
+            // Format as dd/MM/yyyy (e.g., 17/04/2025)
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function parseDDMMYYYYDate(dateStr) {
+            // Parse dd/MM/yyyy back to Date for sorting
+            const parts = dateStr.split('/');
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1;
+            const year = parseInt(parts[2]);
+            return new Date(year, month, day);
+        }
+
+        function updateCharts() {
+            updatePressureChart();
+            updateElevationChart();
+        }
+
+        function updatePressureChart() {
+            const ctx = document.getElementById('pressureChart').getContext('2d');
+            
+            if (pressureChart) {
+                pressureChart.destroy();
+            }
+
+            // Sort wells alphabetically by name for consistent legend order
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+
+            const datasets = sortedWells.map(well => ({
+                label: well.name,
+                data: well.data.map(d => ({
+                    x: d.dateObj,
+                    y: d.pressure
+                })),
+                borderColor: well.color,
+                backgroundColor: well.color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.1
+            }));
+
+            pressureChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d, HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date/Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Pressure (kPa)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateElevationChart() {
+            const ctx = document.getElementById('elevationChart').getContext('2d');
+            
+            if (elevationChart) {
+                elevationChart.destroy();
+            }
+
+            // Sort wells alphabetically by name for consistent legend order
+            const sortedWells = [...wells].sort((a, b) => a.name.localeCompare(b.name));
+
+            const datasets = sortedWells.map(well => ({
+                label: well.name,
+                data: well.data.map(d => {
+                    // GW Elevation = RL at surface - Depth of hole + Water height
+                    const waterHeight = calculateWaterHeight(d.pressure, well.atmPressure);
+                    const depthOfHole = well.depthOfHole || 0;
+                    const elevation = well.groundRL - depthOfHole + waterHeight;
+                    return {
+                        x: d.dateObj,
+                        y: elevation
+                    };
+                }),
+                borderColor: well.color,
+                backgroundColor: well.color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.1
+            }));
+
+            elevationChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(3) + ' m AHD';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d, HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date/Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Groundwater Elevation (m AHD)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

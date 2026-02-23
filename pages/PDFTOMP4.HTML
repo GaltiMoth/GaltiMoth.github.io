@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Video Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .info-box {
+            background: #f0f2ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .download-section {
+            display: none;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(67, 233, 123, 0.4);
+        }
+        
+        .error {
+            background: #ffe0e0;
+            color: #d00;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .note {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        canvas {
+            display: none;
+            max-width: 100%;
+            margin-top: 20px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+        }
+        
+        canvas.recording {
+            display: block;
+        }
+        
+        video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 PDF to Video Converter</h1>
+        <p class="subtitle">Upload your PDF and convert it to a WebM video with customizable quality and timing</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <p style="font-size: 18px; color: #333; margin-bottom: 10px;">
+                <strong>Click to upload</strong> or drag and drop
+            </p>
+            <p style="color: #999; font-size: 14px;">
+                PDF files only (up to 250 pages recommended)
+            </p>
+            <input type="file" id="pdfInput" accept=".pdf">
+        </div>
+        
+        <div class="info-box" id="infoBox">
+            <h3>📋 PDF Information</h3>
+            <div class="info-item">
+                <span class="info-label">File Name:</span>
+                <span class="info-value" id="fileName">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Total Pages:</span>
+                <span class="info-value" id="pageCount">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Video Duration:</span>
+                <span class="info-value" id="videoDuration">-</span>
+            </div>
+        </div>
+        
+        <div class="info-box" id="settingsBox" style="display: none;">
+            <h3>⚙️ Video Settings</h3>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px;">
+                    ⏱️ Time per Page (seconds)
+                </label>
+                <input type="number" id="timePerFrame" min="0.5" max="10" step="0.5" value="1" 
+                    style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                <small style="color: #999; display: block; margin-top: 5px;">
+                    Range: 0.5 - 10 seconds
+                </small>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px;">
+                    🎨 Render Quality
+                </label>
+                <select id="renderQuality" 
+                    style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                    <option value="1">Low (1x - Fast, smaller file)</option>
+                    <option value="1.5">Medium (1.5x)</option>
+                    <option value="2" selected>High (2x - Recommended)</option>
+                    <option value="3">Very High (3x - Slower, crisp)</option>
+                    <option value="4">Ultra (4x - Slowest, largest file)</option>
+                </select>
+                <small style="color: #999; display: block; margin-top: 5px;">
+                    Higher quality = sharper text but larger file
+                </small>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px;">
+                    📹 Video Bitrate (quality)
+                </label>
+                <select id="videoBitrate" 
+                    style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                    <option value="1000000">Low (1 Mbps - Smaller file)</option>
+                    <option value="2500000" selected>Medium (2.5 Mbps - Recommended)</option>
+                    <option value="5000000">High (5 Mbps - Better quality)</option>
+                    <option value="8000000">Very High (8 Mbps - Best quality)</option>
+                    <option value="12000000">Ultra (12 Mbps - Largest file)</option>
+                </select>
+                <small style="color: #999; display: block; margin-top: 5px;">
+                    Higher bitrate = better video quality but larger file
+                </small>
+            </div>
+            
+            <button class="btn" id="convertBtn" disabled>🎬 Convert to Video</button>
+        </div>
+        
+        <div class="note">
+            <strong>ℹ️ Tips:</strong> 
+            <ul style="margin: 10px 0 0 20px; line-height: 1.6;">
+                <li>Output format is WebM (plays in all modern browsers)</li>
+                <li>Higher quality settings increase processing time and file size</li>
+                <li>For 250 pages at 1 sec/page = ~4 minute video</li>
+                <li>Recommended: 2x quality, 2.5 Mbps bitrate for best balance</li>
+            </ul>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="status" id="statusText">Initializing...</div>
+        </div>
+        
+        <div class="download-section" id="downloadSection">
+            <h3 style="color: #43e97b; margin-bottom: 15px;">✅ Conversion Complete!</h3>
+            <a href="#" class="download-btn" id="downloadBtn">⬇️ Download Video</a>
+        </div>
+        
+        <div class="error" id="errorBox"></div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    <video id="video" muted></video>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const pdfInput = document.getElementById('pdfInput');
+        const infoBox = document.getElementById('infoBox');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('statusText');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorBox = document.getElementById('errorBox');
+        const canvas = document.getElementById('canvas');
+        const video = document.getElementById('video');
+        const ctx = canvas.getContext('2d');
+        
+        let pdfDoc = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        
+        // Upload area interactions
+        uploadArea.addEventListener('click', () => pdfInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handlePDFUpload(files[0]);
+            }
+        });
+        
+        pdfInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handlePDFUpload(e.target.files[0]);
+            }
+        });
+        
+        async function handlePDFUpload(file) {
+            try {
+                errorBox.style.display = 'none';
+                downloadSection.style.display = 'none';
+                
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedArray = new Uint8Array(this.result);
+                    pdfDoc = await pdfjsLib.getDocument(typedArray).promise;
+                    
+                    const pageCount = pdfDoc.numPages;
+                    
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('pageCount').textContent = pageCount;
+                    
+                    infoBox.style.display = 'block';
+                    document.getElementById('settingsBox').style.display = 'block';
+                    convertBtn.disabled = false;
+                    
+                    // Update duration when time per frame changes
+                    updateDuration();
+                    document.getElementById('timePerFrame').addEventListener('input', updateDuration);
+                };
+                fileReader.readAsArrayBuffer(file);
+            } catch (error) {
+                showError('Failed to load PDF: ' + error.message);
+            }
+        }
+        
+        function updateDuration() {
+            const pageCount = pdfDoc.numPages;
+            const timePerFrame = parseFloat(document.getElementById('timePerFrame').value);
+            const videoDuration = pageCount * timePerFrame;
+            
+            document.getElementById('videoDuration').textContent = 
+                `${videoDuration.toFixed(1)} seconds (${Math.floor(videoDuration / 60)}:${(Math.floor(videoDuration % 60)).toString().padStart(2, '0')})`;
+        }
+        
+        convertBtn.addEventListener('click', convertToVideo);
+        
+        async function convertToVideo() {
+            try {
+                convertBtn.disabled = true;
+                progressContainer.style.display = 'block';
+                downloadSection.style.display = 'none';
+                errorBox.style.display = 'none';
+                recordedChunks = [];
+                
+                // Get user settings
+                const scale = parseFloat(document.getElementById('renderQuality').value);
+                const bitrate = parseInt(document.getElementById('videoBitrate').value);
+                const timePerFrame = parseFloat(document.getElementById('timePerFrame').value) * 1000; // Convert to ms
+                
+                const numPages = pdfDoc.numPages;
+                const images = [];
+                
+                // Step 1: Render all pages to image data
+                updateProgress(0, 'Rendering PDF pages...');
+                
+                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                    updateProgress((pageNum / numPages) * 50, `Rendering page ${pageNum} of ${numPages}...`);
+                    
+                    const page = await pdfDoc.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: scale });
+                    
+                    // Set canvas size on first page
+                    if (pageNum === 1) {
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                    }
+                    
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+                    
+                    // Store image data
+                    images.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+                }
+                
+                updateProgress(50, 'Creating video...');
+                
+                // Show canvas so user can see progress
+                canvas.classList.add('recording');
+                
+                // Draw first frame to canvas before starting recording
+                ctx.putImageData(images[0], 0, 0);
+                
+                // Wait a moment to ensure canvas is updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Step 2: Setup video recording with higher frame rate for smoother capture
+                const stream = canvas.captureStream(30); // 30 fps capture
+                
+                const options = {
+                    mimeType: 'video/webm;codecs=vp9',
+                    videoBitsPerSecond: bitrate
+                };
+                
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options.mimeType = 'video/webm;codecs=vp8';
+                }
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    canvas.classList.remove('recording');
+                    
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    downloadBtn.href = url;
+                    downloadBtn.download = 'pdf-video.webm';
+                    downloadSection.style.display = 'block';
+                    
+                    updateProgress(100, 'Complete!');
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 2000);
+                };
+                
+                // Step 3: Start recording and play through images
+                mediaRecorder.start(100); // Record in 100ms chunks
+                
+                // Wait for recorder to be ready
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                for (let i = 0; i < images.length; i++) {
+                    updateProgress(50 + (i / images.length) * 50, `Encoding page ${i + 1} of ${numPages}...`);
+                    
+                    // Draw this image to canvas
+                    ctx.putImageData(images[i], 0, 0);
+                    
+                    // Hold for specified time per frame
+                    await new Promise(resolve => setTimeout(resolve, timePerFrame));
+                }
+                
+                updateProgress(100, 'Finalizing video...');
+                
+                // Stop recording
+                mediaRecorder.stop();
+                
+            } catch (error) {
+                showError('Conversion failed: ' + error.message);
+                convertBtn.disabled = false;
+                progressContainer.style.display = 'none';
+            }
+        }
+        
+        function updateProgress(percent, message) {
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = Math.round(percent) + '%';
+            statusText.textContent = message;
+        }
+        
+        function showError(message) {
+            errorBox.textContent = '❌ ' + message;
+            errorBox.style.display = 'block';
+            progressContainer.style.display = 'none';
+            convertBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>

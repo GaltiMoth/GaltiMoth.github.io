@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Coordinates Visualizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: rgba(52, 152, 219, 0.05);
+            border-bottom: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .input-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .method-tabs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #3498db;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .input-method {
+            display: none;
+        }
+
+        .input-method.active {
+            display: block;
+        }
+
+        .input-method input[type="file"] {
+            padding: 12px;
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .input-method input[type="file"]:hover {
+            border-color: #2980b9;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        #csvPaste {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s ease;
+        }
+
+        #csvPaste:focus {
+            outline: none;
+            border-color: #2980b9;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .process-btn {
+            margin-top: 10px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .visualization-controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .viz-btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
+            min-width: 140px;
+        }
+
+        .viz-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(142, 68, 173, 0.3);
+        }
+
+        .viz-btn.active {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .btn-icon {
+            font-size: 1.2em;
+        }
+
+        .load-sample {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .load-sample:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(46, 204, 113, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .map-container {
+            position: relative;
+            background: #ecf0f1;
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+
+        .data-panel {
+            padding: 30px;
+            background: white;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .data-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .data-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 0.85rem;
+        }
+
+        .data-table tr:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .data-table tr:nth-child(even) {
+            background: rgba(248, 249, 250, 0.5);
+        }
+
+        .marker-info {
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .marker-info h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .marker-info p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            margin: 20px 30px;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .method-tabs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GPS Coordinates Visualizer</h1>
+            <p>Interactive mapping and analysis of GPS survey data</p>
+        </div>
+
+        <div class="controls">
+            <div class="input-methods">
+                <div class="method-tabs">
+                    <button class="tab-btn active" onclick="switchTab('file')">Upload File</button>
+                    <button class="tab-btn" onclick="switchTab('paste')">Paste Data</button>
+                    <button class="load-sample" onclick="loadSampleData()">Load Sample Data</button>
+                </div>
+
+                <div id="fileTab" class="input-method active">
+                    <input type="file" id="csvFile" accept=".csv" placeholder="Choose CSV file...">
+                </div>
+
+                <div id="pasteTab" class="input-method">
+                    <textarea id="csvPaste" placeholder="Paste your data here...&#10;&#10;Supports:&#10;• CSV format with headers&#10;• Space-separated data (like your survey output)&#10;• Tab-separated data&#10;&#10;Example:&#10;1 322965.3 6279430 33.837 gcp 115.0918 -33.6102..." rows="8"></textarea>
+                    <button class="process-btn" onclick="processPastedData()">Process Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+
+            <div class="data-panel">
+                <h3>Survey Data</h3>
+                <div class="stats" id="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="pointCount">0</div>
+                        <div class="stat-label">Points</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgElevation">0</div>
+                        <div class="stat-label">Avg Elevation</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgRMS">0</div>
+                        <div class="stat-label">Avg RMS</div>
+                    </div>
+                </div>
+
+                <div class="visualization-controls">
+                    <button class="viz-btn" onclick="toggleTIN()" id="tinBtn">
+                        <span class="btn-icon">🔺</span>
+                        Create TIN Surface
+                    </button>
+                    <button class="viz-btn" id="contourBtn">
+                        <span class="btn-icon">📊</span>
+                        Show Contours
+                    </button>
+                </div>
+
+                <div id="dataContainer">
+                    <div class="loading">Load CSV data to view survey points</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let surveyData = [];
+        let tinLayer = null;
+        let contoursLayer = null;
+        let showingTIN = false;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([-33.61, 115.09], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Simple and robust Delaunay triangulation
+        function delaunay(points) {
+            if (points.length < 3) return [];
+
+            // For small datasets, use simple triangulation
+            if (points.length <= 6) {
+                return simpleTriangulation(points);
+            }
+
+            // Create a larger bounding triangle to encompass all points
+            const minX = Math.min(...points.map(p => p.x)) - 1000;
+            const maxX = Math.max(...points.map(p => p.x)) + 1000;
+            const minY = Math.min(...points.map(p => p.y)) - 1000;
+            const maxY = Math.max(...points.map(p => p.y)) + 1000;
+
+            // Create super triangle with much larger bounds
+            const superTriangle = [{
+                    x: minX - (maxX - minX),
+                    y: minY - (maxY - minY),
+                    z: 0
+                },
+                {
+                    x: maxX + (maxX - minX),
+                    y: minY - (maxY - minY),
+                    z: 0
+                },
+                {
+                    x: (minX + maxX) / 2,
+                    y: maxY + (maxY - minY) * 2,
+                    z: 0
+                }
+            ];
+
+            let triangles = [superTriangle];
+
+            // Add points one by one
+            for (let point of points) {
+                const badTriangles = [];
+                const edges = [];
+
+                // Find triangles whose circumcircle contains the point
+                triangles.forEach(triangle => {
+                    if (pointInTriangleCircumcircle(point, triangle)) {
+                        badTriangles.push(triangle);
+                        // Store edges
+                        for (let i = 0; i < 3; i++) {
+                            const edge = [triangle[i], triangle[(i + 1) % 3]];
+                            edges.push(edge);
+                        }
+                    }
+                });
+
+                // Remove bad triangles
+                triangles = triangles.filter(t => !badTriangles.includes(t));
+
+                // Find polygon boundary (unique edges)
+                const polygon = [];
+                for (let edge of edges) {
+                    let count = 0;
+                    for (let otherEdge of edges) {
+                        if (edgesEqual(edge, otherEdge)) count++;
+                    }
+                    if (count === 1) {
+                        polygon.push(edge);
+                    }
+                }
+
+                // Create new triangles
+                for (let edge of polygon) {
+                    triangles.push([edge[0], edge[1], point]);
+                }
+            }
+
+            // Remove triangles that share vertices with super triangle
+            const finalTriangles = triangles.filter(triangle =>
+                !triangle.some(vertex => superTriangle.includes(vertex))
+            );
+
+            return finalTriangles.length > 0 ? finalTriangles : simpleTriangulation(points);
+        }
+
+        function pointInTriangleCircumcircle(point, triangle) {
+            const [a, b, c] = triangle;
+
+            // Calculate determinant for circumcircle test with relaxed tolerance
+            const ax = a.x - point.x;
+            const ay = a.y - point.y;
+            const bx = b.x - point.x;
+            const by = b.y - point.y;
+            const cx = c.x - point.x;
+            const cy = c.y - point.y;
+
+            const det = (ax * ax + ay * ay) * (bx * cy - by * cx) +
+                (bx * bx + by * by) * (cx * ay - cy * ax) +
+                (cx * cx + cy * cy) * (ax * by - ay * bx);
+
+            // Use a much more relaxed tolerance for suboptimal data
+            return det > -1e-6;
+        }
+
+        // Robust triangulation fallback for difficult datasets
+        function robustTriangulation(points) {
+            if (points.length < 3) return [];
+
+            const triangles = [];
+
+            // Sort points by distance from centroid to create more regular triangles
+            const centroid = {
+                x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+                y: points.reduce((sum, p) => sum + p.y, 0) / points.length
+            };
+
+            const sortedPoints = [...points].sort((a, b) => {
+                const distA = Math.sqrt((a.x - centroid.x) ** 2 + (a.y - centroid.y) ** 2);
+                const distB = Math.sqrt((b.x - centroid.x) ** 2 + (b.y - centroid.y) ** 2);
+                return distA - distB;
+            });
+
+            // Create triangles connecting nearest neighbors
+            for (let i = 0; i < sortedPoints.length; i++) {
+                for (let j = i + 1; j < Math.min(i + 4, sortedPoints.length); j++) {
+                    for (let k = j + 1; k < Math.min(j + 3, sortedPoints.length); k++) {
+                        // Check if triangle has reasonable area (not degenerate)
+                        const area = Math.abs(
+                            (sortedPoints[i].x * (sortedPoints[j].y - sortedPoints[k].y) +
+                                sortedPoints[j].x * (sortedPoints[k].y - sortedPoints[i].y) +
+                                sortedPoints[k].x * (sortedPoints[i].y - sortedPoints[j].y)) / 2
+                        );
+
+                        if (area > 1e-10) { // Minimum area threshold
+                            triangles.push([sortedPoints[i], sortedPoints[j], sortedPoints[k]]);
+                        }
+
+                        if (triangles.length >= points.length * 2) break; // Reasonable limit
+                    }
+                    if (triangles.length >= points.length * 2) break;
+                }
+                if (triangles.length >= points.length * 2) break;
+            }
+
+            return triangles;
+        }
+
+        function edgesEqual(edge1, edge2) {
+            return (edge1[0] === edge2[0] && edge1[1] === edge2[1]) ||
+                (edge1[0] === edge2[1] && edge1[1] === edge2[0]);
+        }
+
+        // Alternative: Simple triangulation for small datasets
+        function simpleTriangulation(points) {
+            if (points.length < 3) return [];
+
+            const triangles = [];
+
+            // For small datasets, create triangles by connecting each point to a central point
+            if (points.length <= 6) {
+                // Find centroid
+                const centroid = {
+                    x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+                    y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+                    z: points.reduce((sum, p) => sum + p.z, 0) / points.length
+                };
+
+                // Create triangles from each edge to centroid
+                for (let i = 0; i < points.length; i++) {
+                    const next = (i + 1) % points.length;
+                    triangles.push([points[i], points[next], centroid]);
+                }
+            } else {
+                // For larger datasets, use convex hull approach
+                const hull = convexHull(points);
+
+                // Triangulate from first point
+                for (let i = 1; i < hull.length - 1; i++) {
+                    triangles.push([hull[0], hull[i], hull[i + 1]]);
+                }
+
+                // Add interior points
+                const interior = points.filter(p => !hull.includes(p));
+                for (let point of interior) {
+                    // Find nearest triangle and add point
+                    if (triangles.length > 0) {
+                        triangles.push([triangles[0][0], triangles[0][1], point]);
+                    }
+                }
+            }
+
+            return triangles;
+        }
+
+        function convexHull(points) {
+            if (points.length < 3) return points;
+
+            // Sort points by x-coordinate
+            const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+
+            // Build lower hull
+            const lower = [];
+            for (let point of sorted) {
+                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+                    lower.pop();
+                }
+                lower.push(point);
+            }
+
+            // Build upper hull
+            const upper = [];
+            for (let i = sorted.length - 1; i >= 0; i--) {
+                const point = sorted[i];
+                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+                    upper.pop();
+                }
+                upper.push(point);
+            }
+
+            // Remove last point of each half because it's repeated
+            lower.pop();
+            upper.pop();
+
+            return lower.concat(upper);
+        }
+
+        function cross(o, a, b) {
+            return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+        }
+
+        // Toggle TIN surface visualization
+        function toggleTIN() {
+            if (surveyData.length < 3) {
+                showError('Need at least 3 points to create TIN surface');
+                return;
+            }
+
+            const btn = document.getElementById('tinBtn');
+
+            if (showingTIN) {
+                // Remove TIN layer
+                if (tinLayer) {
+                    map.removeLayer(tinLayer);
+                    tinLayer = null;
+                }
+                showingTIN = false;
+                btn.classList.remove('active');
+                btn.innerHTML = '<span class="btn-icon">🔺</span> Create TIN Surface';
+            } else {
+                // Create TIN layer
+                createTINSurface();
+                showingTIN = true;
+                btn.classList.add('active');
+                btn.innerHTML = '<span class="btn-icon">🔺</span> Hide TIN Surface';
+            }
+        }
+
+        function showContours() {
+            if (!surveyData.length) {
+                alert('Load data first');
+                return;
+            }
+            if (contoursLayer) {
+                map.removeLayer(contoursLayer);
+                contoursLayer = null;
+                document.getElementById('contourBtn').classList.remove('active');
+                return;
+            }
+            document.getElementById('contourBtn').classList.add('active');
+
+            const pts = turf.featureCollection(
+                surveyData.map(p =>
+                    turf.point([+p.Longitude, +p.Latitude], {
+                        elevation: +p.Elevation
+                    })
+                )
+            );
+            const interpolated = turf.interpolate(pts, 10, {
+                gridType: 'points',
+                property: 'elevation',
+                units: 'degrees'
+            });
+            const elevs = surveyData.map(p => +p.Elevation);
+            const minE = Math.floor(Math.min(...elevs)),
+                maxE = Math.ceil(Math.max(...elevs));
+            const breaks = [];
+            for (let z = minE; z <= maxE; z += 1) breaks.push(z);
+
+
+            const contours = turf.isolines(interpolated, breaks, {
+                zProperty: 'elevation'
+            });
+
+
+
+            contoursLayer = L.geoJSON(contours, {
+                style: _ => ({
+                    color: '#333',
+                    weight: 1,
+                    opacity: 0.8
+                }),
+                onEachFeature: (f, l) => l.bindPopup(`Elevation: ${f.properties.elevation} m`)
+            }).addTo(map);
+
+            map.fitBounds(contoursLayer.getBounds().pad(0.1));
+        }
+
+
+        // Create TIN surface
+        function createTINSurface() {
+            // Convert survey data to points for triangulation
+            const points = surveyData.map(point => ({
+                x: parseFloat(point.Longitude),
+                y: parseFloat(point.Latitude),
+                z: parseFloat(point.Elevation || 0)
+            }));
+
+            console.log('Creating TIN with points:', points);
+
+            // Try multiple triangulation methods
+            let triangles = [];
+
+            try {
+                // First try the improved Delaunay
+                triangles = delaunay(points);
+                console.log('Delaunay triangles:', triangles.length);
+
+                // If that fails or produces too few triangles, try simple triangulation
+                if (triangles.length === 0) {
+                    triangles = simpleTriangulation(points);
+                    console.log('Simple triangulation:', triangles.length);
+                }
+
+                // If still no luck, try robust triangulation
+                if (triangles.length === 0) {
+                    triangles = robustTriangulation(points);
+                    console.log('Robust triangulation:', triangles.length);
+                }
+            } catch (error) {
+                console.error('Triangulation error:', error);
+                triangles = robustTriangulation(points);
+                console.log('Fallback robust triangulation:', triangles.length);
+            }
+
+            if (triangles.length === 0) {
+                showError('Could not generate triangulation. Try with more evenly distributed points.');
+                return;
+            }
+
+            // Create triangular polygons with elevation-based coloring
+            const trianglePolygons = [];
+            const elevations = points.map(p => p.z);
+            const minElev = Math.min(...elevations);
+            const maxElev = Math.max(...elevations);
+
+            console.log('Elevation range:', minElev, 'to', maxElev);
+
+            triangles.forEach((triangle, index) => {
+                try {
+                    // Calculate average elevation of triangle
+                    const avgElev = (triangle[0].z + triangle[1].z + triangle[2].z) / 3;
+
+                    // Normalize elevation for color mapping (0-1)
+                    const normalizedElev = maxElev > minElev ? (avgElev - minElev) / (maxElev - minElev) : 0.5;
+
+                    // Create color based on elevation (blue=low, red=high)
+                    const hue = (1 - normalizedElev) * 240; // 240=blue, 0=red
+                    const color = `hsl(${hue}, 70%, 50%)`;
+
+                    // Create polygon coordinates
+                    const coords = triangle.map(point => [point.y, point.x]);
+                    coords.push(coords[0]); // Close the polygon
+
+                    // Validate coordinates
+                    if (coords.some(coord => !coord || isNaN(coord[0]) || isNaN(coord[1]))) {
+                        console.warn('Invalid coordinates in triangle', index, coords);
+                        return;
+                    }
+
+                    const polygon = L.polygon(coords, {
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.6,
+                        weight: 1,
+                        opacity: 0.8
+                    });
+
+                    // Add popup with triangle info
+                    const popupContent = `
+                        <div class="marker-info">
+                            <h4>TIN Triangle #${index + 1}</h4>
+                            <p><strong>Average Elevation:</strong> ${avgElev.toFixed(3)}m</p>
+                            <p><strong>Vertices:</strong></p>
+                            ${triangle.map((v, i) => 
+                                `<p>• Point ${i + 1}: ${v.y.toFixed(6)}, ${v.x.toFixed(6)} (${v.z.toFixed(3)}m)</p>`
+                            ).join('')}
+                        </div>
+                    `;
+                    polygon.bindPopup(popupContent);
+
+                    trianglePolygons.push(polygon);
+                } catch (error) {
+                    console.error('Error creating triangle polygon:', error, triangle);
+                }
+            });
+
+            if (trianglePolygons.length === 0) {
+                showError('No valid triangles could be created');
+                return;
+            }
+
+            // Create layer group for all triangles
+            tinLayer = L.layerGroup(trianglePolygons).addTo(map);
+
+            // Add legend for elevation colors
+            createElevationLegend(minElev, maxElev);
+
+            console.log('TIN surface created with', trianglePolygons.length, 'triangles');
+        }
+
+        // Create elevation legend
+        function createElevationLegend(minElev, maxElev) {
+            const legend = L.control({
+                position: 'bottomright'
+            });
+
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'elevation-legend');
+                div.style.cssText = `
+                    background: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    font-size: 12px;
+                `;
+
+                div.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 8px;">Elevation (m)</div>
+                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                        <div style="width: 20px; height: 15px; background: hsl(0, 70%, 50%); margin-right: 8px; border: 1px solid #ccc;"></div>
+                        <span>${maxElev.toFixed(1)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                        <div style="width: 20px; height: 15px; background: hsl(120, 70%, 50%); margin-right: 8px; border: 1px solid #ccc;"></div>
+                        <span>${((maxElev + minElev) / 2).toFixed(1)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 20px; height: 15px; background: hsl(240, 70%, 50%); margin-right: 8px; border: 1px solid #ccc;"></div>
+                        <span>${minElev.toFixed(1)}</span>
+                    </div>
+                `;
+
+                return div;
+            };
+
+            legend.addTo(map);
+        }
+
+        // Show contours (placeholder for future implementation)
+        // Real contour generator using Turf.js
+        function showContours() {
+            if (!surveyData.length) {
+                alert('Load data first');
+                return;
+            }
+            // toggle off
+            if (contoursLayer) {
+                map.removeLayer(contoursLayer);
+                contoursLayer = null;
+                document.getElementById('contourBtn').classList.remove('active');
+                return;
+            }
+            document.getElementById('contourBtn').classList.add('active');
+
+            // build point features
+            const pts = turf.featureCollection(
+                surveyData.map(p =>
+                    turf.point([+p.Longitude, +p.Latitude], {
+                        elevation: +p.Elevation
+                    })
+                )
+            );
+            const bbox = turf.bbox(pts);
+            // interpolate grid (~50 m spacing)
+            const interpolated = turf.interpolate(pts, 10, {
+                gridType: 'points',
+                property: 'elevation',
+                units: 'degrees'
+            });
+            // 1 m contour breaks
+            const elevs = surveyData.map(p => +p.Elevation);
+            const minE = Math.floor(Math.min(...elevs)),
+                maxE = Math.ceil(Math.max(...elevs));
+            const breaks = [];
+            for (let z = minE; z <= maxE; z++) breaks.push(z);
+
+
+            const contours = turf.isolines(interpolated, breaks, {
+                zProperty: 'elevation'
+            });
+
+
+            contoursLayer = L.geoJSON(contours, {
+                style: _ => ({
+                    color: '#333',
+                    weight: 1,
+                    opacity: 0.8
+                }),
+                onEachFeature: (f, l) => l.bindPopup(`Elevation: ${f.properties.elevation} m`)
+            }).addTo(map);
+            map.fitBounds(contoursLayer.getBounds().pad(0.1));
+        }
+
+        function switchTab(method) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update input methods
+            document.querySelectorAll('.input-method').forEach(method => method.classList.remove('active'));
+            document.getElementById(method + 'Tab').classList.add('active');
+        }
+
+        // Process pasted CSV data
+        function processPastedData() {
+            const rawText = document.getElementById('csvPaste').value.trim();
+            if (!rawText) {
+                showError('Please paste data first');
+                return;
+            }
+
+            // Check if it's space-separated data without headers
+            if (!rawText.includes(',') && rawText.includes(' ')) {
+                parseSpaceSeparatedData(rawText);
+            } else {
+                parseCSVData(rawText);
+            }
+        }
+
+        // Parse space-separated data
+        function parseSpaceSeparatedData(rawText) {
+            const lines = rawText.trim().split('\n');
+            const headers = [
+                'Name', 'Code', 'Easting', 'Northing', 'Elevation', 'Description',
+                'Longitude', 'Latitude', 'Ellipsoidal height', 'Origin', 'Easting RMS',
+                'Northing RMS', 'Elevation RMS', 'Lateral RMS', 'Antenna height',
+                'Antenna height units', 'Solution status', 'Correction type',
+                'Averaging start', 'Averaging start2', 'Averaging start3', 'Averaging end',
+                'Averaging end2', 'Averaging end3', 'Samples', 'PDOP', 'GDOP',
+                'Base easting', 'Base northing', 'Base elevation', 'Base longitude',
+                'Base latitude', 'Base ellipsoidal height', 'Baseline', 'Mount point',
+                'CS name', 'GPS Satellites', 'GLONASS Satellites', 'Galileo Satellites',
+                'BeiDou Satellites', 'QZSS Satellites'
+            ];
+
+            surveyData = [];
+
+            lines.forEach(line => {
+                if (line.trim()) {
+                    const values = line.trim().split(/\s+/);
+                    const dataPoint = {};
+
+                    // Map values to headers
+                    values.forEach((value, index) => {
+                        if (index < headers.length) {
+                            // Convert numeric values
+                            if (!isNaN(value) && value !== '') {
+                                dataPoint[headers[index]] = parseFloat(value);
+                            } else {
+                                dataPoint[headers[index]] = value;
+                            }
+                        }
+                    });
+
+                    // Ensure we have valid coordinates
+                    if (dataPoint.Latitude != null && dataPoint.Longitude != null &&
+                        !isNaN(dataPoint.Latitude) && !isNaN(dataPoint.Longitude)) {
+
+                        // Combine timestamp parts if they exist
+                        if (dataPoint['Averaging start2']) {
+                            dataPoint['Averaging start'] = dataPoint['Averaging start'] + ' ' +
+                                dataPoint['Averaging start2'] + ' ' + dataPoint['Averaging start3'];
+                        }
+                        if (dataPoint['Averaging end2']) {
+                            dataPoint['Averaging end'] = dataPoint['Averaging end'] + ' ' +
+                                dataPoint['Averaging end2'] + ' ' + dataPoint['Averaging end3'];
+                        }
+
+                        surveyData.push(dataPoint);
+                    }
+                }
+            });
+
+            if (surveyData.length === 0) {
+                showError('No valid GPS coordinates found in the pasted data');
+                return;
+            }
+
+            displayData();
+            updateMap();
+            updateStats();
+        }
+
+        // Sample data based on your provided coordinates
+        function loadSampleData() {
+            const sampleCSV = `Name,Code,Easting,Northing,Elevation,Description,Longitude,Latitude,Ellipsoidal height,Origin,Easting RMS,Northing RMS,Elevation RMS,Lateral RMS,Antenna height,Antenna height units,Solution status,Correction type,Averaging start,Averaging end,Samples,PDOP,GDOP,Base easting,Base northing,Base elevation,Base longitude,Base latitude,Base ellipsoidal height,Baseline,Mount point,CS name,GPS Satellites,GLONASS Satellites,Galileo Satellites,BeiDou Satellites,QZSS Satellites
+1,322965.3,6279430,33.837,gcp,115.0918,-33.6102,1.805,Global,0.011,0.011,0.026,0.016,1.934,m,FIX,RTK,2025-07-21 11:30:20.0 UTC+08:00,2025-07-21 11:30:30.0 UTC+08:00,49,2.9,3.4,343222,6272667,6.403,115.3088,-33.6744,-26.311,21357.17,BUSS00AUS0,GDA2020 / MGA zone 50 + AHD height,9,9,0,0,0
+2,322931.6,6279481,32.97,gcp,115.0914,-33.6097,0.939,Global,0.01,0.011,0.02,0.015,1.934,m,FIX,RTK,2025-07-21 11:31:17.4 UTC+08:00,2025-07-21 11:31:27.4 UTC+08:00,49,2.9,3.4,343222,6272667,6.403,115.3088,-33.6744,-26.311,21405.3,BUSS00AUS0,GDA2020 / MGA zone 50 + AHD height,8,9,0,0,0`;
+
+            parseCSVData(sampleCSV);
+        }
+
+        // Parse CSV data
+        function parseCSVData(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        showError('CSV parsing errors: ' + results.errors.map(e => e.message).join(', '));
+                        return;
+                    }
+
+                    surveyData = results.data.filter(row =>
+                        row.Latitude != null && row.Longitude != null &&
+                        !isNaN(row.Latitude) && !isNaN(row.Longitude)
+                    );
+
+                    if (surveyData.length === 0) {
+                        showError('No valid GPS coordinates found in the data');
+                        return;
+                    }
+
+                    displayData();
+                    updateMap();
+                    updateStats();
+                }
+            });
+        }
+
+        // Display data in table
+        function displayData() {
+            const container = document.getElementById('dataContainer');
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Longitude</th>
+                            <th>Latitude</th>
+                            <th>Elevation</th>
+                            <th>Description</th>
+                            <th>RMS</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            surveyData.forEach(point => {
+                tableHTML += `
+                    <tr>
+                        <td><strong>${point.Name || 'N/A'}</strong></td>
+                        <td>${parseFloat(point.Longitude).toFixed(6)}</td>
+                        <td>${parseFloat(point.Latitude).toFixed(6)}</td>
+                        <td>${parseFloat(point.Elevation).toFixed(3)}m</td>
+                        <td>${point.Description || 'N/A'}</td>
+                        <td>${parseFloat(point['Lateral RMS'] || 0).toFixed(3)}</td>
+                        <td><span style="color: ${point['Solution status'] === 'FIX' ? 'green' : 'orange'}">${point['Solution status'] || 'N/A'}</span></td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+        }
+
+        // Update map with markers
+        function updateMap() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            if (surveyData.length === 0) return;
+
+            // Add markers for each point
+            surveyData.forEach((point, index) => {
+                const lat = parseFloat(point.Latitude);
+                const lng = parseFloat(point.Longitude);
+
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                // Create custom icon based on solution status
+                const iconColor = point['Solution status'] === 'FIX' ? 'green' : 'orange';
+
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 8,
+                    fillColor: iconColor,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                // Create popup content
+                const popupContent = `
+                    <div class="marker-info">
+                        <h4>Point ${point.Name}</h4>
+                        <p><strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+                        <p><strong>Elevation:</strong> ${parseFloat(point.Elevation).toFixed(3)}m</p>
+                        <p><strong>Description:</strong> ${point.Description}</p>
+                        <p><strong>Solution Status:</strong> ${point['Solution status']}</p>
+                        <p><strong>Lateral RMS:</strong> ${parseFloat(point['Lateral RMS'] || 0).toFixed(3)}</p>
+                        <p><strong>Measurement Time:</strong> ${point['Averaging start']}</p>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                markers.push(marker);
+            });
+
+            // Fit map to show all markers
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const pointCount = surveyData.length;
+            const avgElevation = surveyData.reduce((sum, p) => sum + parseFloat(p.Elevation || 0), 0) / pointCount;
+            const avgRMS = surveyData.reduce((sum, p) => sum + parseFloat(p['Lateral RMS'] || 0), 0) / pointCount;
+
+            document.getElementById('pointCount').textContent = pointCount;
+            document.getElementById('avgElevation').textContent = avgElevation.toFixed(2) + 'm';
+            document.getElementById('avgRMS').textContent = avgRMS.toFixed(3);
+        }
+
+        // Show error message
+        function showError(message) {
+            const container = document.getElementById('dataContainer');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // File input handler
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseCSVData(e.target.result);
+            };
+            reader.readAsText(file);
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            loadSampleData(); // Load sample data by default
+
+            // Wire the contours button after the DOM is ready
+            document.getElementById('contourBtn').onclick = showContours;
+        });
+
+
+        function showContours() {
+            if (!surveyData.length) {
+                alert('Load data first');
+                return;
+            }
+            if (contoursLayer) {
+                map.removeLayer(contoursLayer);
+                contoursLayer = null;
+                document.getElementById('contourBtn').classList.remove('active');
+                return;
+            }
+            document.getElementById('contourBtn').classList.add('active');
+
+            const pts = turf.featureCollection(
+                surveyData.map(p =>
+                    turf.point([+p.Longitude, +p.Latitude], {
+                        elevation: +p.Elevation
+                    })
+                )
+            );
+            const interpolated = turf.interpolate(pts, 10, {
+                gridType: 'points',
+                property: 'elevation',
+                units: 'degrees'
+            });
+            const elevs = surveyData.map(p => +p.Elevation);
+            const minE = Math.floor(Math.min(...elevs)),
+                maxE = Math.ceil(Math.max(...elevs));
+            const breaks = [];
+            for (let z = minE; z <= maxE; z += 1) breaks.push(z);
+
+            const contours = turf.isolines(interpolated, breaks, {
+                zProperty: 'elevation'
+            });
+            contoursLayer = L.geoJSON(contours, {
+                style: _ => ({
+                    color: '#333',
+                    weight: 1,
+                    opacity: 0.8
+                }),
+                onEachFeature: (f, l) => l.bindPopup(`Elevation: ${f.properties.elevation} m`)
+            }).addTo(map);
+
+            map.fitBounds(contoursLayer.getBounds().pad(0.1));
+        }
+    </script>
+</body>
+
+</html>

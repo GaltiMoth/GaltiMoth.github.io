@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPT Analysis Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #4CAF50;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .upload-area:hover {
+            border-color: #45a049;
+            background: #f0fff0;
+        }
+        
+        .upload-area.dragover {
+            border-color: #45a049;
+            background: #e8f5e8;
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .upload-area.dragover::after {
+            content: "📁 Drop your CPT files here!";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #45a049;
+            pointer-events: none;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .remove-file {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .remove-file:hover {
+            background: #cc0000;
+        }
+        
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .param-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .param-group h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2em;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        input:focus, select:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        
+        .thresholds-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .thresholds-table th, .thresholds-table td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        .thresholds-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .thresholds-table input {
+            width: 80px;
+            padding: 5px;
+            margin: 0;
+        }
+        
+        .process-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .results-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        .results-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .results-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+        
+        .export-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            margin: 5px 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .export-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .copy-btn {
+            background: #28a745 !important;
+        }
+        
+        .copy-btn:hover {
+            background: #218838 !important;
+        }
+        
+        .dynamic-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .dynamic-controls h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .controls-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toggle-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-btn.active {
+            background: #dc3545;
+        }
+        
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .reset-btn:hover {
+            background: #5a6268;
+        }
+        
+        .raw-data-section {
+            background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .raw-data-section h4 {
+            color: #004085;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .raw-data-section p {
+            margin: 5px 0; 
+            color: #666; 
+            font-size: 0.9em;
+        }
+        
+        .raw-data-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .format-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .format-badge.european {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #1976d2;
+        }
+        
+        .format-badge.standard {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #f57c00;
+        }
+        
+        .format-badge.tabdelim {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            border: 1px solid #7b1fa2;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ CPT Analysis Tool</h1>
+            <p>Upload and analyze Cone Penetration Test data with customizable soil classification parameters</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.85;">
+                Supports: Standard CSV (comma + period) • European CSV (semicolon + comma) • Tab-delimited
+            </p>
+        </div>
+        
+        <div class="content">
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>📁 Upload CPT Files</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-text">
+                        <strong>Click here or drag and drop your CPT files</strong><br>
+                        Supported formats: .csv, .txt, .xlsx<br>
+                        <small style="color: #666; margin-top: 5px; display: block;">
+                            ✓ Standard CSV (commas, periods: "0.5,1.2,...")<br>
+                            ✓ European CSV (semicolons, commas: "0,5;1,2;...")<br>
+                            ✓ Tab-delimited format<br>
+                            Auto-detects format and calculates RF if not provided
+                        </small>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" multiple accept=".csv,.txt,.xlsx">
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+            
+            <!-- Parameters Section -->
+            <div class="section">
+                <h2>⚙️ Analysis Parameters</h2>
+                <div class="parameters-grid">
+                    <!-- Basic Settings -->
+                    <div class="param-group">
+                        <h3>📏 Units & Settings</h3>
+                        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #4CAF50;">
+                            <strong>Current Display Units:</strong>
+                            <div id="currentUnitsDisplay" style="margin-top: 5px;">
+                                <div>📥 <strong>Input:</strong> Depth: cm, Pressure: kPa</div>
+                                <div>📤 <strong>Display:</strong> Depth: m, Pressure: MPa, Coordinates: utm</div>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="inputDepthUnit">Input Data Depth Unit (what your CPT files contain)</label>
+                            <select id="inputDepthUnit" onchange="updateUnitsDisplay()">
+                                <option value="m">Meters (m)</option>
+                                <option value="cm" selected>Centimeters (cm)</option>
+                                <option value="mm">Millimeters (mm)</option>
+                                <option value="ft">Feet (ft)</option>
+                                <option value="in">Inches (in)</option>
+                            </select>
+                            <small style="color: #666; font-style: italic;">⚠️ Important: Select the actual units in your CPT data files</small>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="inputPressureUnit">Input Data Pressure Unit (what your CPT files contain)</label>
+                            <select id="inputPressureUnit" onchange="updateUnitsDisplay()">
+                                <option value="MPa">Megapascals (MPa)</option>
+                                <option value="kPa" selected>Kilopascals (kPa)</option>
+                                <option value="Pa">Pascals (Pa)</option>
+                                <option value="tsf">Tons per sq ft (tsf)</option>
+                                <option value="ksf">Kips per sq ft (ksf)</option>
+                                <option value="psi">Pounds per sq in (psi)</option>
+                            </select>
+                            <small style="color: #666; font-style: italic;">⚠️ Check your CPT file headers for pressure units</small>
+                        </div>
+                        
+                        <hr style="margin: 20px 0; border: 1px solid #ddd;">
+                        <h4>Display Units (how you want results shown)</h4>
+                        
+                        <div class="input-group">
+                            <label for="rfThreshold">RF Threshold for Granular/Cohesive (%)</label>
+                            <input type="number" id="rfThreshold" value="1" step="0.1" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="depthUnit">Display Depth Unit</label>
+                            <select id="depthUnit" onchange="updateResultsHeader(); updateUnitsDisplay()">
+                                <option value="m" selected>Meters (m)</option>
+                                <option value="cm">Centimeters (cm)</option>
+                                <option value="mm">Millimeters (mm)</option>
+                                <option value="ft">Feet (ft)</option>
+                                <option value="in">Inches (in)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="pressureUnit">Display Pressure Unit</label>
+                            <select id="pressureUnit" onchange="updateResultsHeader(); updateUnitsDisplay()">
+                                <option value="MPa" selected>Megapascals (MPa)</option>
+                                <option value="kPa">Kilopascals (kPa)</option>
+                                <option value="Pa">Pascals (Pa)</option>
+                                <option value="tsf">Tons per sq ft (tsf)</option>
+                                <option value="ksf">Kips per sq ft (ksf)</option>
+                                <option value="psi">Pounds per sq in (psi)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="coordinateUnit">Coordinate System</label>
+                            <select id="coordinateUnit" onchange="updateResultsHeader(); updateUnitsDisplay()">
+                                <option value="utm" selected>UTM</option>
+                                <option value="decimal">Decimal Degrees</option>
+                                <option value="dms">Degrees/Minutes/Seconds</option>
+                                <option value="local">Local Grid</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Granular Classification -->
+                    <div class="param-group">
+                        <h3 id="granularTitle">🏔️ Granular Soil Classification</h3>
+                        <p style="font-style: italic; color: #666; margin-bottom: 15px;">Qc thresholds in <span id="granularUnits">MPa</span></p>
+                        <table class="thresholds-table">
+                            <thead>
+                                <tr>
+                                    <th>Classification</th>
+                                    <th>Name</th>
+                                    <th>Min Qc</th>
+                                    <th>Max Qc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td><input type="text" value="LOOSE" id="gran1Name"></td>
+                                    <td>0</td>
+                                    <td><input type="number" value="5" step="0.1" id="gran1Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td><input type="text" value="MED_DENSE" id="gran2Name"></td>
+                                    <td>5</td>
+                                    <td><input type="number" value="12" step="0.1" id="gran2Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td><input type="text" value="DENSE" id="gran3Name"></td>
+                                    <td>12</td>
+                                    <td><input type="number" value="30" step="0.1" id="gran3Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td><input type="text" value="VERY_DENSE" id="gran4Name"></td>
+                                    <td>30</td>
+                                    <td>∞</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Cohesive Classification -->
+                    <div class="param-group">
+                        <h3 id="cohesiveTitle">🧱 Cohesive Soil Classification</h3>
+                        <p style="font-style: italic; color: #666; margin-bottom: 15px;">Qc thresholds in <span id="cohesiveUnits">MPa</span></p>
+                        <table class="thresholds-table">
+                            <thead>
+                                <tr>
+                                    <th>Classification</th>
+                                    <th>Name</th>
+                                    <th>Min Qc</th>
+                                    <th>Max Qc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td><input type="text" value="VERY_SOFT" id="coh1Name"></td>
+                                    <td>0</td>
+                                    <td><input type="number" value="0.3" step="0.1" id="coh1Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td><input type="text" value="SOFT" id="coh2Name"></td>
+                                    <td>0.3</td>
+                                    <td><input type="number" value="0.6" step="0.1" id="coh2Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td><input type="text" value="FIRM" id="coh3Name"></td>
+                                    <td>0.6</td>
+                                    <td><input type="number" value="1.2" step="0.1" id="coh3Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td><input type="text" value="STIFF" id="coh4Name"></td>
+                                    <td>1.2</td>
+                                    <td><input type="number" value="2.5" step="0.1" id="coh4Max"></td>
+                                </tr>
+                                <tr>
+                                    <td>5</td>
+                                    <td><input type="text" value="VERY_STIFF" id="coh5Name"></td>
+                                    <td>2.5</td>
+                                    <td>∞</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Process Section -->
+            <div class="section" style="text-align: center;">
+                <button class="process-btn" id="processBtn" disabled>🔄 Process CPT Files</button>
+                <div id="status"></div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results" id="results" style="display: none;">
+                <div class="section">
+                    <h2>📊 Analysis Results</h2>
+                    
+                    <!-- Dynamic Controls Panel -->
+                    <div class="dynamic-controls">
+                        <h3>🎛️ Dynamic Results Control</h3>
+                        <div class="controls-grid">
+							<div>
+								<label for="quickDepthUnit"><strong>Quick Depth Unit:</strong></label>
+								<select id="quickDepthUnit" onchange="quickChangeDepthUnit()">
+									<option value="mm">Millimeters (mm)</option>
+									<option value="cm">Centimeters (cm)</option>
+									<option value="m" selected>Meters (m)</option>
+									<option value="ft">Feet (ft)</option>
+								</select>
+							</div>
+
+							<div>
+								<label for="exportMode"><strong>Export Mode:</strong></label>
+								<select id="exportMode" onchange="displayResults()">
+									<option value="detailed">Detailed (Loose/Dense/Stiff)</option>
+									<option value="simple">Simplified (Sand/Clay)</option>
+								</select>
+							</div>
+							<div>
+								<label for="minThickness"><strong>Min Layer Thickness (m):</strong></label>
+								<input type="number" id="minThickness" value="0.0" step="0.05" min="0" onchange="displayResults()">
+							</div>
+
+							<div>
+								<label for="simpleSandName"><strong>"Sand" Export Name:</strong></label>
+								<input type="text" id="simpleSandName" value="SAND" onchange="displayResults()">
+							</div>
+							<div>
+								<label for="simpleClayName"><strong>"Clay" Export Name:</strong></label>
+								<input type="text" id="simpleClayName" value="CLAY" onchange="displayResults()">
+							</div>
+                            <div>
+                                <label for="layerNamePrefix"><strong>Layer Name Prefix:</strong></label>
+                                <input type="text" id="layerNamePrefix" placeholder="e.g., FILL_, SP_, CL_" onchange="updateLayerNames()">
+                            </div>
+                            <div>
+                                <label for="layerNameSuffix"><strong>Layer Name Suffix:</strong></label>
+                                <input type="text" id="layerNameSuffix" placeholder="e.g., _LAYER, _UNIT" onchange="updateLayerNames()">
+                            </div>
+                        </div>
+                        
+                        <div class="controls-buttons">
+                            <button onclick="toggleCompactNames()" id="compactNamesBtn" class="toggle-btn">
+                                📝 Toggle Compact Names
+                            </button>
+                            <button onclick="resetLayerNames()" class="reset-btn">
+                                🔄 Reset Names
+                            </button>
+                            <span style="color: #666; font-style: italic;">Changes apply immediately to the table below</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Export Buttons -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        <button class="export-btn" onclick="exportToCSV()">📄 Export to CSV</button>
+                        <button class="export-btn" onclick="exportToExcel()">📊 Export to Excel</button>
+                        <button class="export-btn copy-btn" onclick="copyToClipboard()">📋 Copy Summary Table</button>
+                    </div>
+                    
+                    <!-- Raw Data Export Section -->
+                    <div class="raw-data-section">
+                        <h4>📊 Raw Data for Excel Analysis</h4>
+                        <p>Each CPT becomes a column with name header + raw data points. Perfect for creating charts and statistical analysis!</p>
+                        <div class="raw-data-buttons">
+                            <button class="export-btn" onclick="copyQCData()" style="background: #6f42c1;">📈 Copy QC Data Columns</button>
+                            <button class="export-btn" onclick="copyRFData()" style="background: #e83e8c;">📉 Copy RF Data Columns</button>
+                            <button class="export-btn" onclick="copyDepthData()" style="background: #20c997;">📏 Copy Depth Data Columns</button>
+                        </div>
+                    </div>
+                    
+                    <div id="copyStatus" style="display: none; padding: 10px; border-radius: 5px; margin: 10px 0;"></div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table class="results-table" id="resultsTable">
+                            <thead id="resultsHeader">
+                                <!-- Dynamic header will be inserted here -->
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Results will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+        let processedData = [];
+        let isCompactNames = false;
+        let originalLayerNames = {}; // Store original layer names for each data entry
+        
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const processBtn = document.getElementById('processBtn');
+        const status = document.getElementById('status');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        processBtn.addEventListener('click', processFiles);
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.target === uploadArea) {
+                uploadArea.classList.remove('dragover');
+            }
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            
+            const validFiles = files.filter(file => 
+                file.name.match(/\.(csv|txt|xlsx)$/i)
+            );
+            
+            if (validFiles.length === 0) {
+                showStatus('❌ Please drop only .csv, .txt, or .xlsx files', 'error');
+                return;
+            }
+            
+            if (validFiles.length < files.length) {
+                showStatus(`⚠️ ${files.length - validFiles.length} file(s) skipped (wrong format). Added ${validFiles.length} valid file(s).`, 'info');
+            } else {
+                showStatus(`✅ ${validFiles.length} file(s) ready to process!`, 'success');
+            }
+            
+            addFiles(validFiles);
+        }
+        
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+        
+        function addFiles(files) {
+            files.forEach(file => {
+                if (file.name.match(/\.(csv|txt|xlsx)$/i)) {
+                    uploadedFiles.push(file);
+                    displayFile(file, uploadedFiles.length - 1);
+                } else {
+                    showStatus('Invalid file type: ' + file.name + '. Please upload .csv, .txt, or .xlsx files.', 'error');
+                }
+            });
+            updateProcessButton();
+        }
+        
+        function displayFile(file, index) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <span><strong>${file.name}</strong> (${formatFileSize(file.size)})</span>
+                <button class="remove-file" onclick="removeFile(${index})">Remove</button>
+            `;
+            fileList.appendChild(fileItem);
+        }
+        
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            fileList.innerHTML = '';
+            uploadedFiles.forEach((file, i) => displayFile(file, i));
+            updateProcessButton();
+        }
+        
+        function updateProcessButton() {
+            processBtn.disabled = uploadedFiles.length === 0;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function showStatus(message, type) {
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        async function processFiles() {
+            if (uploadedFiles.length === 0) return;
+            
+            showStatus('Processing files...', 'info');
+            processBtn.disabled = true;
+            processedData = [];
+            originalLayerNames = {};
+            
+            try {
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    const file = uploadedFiles[i];
+                    showStatus(`Processing ${file.name} (${i + 1}/${uploadedFiles.length})...`, 'info');
+                    
+                    const result = await processFile(file);
+                    if (result) {
+                        processedData.push(result);
+                        const formatInfo = result.formatDetected || 'Format detected';
+                        showStatus(`✓ ${file.name} - ${formatInfo} - ${result.rawData.length} data points`, 'success');
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                
+                if (processedData.length > 0) {
+                    displayResults();
+                    showStatus(`Successfully processed ${processedData.length} files.`, 'success');
+                } else {
+                    showStatus('No files were successfully processed.', 'error');
+                }
+            } catch (error) {
+                showStatus('Error processing files: ' + error.message, 'error');
+            }
+            
+            processBtn.disabled = false;
+        }
+        
+        async function processFile(file) {
+            try {
+                let content;
+                
+                if (file.name.endsWith('.xlsx')) {
+                    throw new Error('Excel support requires additional libraries. Please convert to CSV first.');
+                } else {
+                    content = await readFileAsText(file);
+                }
+                
+                console.log(`Processing ${file.name}, content length: ${content.length}`);
+                
+                const result = await parseCPTData(content, file.name);
+                
+                if (result && result.formatDetected) {
+                    console.log(`${file.name}: Detected ${result.formatDetected}`);
+                    console.log(`Found ${result.rawData.length} data points`);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error(`Error processing ${file.name}:`, error);
+                showStatus(`Error processing ${file.name}: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        
+        function parseEuropeanNumber(str) {
+            // Convert European format (comma as decimal) to standard format (period as decimal)
+            if (typeof str === 'string') {
+                return parseFloat(str.replace(',', '.'));
+            }
+            return parseFloat(str);
+        }
+        
+        function parseCPTData(content, filename) {
+            const lines = content.split('\n');
+            console.log(`Total lines in file: ${lines.length}`);
+            
+            // Detect file format
+            let fileFormat = 'format1'; // Default format (comma delimiter, period decimal)
+            let dataStartLine = 24;
+            let isEuropeanCSV = false;
+            
+            // Check for European CSV format (semicolon delimiter)
+            // Look in first 50 lines for characteristic patterns
+            for (let i = 0; i < Math.min(50, lines.length); i++) {
+                const line = lines[i].trim().toLowerCase();
+                
+                // European format detection: semicolons as delimiters
+                if (line.includes(';') && !line.includes(',') && line.split(';').length > 3) {
+                    // Check if this looks like a data line with semicolons
+                    const parts = line.split(';');
+                    let hasNumericData = false;
+                    for (const part of parts) {
+                        if (part && /[\d,]+/.test(part)) {
+                            hasNumericData = true;
+                            break;
+                        }
+                    }
+                    if (hasNumericData) {
+                        isEuropeanCSV = true;
+                    }
+                }
+                
+                // Look for European format header lines
+                if (line.includes('depth;tip;') || line.includes('depth;local friction;')) {
+                    fileFormat = 'european';
+                    isEuropeanCSV = true;
+                    // Data typically starts 2-3 lines after header
+                    dataStartLine = i + 2;
+                    console.log(`Detected European format at line ${i + 1}`);
+                    break;
+                }
+                
+                // Check for Format 2 (tab-delimited)
+                if (line.includes('depth log') && line.includes('cone resistance') && line.includes('friction ratio')) {
+                    fileFormat = 'format2';
+                    dataStartLine = i + 1;
+                    console.log(`Detected Format 2 (tab-delimited) at line ${i + 1}`);
+                    break;
+                }
+            }
+            
+            // For format1, look for the exact header line
+            if (fileFormat === 'format1' && !isEuropeanCSV) {
+                console.log('Looking for Format 1 header...');
+                for (let i = 20; i < Math.min(30, lines.length); i++) {
+                    const line = lines[i].trim();
+                    if (line.toLowerCase().includes('depth') && 
+                        line.toLowerCase().includes('qc') && 
+                        line.toLowerCase().includes('fs') && 
+                        line.toLowerCase().includes('rf')) {
+                        dataStartLine = i + 1;
+                        console.log(`Found Format 1 header at line ${i + 1}, data starts at line ${dataStartLine + 1}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Extract metadata
+            const metadata = {};
+            const metadataLines = fileFormat === 'format2' ? 12 : (isEuropeanCSV ? 40 : 24);
+            for (let i = 0; i < Math.min(metadataLines, lines.length); i++) {
+                const line = lines[i].trim();
+                if (line.includes(':') || line.includes(';')) {
+                    const separator = line.includes(';') ? ';' : ':';
+                    const separatorIndex = line.indexOf(separator);
+                    const key = line.substring(0, separatorIndex).trim();
+                    const value = line.substring(separatorIndex + 1).trim();
+                    if (key && value) {
+                        metadata[key] = value;
+                    }
+                }
+            }
+            console.log('Metadata extracted:', metadata);
+            
+            // Get input units
+            const inputDepthUnit = document.getElementById('inputDepthUnit').value;
+            const inputPressureUnit = document.getElementById('inputPressureUnit').value;
+            
+            // Parse data
+            const data = [];
+            let validLineCount = 0;
+            let invalidLineCount = 0;
+            let rfCalculated = false;
+            
+            for (let i = dataStartLine; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Detect delimiter
+                let values;
+                let delimiter = ',';
+                
+                if (isEuropeanCSV || line.split(';').length > line.split(',').length) {
+                    // European format: semicolon delimiter
+                    values = line.split(';').map(v => v.trim()).filter(v => v !== '');
+                    delimiter = ';';
+                } else if (line.includes('\t')) {
+                    values = line.split('\t').map(v => v.trim()).filter(v => v !== '');
+                    delimiter = '\t';
+                } else {
+                    values = line.split(',').map(v => v.trim()).filter(v => v !== '');
+                }
+                
+                if (i === dataStartLine) {
+                    console.log(`First data line (${i + 1}): "${line}"`);
+                    console.log(`Parsed values:`, values);
+                    console.log(`Delimiter: ${delimiter}, European: ${isEuropeanCSV}`);
+                }
+                
+                // Skip lines that are all empty values or zeros
+                if (values.every(v => !v || v === '0')) continue;
+                
+                let depth, qc, fs, u2, rf;
+                
+                if (fileFormat === 'european' || (isEuropeanCSV && values.length >= 3)) {
+                    // European format: Depth;TIP;LOCAL FRICTION;PORE SHOULDER;...
+                    if (values.length >= 3) {
+                        depth = parseEuropeanNumber(values[0]);
+                        qc = parseEuropeanNumber(values[1]); // TIP
+                        fs = parseEuropeanNumber(values[2]); // LOCAL FRICTION
+                        u2 = values.length > 3 ? parseEuropeanNumber(values[3]) : 0; // PORE SHOULDER
+                        
+                        // Calculate RF if not provided: RF = (fs / qc) * 100
+                        if (qc !== 0 && !isNaN(qc) && !isNaN(fs)) {
+                            rf = (fs / qc) * 100;
+                            rfCalculated = true;
+                        } else {
+                            rf = 0;
+                        }
+                    }
+                } else if (fileFormat === 'format2') {
+                    // Format 2: tab-delimited
+                    if (values.length >= 5) {
+                        depth = parseFloat(values[0]);
+                        let qcValue = parseFloat(values[2]); // corrected Qc
+                        if (isNaN(qcValue) || values[2].toLowerCase() === 'nan') {
+                            qcValue = parseFloat(values[1]); // fallback to cone resistance
+                        }
+                        qc = qcValue;
+                        fs = parseFloat(values[3]);
+                        u2 = parseFloat(values[5]) || 0;
+                        rf = parseFloat(values[4]);
+                    }
+                } else {
+                    // Format 1: standard CSV
+                    if (values.length >= 5) {
+                        depth = parseFloat(values[0]);
+                        qc = parseFloat(values[1]);
+                        fs = parseFloat(values[2]);
+                        u2 = parseFloat(values[3]);
+                        rf = parseFloat(values[4]);
+                    }
+                }
+                
+                if (!isNaN(depth) && !isNaN(qc) && !isNaN(rf) && depth > 0) {
+                    // Convert to standard internal units (meters, MPa)
+                    const depthM = convertDepthToMeters(depth, inputDepthUnit);
+                    const qcMPa = convertPressureToMPa(qc, inputPressureUnit);
+                    const fsMPa = convertPressureToMPa(fs, inputPressureUnit);
+                    
+                    data.push({ 
+                        depth: depthM, 
+                        qc: qcMPa, 
+                        fs: fsMPa, 
+                        u2, 
+                        rf 
+                    });
+                    validLineCount++;
+                } else {
+                    invalidLineCount++;
+                    if (invalidLineCount <= 3) {
+                        console.log(`Invalid data at line ${i + 1}: depth=${depth}, qc=${qc}, rf=${rf}`);
+                    }
+                }
+            }
+            
+            console.log(`Parsing complete: ${validLineCount} valid lines, ${invalidLineCount} invalid lines`);
+            console.log(`RF calculated: ${rfCalculated}`);
+            
+            if (data.length === 0) {
+                throw new Error(`No valid data found in file. Checked ${lines.length} lines starting from line ${dataStartLine + 1}`);
+            }
+            
+            // Analyze layers
+            const layers = analyzeLayers(data);
+            
+            // Extract key information
+            const name = filename.replace(/\.(csv|txt|xlsx)$/i, '');
+            const lat = metadata['Lat.'] || metadata['Lat'] || metadata['Latitude'] || '';
+            const lon = metadata['Lon.'] || metadata['Lon'] || metadata['Longitude'] || '';
+            let elev = metadata['Ground Level'] || metadata['Elevation'] || metadata['reference level'] || '';
+            if (elev && !isNaN(parseFloat(elev))) {
+                elev = convertDepthToMeters(parseEuropeanNumber(elev), inputDepthUnit);
+            }
+            const totalDepth = Math.max(...data.map(d => d.depth));
+            const gw = metadata['waterdepth'] || '-';
+            
+            const formatNames = {
+                'format1': 'Standard CSV Format (comma + period)',
+                'format2': 'Tab-delimited Format',
+                'european': 'European CSV Format (semicolon + comma)'
+            };
+            
+            const formatBadge = isEuropeanCSV || fileFormat === 'european' ? 'european' : 
+                               fileFormat === 'format2' ? 'tabdelim' : 'standard';
+            
+            let formatDesc = formatNames[fileFormat] || formatNames['format1'];
+            if (isEuropeanCSV && fileFormat !== 'european') {
+                formatDesc = 'European CSV Format (semicolon + comma)';
+            }
+            if (rfCalculated) {
+                formatDesc += ' • RF calculated';
+            }
+            
+            return {
+                name,
+                lat,
+                lon,
+                elev,
+                totalDepth,
+                gw,
+                layers,
+                rawData: data,
+                formatDetected: formatDesc,
+                formatBadge: formatBadge
+            };
+        }
+        
+        function convertPressureToMPa(value, sourceUnit) {
+            if (typeof value !== 'number' || isNaN(value)) return value;
+            
+            switch(sourceUnit) {
+                case 'MPa': return value;
+                case 'kPa': return value / 1000;
+                case 'Pa': return value / 1000000;
+                case 'tsf': return value / 10.4427;
+                case 'ksf': return value / 20.8854;
+                case 'psi': return value / 145.038;
+                default: return value;
+            }
+        }
+        
+        // REPLACE your old analyzeLayers function with this:
+		function analyzeLayers(data) {
+			const rfThreshold = parseFloat(document.getElementById('rfThreshold').value);
+			
+			// New Controls
+			const exportMode = document.getElementById('exportMode') ? document.getElementById('exportMode').value : 'detailed';
+			const minThickness = document.getElementById('minThickness') ? parseFloat(document.getElementById('minThickness').value) : 0;
+			const sandName = document.getElementById('simpleSandName') ? document.getElementById('simpleSandName').value : 'SAND';
+			const clayName = document.getElementById('simpleClayName') ? document.getElementById('simpleClayName').value : 'CLAY';
+
+			let layers = [];
+			if (data.length === 0) return layers;
+
+			let currentLayer = null;
+			let currentDepth = data[0].depth;
+
+			// --- STEP 1: Initial Classification ---
+			for (let i = 0; i < data.length; i++) {
+				const point = data[i];
+				const isGranular = point.rf < rfThreshold;
+				
+				let classification;
+				
+				// Check which mode we are in
+				if (exportMode === 'simple') {
+					classification = isGranular ? sandName : clayName;
+				} else {
+					classification = classifySoil(point.qc, isGranular);
+				}
+
+				if (!currentLayer || currentLayer.classification !== classification) {
+					if (currentLayer) {
+						currentLayer.endDepth = currentDepth;
+						layers.push(currentLayer);
+					}
+					currentLayer = {
+						classification,
+						startDepth: point.depth,
+						endDepth: point.depth
+					};
+				}
+				currentDepth = point.depth;
+			}
+			if (currentLayer) {
+				currentLayer.endDepth = currentDepth;
+				layers.push(currentLayer);
+			}
+
+			// --- STEP 2: Filter Minimum Thickness ---
+			// If a layer is too thin, we change its name to the PREVIOUS layer's name
+			// (effectively merging them), then we re-merge the array.
+			if (minThickness > 0) {
+				// 1. Rename thin layers
+				for (let i = 0; i < layers.length; i++) {
+					const thickness = layers[i].endDepth - layers[i].startDepth;
+					
+					if (thickness < minThickness) {
+						if (i > 0) {
+							// Merge into previous layer
+							layers[i].classification = layers[i-1].classification;
+						} else if (i < layers.length - 1) {
+							// It's the first layer, merge into next
+							layers[i].classification = layers[i+1].classification;
+						}
+					}
+				}
+
+				// 2. Re-merge adjacent identical layers
+				const mergedLayers = [];
+				if (layers.length > 0) {
+					let active = layers[0];
+					for (let i = 1; i < layers.length; i++) {
+						if (layers[i].classification === active.classification) {
+							// Same type, just extend depth
+							active.endDepth = layers[i].endDepth;
+						} else {
+							// New type, push active and start new
+							mergedLayers.push(active);
+							active = layers[i];
+						}
+					}
+					mergedLayers.push(active);
+				}
+				layers = mergedLayers;
+			}
+
+			return layers;
+		}
+        
+        function classifySoil(qc, isGranular) {
+            const inputPressureUnit = document.getElementById('pressureUnit').value;
+            
+            if (isGranular) {
+                const gran1Max = convertPressureToMPa(parseFloat(document.getElementById('gran1Max').value), inputPressureUnit);
+                const gran2Max = convertPressureToMPa(parseFloat(document.getElementById('gran2Max').value), inputPressureUnit);
+                const gran3Max = convertPressureToMPa(parseFloat(document.getElementById('gran3Max').value), inputPressureUnit);
+                
+                if (qc < gran1Max) return document.getElementById('gran1Name').value;
+                if (qc < gran2Max) return document.getElementById('gran2Name').value;
+                if (qc < gran3Max) return document.getElementById('gran3Name').value;
+                return document.getElementById('gran4Name').value;
+            } else {
+                const coh1Max = convertPressureToMPa(parseFloat(document.getElementById('coh1Max').value), inputPressureUnit);
+                const coh2Max = convertPressureToMPa(parseFloat(document.getElementById('coh2Max').value), inputPressureUnit);
+                const coh3Max = convertPressureToMPa(parseFloat(document.getElementById('coh3Max').value), inputPressureUnit);
+                const coh4Max = convertPressureToMPa(parseFloat(document.getElementById('coh4Max').value), inputPressureUnit);
+                
+                if (qc < coh1Max) return document.getElementById('coh1Name').value;
+                if (qc < coh2Max) return document.getElementById('coh2Name').value;
+                if (qc < coh3Max) return document.getElementById('coh3Name').value;
+                if (qc < coh4Max) return document.getElementById('coh4Name').value;
+                return document.getElementById('coh5Name').value;
+            }
+        }
+        
+        // REPLACE your old displayResults function with this:
+		function displayResults() {
+			const results = document.getElementById('results');
+			const resultsHeader = document.getElementById('resultsHeader');
+			const resultsBody = document.getElementById('resultsBody');
+			
+			// --- KEY CHANGE: Re-calculate layers dynamically based on rawData ---
+			// This ensures changes to Min Thickness or Export Mode apply instantly
+			const dynamicData = processedData.map(d => {
+				// We create a copy of the data object but replace 'layers' with the new calculation
+				return {
+					...d,
+					layers: analyzeLayers(d.rawData) 
+				};
+			});
+
+			const maxLayers = Math.max(...dynamicData.map(data => data.layers.length), 5);
+			const depthUnit = document.getElementById('depthUnit').value;
+			const coordUnit = document.getElementById('coordinateUnit').value;
+			
+			// Create header
+			let headerHTML = `<tr>
+				<th>Name</th>
+				<th>Format</th>
+				<th>Lat (${coordUnit})</th>
+				<th>Long (${coordUnit})</th>
+				<th>Elev (${depthUnit})</th>
+				<th>Total Depth (${depthUnit})</th>
+				<th>GW (${depthUnit})</th>`;
+			for (let i = 1; i <= maxLayers; i++) {
+				headerHTML += `<th>S${i}</th><th>S${i} Depth (${depthUnit})</th>`;
+			}
+			headerHTML += '</tr>';
+			resultsHeader.innerHTML = headerHTML;
+			
+			// Create rows
+			let bodyHTML = '';
+			dynamicData.forEach((data, dataIndex) => {
+				// Convert for display (units)
+				const convertedData = convertDataToDisplayUnits(data);
+				
+				const badgeClass = data.formatBadge || 'standard';
+				const formatBadge = `<span class="format-badge ${badgeClass}">${badgeClass.toUpperCase()}</span>`;
+				
+				let rowHTML = `<tr>
+					<td>${convertedData.name}</td>
+					<td>${formatBadge}</td>
+					<td>${convertedData.lat}</td>
+					<td>${convertedData.lon}</td>
+					<td>${convertedData.elev}</td>
+					<td>${convertedData.totalDepth}</td>
+					<td>${convertedData.gw}</td>`;
+				
+				for (let i = 0; i < maxLayers; i++) {
+					if (i < convertedData.layers.length) {
+						const layer = convertedData.layers[i];
+						// Note: We skip the "Original Name" lookup here to allow dynamic renaming
+						const formattedName = formatLayerName(layer.classification);
+						rowHTML += `<td>${formattedName}</td><td>${layer.endDepth}</td>`;
+					} else {
+						rowHTML += '<td></td><td></td>';
+					}
+				}
+				
+				rowHTML += '</tr>';
+				bodyHTML += rowHTML;
+			});
+			
+			resultsBody.innerHTML = bodyHTML;
+			results.style.display = 'block';
+			
+			const mainDepthUnit = document.getElementById('depthUnit').value;
+			const quickDepthUnit = document.getElementById('quickDepthUnit');
+			if (quickDepthUnit) {
+				quickDepthUnit.value = mainDepthUnit;
+			}
+		}
+        
+        // Unit conversion functions
+        function convertDepthFromMeters(value, targetUnit) {
+            if (typeof value !== 'number' || isNaN(value)) return value;
+            
+            switch(targetUnit) {
+                case 'mm': return (value * 1000).toFixed(1);
+                case 'cm': return (value * 100).toFixed(1);
+                case 'm': return value.toFixed(1);
+                case 'ft': return (value * 3.28084).toFixed(1);
+                case 'in': return (value * 39.3701).toFixed(1);
+                default: return value.toFixed(1);
+            }
+        }
+        
+        function convertDepthToMeters(value, sourceUnit) {
+            if (typeof value !== 'number' || isNaN(value)) return value;
+            
+            switch(sourceUnit) {
+                case 'mm': return value / 1000;
+                case 'cm': return value / 100;
+                case 'm': return value;
+                case 'ft': return value / 3.28084;
+                case 'in': return value / 39.3701;
+                default: return value;
+            }
+        }
+        
+        function convertPressureFromMPa(value, targetUnit) {
+            if (typeof value !== 'number' || isNaN(value)) return value;
+            
+            switch(targetUnit) {
+                case 'MPa': return value.toFixed(2);
+                case 'kPa': return (value * 1000).toFixed(0);
+                case 'Pa': return (value * 1000000).toFixed(0);
+                case 'tsf': return (value * 10.4427).toFixed(2);
+                case 'ksf': return (value * 20.8854).toFixed(2);
+                case 'psi': return (value * 145.038).toFixed(1);
+                default: return value.toFixed(2);
+            }
+        }
+        
+        function convertDataToDisplayUnits(data) {
+            const depthUnit = document.getElementById('depthUnit').value;
+            const pressureUnit = document.getElementById('pressureUnit').value;
+            
+            return {
+                name: data.name,
+                lat: data.lat,
+                lon: data.lon,
+                elev: data.elev ? convertDepthFromMeters(parseFloat(data.elev), depthUnit) : data.elev,
+                totalDepth: convertDepthFromMeters(data.totalDepth, depthUnit),
+                gw: data.gw === '-' ? '-' : convertDepthFromMeters(parseFloat(data.gw), depthUnit),
+                layers: data.layers.map(layer => ({
+                    classification: layer.classification,
+                    startDepth: convertDepthFromMeters(layer.startDepth, depthUnit),
+                    endDepth: convertDepthFromMeters(layer.endDepth, depthUnit)
+                }))
+            };
+        }
+        
+        function updateResultsHeader() {
+            if (processedData.length > 0) {
+                displayResults();
+            }
+            
+            const mainDepthUnit = document.getElementById('depthUnit').value;
+            const quickDepthUnit = document.getElementById('quickDepthUnit');
+            if (quickDepthUnit) {
+                quickDepthUnit.value = mainDepthUnit;
+            }
+        }
+        
+        function updateUnitsDisplay() {
+            const depthUnit = document.getElementById('depthUnit').value;
+            const pressureUnit = document.getElementById('pressureUnit').value;
+            const coordUnit = document.getElementById('coordinateUnit').value;
+            
+            const inputDepthUnit = document.getElementById('inputDepthUnit').value;
+            const inputPressureUnit = document.getElementById('inputPressureUnit').value;
+            
+            const display = document.getElementById('currentUnitsDisplay');
+            if (display) {
+                display.innerHTML = `
+                    <div>📥 <strong>Input:</strong> Depth: ${inputDepthUnit}, Pressure: ${inputPressureUnit}</div>
+                    <div>📤 <strong>Display:</strong> Depth: ${depthUnit}, Pressure: ${pressureUnit}, Coordinates: ${coordUnit}</div>
+                `;
+            }
+            
+            const granularUnits = document.getElementById('granularUnits');
+            const cohesiveUnits = document.getElementById('cohesiveUnits');
+            
+            if (granularUnits) granularUnits.textContent = pressureUnit;
+            if (cohesiveUnits) cohesiveUnits.textContent = pressureUnit;
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUnitsDisplay();
+        });
+        
+        // Dynamic controls functions
+        function quickChangeDepthUnit() {
+            const newUnit = document.getElementById('quickDepthUnit').value;
+            document.getElementById('depthUnit').value = newUnit;
+            updateResultsHeader();
+            updateUnitsDisplay();
+        }
+        
+        function updateLayerNames() {
+            if (processedData.length > 0) {
+                displayResults();
+            }
+        }
+        
+        function toggleCompactNames() {
+            isCompactNames = !isCompactNames;
+            const btn = document.getElementById('compactNamesBtn');
+            btn.textContent = isCompactNames ? '📝 Show Full Names' : '📝 Toggle Compact Names';
+            btn.classList.toggle('active', isCompactNames);
+            
+            if (processedData.length > 0) {
+                displayResults();
+            }
+        }
+        
+        function resetLayerNames() {
+            document.getElementById('layerNamePrefix').value = '';
+            document.getElementById('layerNameSuffix').value = '';
+            isCompactNames = false;
+            const btn = document.getElementById('compactNamesBtn');
+            btn.textContent = '📝 Toggle Compact Names';
+            btn.classList.remove('active');
+            
+            if (processedData.length > 0) {
+                displayResults();
+            }
+        }
+        
+        function formatLayerName(originalName) {
+            const prefix = document.getElementById('layerNamePrefix').value || '';
+            const suffix = document.getElementById('layerNameSuffix').value || '';
+            
+            let name = originalName;
+            
+            if (isCompactNames) {
+                const compactMap = {
+                    'VERY_SOFT': 'VS',
+                    'SOFT': 'S',
+                    'FIRM': 'F',
+                    'STIFF': 'ST',
+                    'VERY_STIFF': 'VST',
+                    'LOOSE': 'L',
+                    'MED_DENSE': 'MD',
+                    'MEDIUM_DENSE': 'MD',
+                    'DENSE': 'D',
+                    'VERY_DENSE': 'VD'
+                };
+                name = compactMap[originalName] || originalName;
+            }
+            
+            return prefix + name + suffix;
+        }
+        
+        // Copy functions
+        async function copyToClipboard() {
+            if (processedData.length === 0) {
+                showCopyStatus('No data to copy!', 'error');
+                return;
+            }
+            
+            try {
+                const tabDelimitedData = generateTabDelimitedData();
+                await navigator.clipboard.writeText(tabDelimitedData);
+                showCopyStatus('✅ Summary table copied! Ready to paste into Excel (Ctrl+V)', 'success');
+            } catch (err) {
+                fallbackCopy(generateTabDelimitedData());
+                showCopyStatus('✅ Summary table copied! Ready to paste into Excel (Ctrl+V)', 'success');
+            }
+        }
+        
+        async function copyQCData() {
+            if (processedData.length === 0) {
+                showCopyStatus('No data to copy!', 'error');
+                return;
+            }
+            
+            try {
+                const qcData = generateRawDataColumns('qc');
+                await navigator.clipboard.writeText(qcData);
+                showCopyStatus('✅ QC data columns copied! Paste into Excel for instant charts', 'success');
+            } catch (err) {
+                fallbackCopy(generateRawDataColumns('qc'));
+                showCopyStatus('✅ QC data columns copied! Paste into Excel for instant charts', 'success');
+            }
+        }
+        
+        async function copyRFData() {
+            if (processedData.length === 0) {
+                showCopyStatus('No data to copy!', 'error');
+                return;
+            }
+            
+            try {
+                const rfData = generateRawDataColumns('rf');
+                await navigator.clipboard.writeText(rfData);
+                showCopyStatus('✅ RF data columns copied! Paste into Excel for instant charts', 'success');
+            } catch (err) {
+                fallbackCopy(generateRawDataColumns('rf'));
+                showCopyStatus('✅ RF data columns copied! Paste into Excel for instant charts', 'success');
+            }
+        }
+        
+        async function copyDepthData() {
+            if (processedData.length === 0) {
+                showCopyStatus('No data to copy!', 'error');
+                return;
+            }
+            
+            try {
+                const depthData = generateRawDataColumns('depth');
+                await navigator.clipboard.writeText(depthData);
+                showCopyStatus('✅ Depth data columns copied! Paste into Excel for instant charts', 'success');
+            } catch (err) {
+                fallbackCopy(generateRawDataColumns('depth'));
+                showCopyStatus('✅ Depth data columns copied! Paste into Excel for instant charts', 'success');
+            }
+        }
+        
+        function fallbackCopy(data) {
+            const textArea = document.createElement('textarea');
+            textArea.value = data;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+        
+        function generateTabDelimitedData() {
+		if (processedData.length === 0) return "";
+
+		// Calculate dynamic layers for all files first to find the new maxLayers
+		const dynamicData = processedData.map(d => {
+			return {
+				...d,
+				layers: analyzeLayers(d.rawData) 
+			};
+		});
+
+		const maxLayers = Math.max(...dynamicData.map(data => data.layers.length), 5);
+		const depthUnit = document.getElementById('depthUnit').value;
+		const coordUnit = document.getElementById('coordinateUnit').value;
+		
+		// Create Header String
+		let result = `Name\tFormat\tLat (${coordUnit})\tLong (${coordUnit})\tElev (${depthUnit})\tTotal Depth (${depthUnit})\tGW (${depthUnit})`;
+		for (let i = 1; i <= maxLayers; i++) {
+			result += `\tS${i}\tS${i} Depth (${depthUnit})`;
+		}
+		result += '\n';
+		
+		// Create Rows String
+		dynamicData.forEach((data) => {
+			const convertedData = convertDataToDisplayUnits(data);
+			const badgeClass = data.formatBadge || 'standard';
+			
+			let row = `${convertedData.name}\t${badgeClass.toUpperCase()}\t${convertedData.lat}\t${convertedData.lon}\t${convertedData.elev}\t${convertedData.totalDepth}\t${convertedData.gw}`;
+			
+			for (let i = 0; i < maxLayers; i++) {
+				if (i < convertedData.layers.length) {
+					const layer = convertedData.layers[i];
+					// Apply the current prefix/suffix/compact settings to the dynamic classification
+					const formattedName = formatLayerName(layer.classification);
+					row += `\t${formattedName}\t${layer.endDepth}`;
+				} else {
+					row += '\t\t';
+				}
+			}
+			
+			result += row + '\n';
+		});
+		
+		return result;
+	}
+        function generateRawDataColumns(dataType) {
+            const maxDataPoints = Math.max(...processedData.map(data => data.rawData ? data.rawData.length : 0));
+            
+            let result = '';
+            
+            const headerRow = processedData.map(data => data.name).join('\t');
+            result += headerRow + '\n';
+            
+            let dataTypeRow = '';
+            for (let i = 0; i < processedData.length; i++) {
+                if (i > 0) dataTypeRow += '\t';
+                switch(dataType) {
+                    case 'qc':
+                        dataTypeRow += 'QC';
+                        break;
+                    case 'rf':
+                        dataTypeRow += 'RF';
+                        break;
+                    case 'depth':
+                        dataTypeRow += 'Depth';
+                        break;
+                }
+            }
+            result += dataTypeRow + '\n';
+            
+            const depthUnit = document.getElementById('depthUnit').value;
+            const pressureUnit = document.getElementById('pressureUnit').value;
+            
+            for (let rowIndex = 0; rowIndex < maxDataPoints; rowIndex++) {
+                let dataRow = '';
+                
+                for (let cptIndex = 0; cptIndex < processedData.length; cptIndex++) {
+                    if (cptIndex > 0) dataRow += '\t';
+                    
+                    const cptData = processedData[cptIndex];
+                    if (cptData.rawData && rowIndex < cptData.rawData.length) {
+                        const dataPoint = cptData.rawData[rowIndex];
+                        let value = '';
+                        
+                        switch(dataType) {
+                            case 'qc':
+                                value = convertPressureFromMPa(dataPoint.qc, pressureUnit);
+                                break;
+                            case 'rf':
+                                value = dataPoint.rf.toFixed(2);
+                                break;
+                            case 'depth':
+                                value = convertDepthFromMeters(dataPoint.depth, depthUnit);
+                                break;
+                        }
+                        dataRow += value;
+                    }
+                }
+                
+                result += dataRow + '\n';
+            }
+            
+            return result;
+        }
+        
+        function showCopyStatus(message, type) {
+            const statusDiv = document.getElementById('copyStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        function exportToCSV() {
+            if (processedData.length === 0) return;
+            
+            const maxLayers = Math.max(...processedData.map(data => data.layers.length), 5);
+            const depthUnit = document.getElementById('depthUnit').value;
+            const coordUnit = document.getElementById('coordinateUnit').value;
+            
+            let csv = `Name,Format,Lat (${coordUnit}),Long (${coordUnit}),Elev (${depthUnit}),Total Depth (${depthUnit}),GW (${depthUnit})`;
+            for (let i = 1; i <= maxLayers; i++) {
+                csv += `,S${i},S${i} Depth (${depthUnit})`;
+            }
+            csv += '\n';
+            
+            processedData.forEach((data, dataIndex) => {
+                const convertedData = convertDataToDisplayUnits(data);
+                const badgeClass = data.formatBadge || 'standard';
+                let row = `${convertedData.name},${badgeClass.toUpperCase()},${convertedData.lat},${convertedData.lon},${convertedData.elev},${convertedData.totalDepth},${convertedData.gw}`;
+                
+                for (let i = 0; i < maxLayers; i++) {
+                    if (i < convertedData.layers.length) {
+                        const layer = convertedData.layers[i];
+                        const originalName = originalLayerNames[dataIndex] ? originalLayerNames[dataIndex][i] : layer.classification;
+                        const formattedName = formatLayerName(originalName || layer.classification);
+                        row += `,${formattedName},${layer.endDepth}`;
+                    } else {
+                        row += ',,';
+                    }
+                }
+                
+                csv += row + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cpt_analysis_results.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function exportToExcel() {
+            exportToCSV();
+            showCopyStatus('Results exported as CSV (open with Excel for spreadsheet format)', 'info');
+        }
+    </script>
+</body>
+</html>
