@@ -2,602 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREAL 3DoF TEST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>XREAL — ANDROID NAILER</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Bebas+Neue&display=swap');
-:root{--bg:#080b10;--sur:#0d1117;--bdr:rgba(0,212,255,0.18);--cy:#00d4ff;--gr:#39ff14;--or:#ff8c00;--rd:#ff3b30;--dm:#3a4a5a;--tx:#c8d8e8;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--tx);font-family:'JetBrains Mono',monospace;height:100dvh;display:grid;grid-template-rows:52px 1fr 200px;overflow:hidden;}
-header{display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--bdr);background:var(--sur);}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--cy);}
-.logo em{color:var(--or);font-style:normal;}
-#sdot{width:8px;height:8px;border-radius:50%;background:var(--dm);transition:background .3s,box-shadow .3s;flex-shrink:0;}
-#sdot.on{background:var(--gr);box-shadow:0 0 8px var(--gr);animation:pulse 1.5s infinite;}
-#sdot.err{background:var(--rd);box-shadow:0 0 8px var(--rd);}
-#sdot.warn{background:var(--or);box-shadow:0 0 8px var(--or);}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-#stxt{font-size:11px;color:var(--dm);letter-spacing:1px;}
-.sp{flex:1;}
-.hbtn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:2px;padding:7px 16px;border-radius:2px;cursor:pointer;border:1px solid var(--cy);background:rgba(0,212,255,0.07);color:var(--cy);transition:all .15s;}
-.hbtn:hover{background:var(--cy);color:#000;}
-.hbtn:disabled{opacity:.4;cursor:not-allowed;}
-main{display:grid;grid-template-columns:1fr 280px;overflow:hidden;}
-#cvw{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#0b1a28 0%,#080b10 65%);}
-canvas{display:block;width:100%;height:100%;}
-#cvw::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:44px 44px;}
-#cvw::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);}
-.crn{position:absolute;width:18px;height:18px;}
-.crn::before,.crn::after{content:'';position:absolute;background:var(--cy);opacity:.4;}
-.tl{top:12px;left:12px;}.tl::before{width:2px;height:14px;top:0;left:0;}.tl::after{width:14px;height:2px;top:0;left:0;}
-.tr{top:12px;right:12px;}.tr::before{width:2px;height:14px;top:0;right:0;}.tr::after{width:14px;height:2px;top:0;right:0;}
-.bl{bottom:12px;left:12px;}.bl::before{width:2px;height:14px;bottom:0;left:0;}.bl::after{width:14px;height:2px;bottom:0;left:0;}
-.br{bottom:12px;right:12px;}.br::before{width:2px;height:14px;bottom:0;right:0;}.br::after{width:14px;height:2px;bottom:0;right:0;}
-#hud{position:absolute;bottom:14px;left:14px;font-size:11px;line-height:2;opacity:0;transition:opacity .4s;}
-#hud.show{opacity:1;}
-.hr{display:flex;gap:8px;}.hl{color:var(--dm);width:44px;}.hv{color:var(--cy);width:68px;text-align:right;font-weight:700;}
-#sbadge{position:absolute;top:14px;right:14px;font-size:9px;letter-spacing:2px;padding:3px 10px;border-radius:2px;border:1px solid var(--bdr);background:rgba(8,11,16,.85);color:var(--dm);display:none;}
-#sbadge.show{display:block;}
-#side{border-left:1px solid var(--bdr);background:var(--sur);display:flex;flex-direction:column;overflow:hidden;}
-.pt{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--cy);padding:10px 14px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
-.mlist{padding:10px;flex:1;overflow-y:auto;}
-.mitem{border:1px solid var(--bdr);border-radius:2px;padding:9px 10px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
-.mitem:hover{border-color:var(--cy);background:rgba(0,212,255,.04);}
-.mitem.active{border-color:var(--gr);background:rgba(57,255,20,.05);}
-.mitem.bad{border-color:rgba(255,59,48,.3);opacity:.55;cursor:default;}
-.mt{font-size:11px;font-weight:700;color:var(--tx);margin-bottom:3px;}
-.mitem.active .mt{color:var(--gr);}
-.md{font-size:9px;color:var(--dm);line-height:1.55;}
-.sbtns{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px;}
-.sbtn{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:8px;border-radius:2px;cursor:pointer;transition:all .15s;border:1px solid var(--bdr);background:rgba(0,212,255,.05);color:var(--cy);}
-.sbtn:hover{background:var(--cy);color:#000;}
-#conw{border-top:1px solid var(--bdr);background:#060810;display:flex;flex-direction:column;overflow:hidden;}
-.chdr{display:flex;align-items:center;gap:6px;padding:5px 12px;border-bottom:1px solid rgba(0,212,255,.08);flex-shrink:0;}
-.d2{width:6px;height:6px;border-radius:50%;}
-.dr2{background:#ff5f57;}.dy2{background:#febc2e;}.dg2{background:#28c840;}
-.ctitle{font-size:10px;color:var(--dm);letter-spacing:1px;margin-left:4px;}
-#con{flex:1;overflow-y:auto;padding:7px 12px;font-size:10px;line-height:1.65;}
-#con::-webkit-scrollbar{width:3px;}
-#con::-webkit-scrollbar-thumb{background:var(--bdr);}
-.ll{white-space:pre-wrap;word-break:break-all;margin-bottom:1px;}
-.li{color:var(--cy);}.ld{color:var(--gr);}.lw{color:var(--or);}.le{color:var(--rd);}.lx{color:var(--dm);}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+:root{--bg:#05070a;--cy:#00d4ff;--gr:#39ff14;--dm:#3a4a5a;--tx:#c8d8e8;--bdr:rgba(0,212,255,0.15);}
+body{background:var(--bg);color:var(--tx);font-family:'JetBrains Mono',monospace;height:100dvh;margin:0;display:grid;grid-template-rows:50px 1fr 150px;overflow:hidden;}
+header{padding:0 20px;display:flex;align-items:center;background:#0a0d14;border-bottom:1px solid var(--bdr);color:var(--cy);font-weight:700;letter-spacing:2px;}
+main{display:grid;grid-template-columns:1fr;position:relative;}
+#cvw{background:radial-gradient(circle at 50% 40%,#0d1b2a 0%,#05070a 70%);}
+canvas{width:100%; height:100%;}
+#controls{position:absolute; bottom:20px; left:20px; right:20px; display:flex; gap:10px;}
+.hbtn{flex:1; padding:12px; background:rgba(0,212,255,0.1); border:1px solid var(--cy); color:var(--cy); font-family:'JetBrains Mono'; font-weight:700; cursor:pointer;}
+#con{background:#000; padding:10px; font-size:10px; overflow-y:auto; color:var(--gr); border-top:1px solid var(--bdr);}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo">XREAL <em>3DoF</em> TEST</div>
-  <div id="sdot"></div>
-  <div id="stxt">IDLE</div>
-  <div class="sp"></div>
-  <button class="hbtn" id="mbtn" onclick="autoConnect()">⬡ AUTO-CONNECT</button>
-</header>
-<main>
-  <div id="cvw">
-    <div class="crn tl"></div><div class="crn tr"></div>
-    <div class="crn bl"></div><div class="crn br"></div>
+<header>XREAL // ANDROID_IMU</header>
+<main id="cvw">
     <canvas id="c"></canvas>
-    <div id="hud">
-      <div class="hr"><span class="hl">PITCH</span><span class="hv" id="hp">0.0°</span></div>
-      <div class="hr"><span class="hl">YAW</span>  <span class="hv" id="hy">0.0°</span></div>
-      <div class="hr"><span class="hl">ROLL</span> <span class="hv" id="hr2">0.0°</span></div>
-      <div class="hr"><span class="hl">SRC</span>  <span class="hv" id="hsrc" style="color:var(--or);font-size:9px">-</span></div>
+    <div id="controls">
+        <button class="hbtn" onclick="initAndroidUSB()">CONNECT GLASSES</button>
+        <button class="hbtn" onclick="recentre()">RE-CENTRE</button>
     </div>
-    <div id="sbadge"></div>
-  </div>
-  <div id="side">
-    <div class="pt">◈ INPUT SOURCE</div>
-    <div class="mlist">
-      <div class="mitem" id="m-webusb" onclick="connectWebUSB()">
-        <div class="mt">① WebUSB ★ ANDROID</div>
-        <div class="md">Direct USB bulk access from the browser. Works on Android Chrome. Reads XREAL Air IMU without any bridge app. Tap to connect — select the XREAL Air in the picker.</div>
-      </div>
-      <div class="mitem" id="m-ws" onclick="connectWS()">
-        <div class="mt">② WebSocket Bridge ★ DESKTOP</div>
-        <div class="md">Run xreal_bridge.py on your PC. Reads USB bulk via libusb, forwards over ws://localhost:7878.</div>
-      </div>
-      <div class="mitem" id="m-orient" onclick="connectOrientation()">
-        <div class="mt">③ DeviceOrientation API</div>
-        <div class="md">Uses phone/PC built-in IMU via browser. No glasses IMU — but good for testing orientation tracking.</div>
-      </div>
-      <div class="mitem" id="m-drag" onclick="connectDrag()">
-        <div class="mt">④ Mouse / Touch Drag</div>
-        <div class="md">Manual rotation. Confirms 3D model and renderer work correctly.</div>
-      </div>
-      <div class="mitem bad" id="m-webhid">
-        <div class="mt">✗ WebHID (does not work)</div>
-        <div class="md">XREAL Air IMU is on USB bulk — WebHID only sees interrupt endpoints. Confirmed from packet logs.</div>
-      </div>
-    </div>
-    <div class="sbtns">
-      <button class="sbtn" onclick="recentre()">⊕ RE-CENTRE</button>
-      <button class="sbtn" onclick="showPythonScript()">⬡ SHOW PYTHON BRIDGE</button>
-    </div>
-  </div>
 </main>
-<div id="conw">
-  <div class="chdr">
-    <div class="d2 dr2"></div><div class="d2 dy2"></div><div class="d2 dg2"></div>
-    <span class="ctitle">DIAGNOSTIC</span>
-  </div>
-  <div id="con"></div>
-</div>
+<div id="con">Ready for Android WebUSB...</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ── LOG ──────────────────────────────────────────────────────
-const conEl=document.getElementById('con');
-let logN=0;
-function clog(msg,cls='li'){
-  const d=document.createElement('div');
-  d.className=`ll l${cls}`;
-  const t=new Date(),ts=`${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}.${String(t.getMilliseconds()).padStart(3,'0')}`;
-  d.textContent=`[${ts}] ${msg}`;
-  conEl.appendChild(d);
-  if(++logN>500) conEl.removeChild(conEl.firstChild);
-  conEl.scrollTop=conEl.scrollHeight;
-  console.log(msg);
-}
+const con = document.getElementById('con');
+function clog(m){ con.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${m}</div>`; con.scrollTop = con.scrollHeight; }
 
-// ── THREE.JS GLASSES MODEL ───────────────────────────────────
-const cv=document.getElementById('c');
-const rend=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
-rend.setPixelRatio(devicePixelRatio);
-rend.setClearColor(0,0);
-const scene=new THREE.Scene();
-const cam=new THREE.PerspectiveCamera(42,1,0.1,100);
-cam.position.set(0,0.5,5.2); cam.lookAt(0,0,0);
+// ── THREE.JS ─────────────────────────────────────────────────
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+cam.position.z = 5;
+const rend = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:true, alpha:true});
+const G = new THREE.Group();
+G.add(new THREE.Mesh(new THREE.BoxGeometry(2,0.4,0.1), new THREE.MeshPhongMaterial({color:0x111111})));
+scene.add(G); scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+function res(){ rend.setSize(window.innerWidth, window.innerHeight); cam.aspect=window.innerWidth/window.innerHeight; cam.updateProjectionMatrix(); }
+window.onresize=res; res();
 
-scene.add(new THREE.AmbientLight(0xffffff,0.35));
-[[3,5,4,0x00d4ff,1.4],[-4,1,-3,0xff8c00,0.5],[0,-3,-4,0xffffff,0.7]].forEach(([x,y,z,c,i])=>{
-  const l=new THREE.DirectionalLight(c,i); l.position.set(x,y,z); scene.add(l);
-});
+// ── ANDROID USB ENGINE ──────────────────────────────────────
+let usbDev, lastT=0, gyroQ=new THREE.Quaternion(), refQ=new THREE.Quaternion();
+const SCALE = (Math.PI/180)*(2000/32768);
 
-const G=new THREE.Group(); scene.add(G);
-let _m;
-const fmat=new THREE.MeshPhongMaterial({color:0x0f1820,specular:0x00d4ff,shininess:140,emissive:0x001828,emissiveIntensity:0.4});
-const lmat=new THREE.MeshPhongMaterial({color:0x001c30,specular:0x88ddff,shininess:220,transparent:true,opacity:0.5,emissive:0x002244,emissiveIntensity:0.6,side:THREE.DoubleSide});
-const amat=new THREE.MeshPhongMaterial({color:0x00d4ff,emissive:0x004466,emissiveIntensity:0.9,shininess:200});
-const smat=new THREE.MeshBasicMaterial({color:0x88eeff,transparent:true,opacity:0.45});
-
-function rrShape(w,h,r){
-  const s=new THREE.Shape(),x=-w/2,y=-h/2;
-  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);
-  s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);
-  s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;
-}
-
-[-0.88,0.88].forEach(xp=>{
-  const sg=new THREE.ShapeGeometry(rrShape(1.38,0.66,0.12));
-  _m=new THREE.Mesh(sg,lmat); _m.position.set(xp,0,0); G.add(_m);
-  const fs=rrShape(1.38,0.66,0.12); fs.holes.push(rrShape(1.24,0.52,0.10));
-  const fm=new THREE.Mesh(new THREE.ExtrudeGeometry(fs,{depth:0.07,bevelEnabled:true,bevelThickness:0.014,bevelSize:0.014,bevelSegments:3}),fmat);
-  fm.position.set(xp,0,-0.035); G.add(fm);
-  _m=new THREE.Mesh(new THREE.BoxGeometry(1.34,0.038,0.07),amat); _m.position.set(xp,0.35,0); G.add(_m);
-  _m=new THREE.Mesh(new THREE.BoxGeometry(0.48,0.016,0.01),smat); _m.position.set(xp-0.1,0.13,0.02); _m.rotation.z=-0.18; G.add(_m);
-  const hg=new THREE.CylinderGeometry(0.05,0.05,0.07,8); hg.rotateZ(Math.PI/2);
-  ((_m=new THREE.Mesh(hg,amat),_m.position.set(Math.sign(xp)*1.18,0.02,0),G.add(_m)));
-  const ng=new THREE.CylinderGeometry(0.033,0.033,0.055,10); ng.rotateX(Math.PI/2);
-  ((_m=new THREE.Mesh(ng,amat),_m.position.set(Math.sign(xp)*1.08,0.23,0.06),G.add(_m)));
-  _m=new THREE.Mesh(new THREE.BoxGeometry(0.076,0.052,1.65),fmat);
-  _m.position.set(Math.sign(xp)*1.59,0,-0.8); _m.rotation.y=Math.sign(xp)*0.07; G.add(_m);
-  _m=new THREE.Mesh(new THREE.BoxGeometry(0.068,0.19,0.09),fmat);
-  _m.position.set(Math.sign(xp)*1.69,-0.075,-1.57); G.add(_m);
-});
-const bg=new THREE.CylinderGeometry(0.038,0.038,0.24,8); bg.rotateZ(Math.PI/2);
-_m=new THREE.Mesh(bg,fmat); _m.position.set(0,0.06,0); G.add(_m);
-_m=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.03,0.055),amat); _m.position.set(0,0.11,0); G.add(_m);
-[-0.19,0.19].forEach(xp=>{ _m=new THREE.Mesh(new THREE.SphereGeometry(0.038,6,6),fmat); _m.position.set(xp,-0.25,0.05); G.add(_m); });
-
-function resize(){const w=document.getElementById('cvw').clientWidth,h=document.getElementById('cvw').clientHeight;rend.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
-window.addEventListener('resize',resize); resize();
-
-// ── STATE ────────────────────────────────────────────────────
-let src='idle', idleSpin=true, idleA=0;
-const gyroQ=new THREE.Quaternion(), refQ=new THREE.Quaternion(), imuQ=new THREE.Quaternion();
-let lastT=0, drag={on:false,lx:0,ly:0}, manE={x:0,y:0};
-let wsock=null, usbDevice=null, usbReading=false;
-
-function setStatus(st,msg){
-  document.getElementById('sdot').className='status-dot '+(st==='on'?'on':st==='err'?'err':st==='warn'?'warn':'');
-  document.getElementById('stxt').textContent=msg;
-}
-function setMethod(id){
-  document.querySelectorAll('.mitem').forEach(m=>{if(!m.classList.contains('bad'))m.classList.remove('active');});
-  if(id)document.getElementById(id)?.classList.add('active');
-}
-function showHUD(s){
-  document.getElementById('hud').classList.add('show');
-  document.getElementById('hsrc').textContent=s;
-  const b=document.getElementById('sbadge'); b.textContent=s; b.classList.add('show');
-}
-function applyQ(q){
-  G.quaternion.copy(q); idleSpin=false;
-  const e=new THREE.Euler().setFromQuaternion(q,'YXZ'),deg=v=>(v*180/Math.PI).toFixed(1)+'°';
-  document.getElementById('hp').textContent=deg(e.x);
-  document.getElementById('hy').textContent=deg(e.y);
-  document.getElementById('hr2').textContent=deg(e.z);
-}
-(function loop(){requestAnimationFrame(loop);if(idleSpin){idleA+=0.006;G.rotation.y=idleA;G.rotation.x=Math.sin(idleA*.35)*.12;}rend.render(scene,cam);})();
-
-// ═══════════════════════════════════════════════════════════════
-//  WebUSB — direct bulk endpoint access
-//  Works on Android Chrome and desktop Chrome.
-//  Accesses the XREAL Air's IMU bulk endpoint (0x83) directly,
-//  bypassing the WebHID limitation.
-// ═══════════════════════════════════════════════════════════════
-
-const XREAL_VID  = 0x3318;
-const XREAL_PID  = 0x0424;
-const GYRO_SCALE = 1.0 / 16.4;   // MPU-6050 @ 2000 dps → deg/LSB
-const RAD        = Math.PI / 180;
-
-// All known activation payloads — sent via control transfer
-const ACTIVATION_CMDS = [
-  new Uint8Array([0xaa, 0xc5, 0xd1, 0x06, 0x0b, 0x00, 0x00, 0x00]), // enable 3DoF
-  new Uint8Array([0xaa, 0xc5, 0xd1, 0x21, 0x00, 0x00, 0x00, 0x00]), // start stream
-  new Uint8Array([0xaa, 0xc5, 0xd1, 0x00, 0x00, 0x03, 0x00, 0x00]), // alt start
-];
-
-async function connectWebUSB() {
-  clog('── WebUSB connection ──','li');
-
-  if (!('usb' in navigator)) {
-    clog('WebUSB not available — need Chrome on Android or desktop Chrome','le');
-    setStatus('err','WEBUSB UNAVAILABLE');
-    return;
-  }
-
-  if (usbDevice) { await disconnectUSB(); }
-
-  try {
-    usbDevice = await navigator.usb.requestDevice({
-      filters: [{ vendorId: XREAL_VID, productId: XREAL_PID }]
-    });
-    clog(`Found: ${usbDevice.productName} (VID=0x${usbDevice.vendorId.toString(16)} PID=0x${usbDevice.productId.toString(16)})`, 'ld');
-  } catch(e) {
-    clog(`Picker cancelled: ${e.message}`, 'lw');
-    return;
-  }
-
-  try {
-    await usbDevice.open();
-    if (usbDevice.configuration === null) await usbDevice.selectConfiguration(1);
-    clog(`Config ${usbDevice.configuration.configurationValue}, ${usbDevice.configuration.interfaces.length} interfaces`, 'lx');
-
-    // ── Map all interfaces ──────────────────────────────────────
-    // From your logs, XREAL Air on Android has:
-    //   iface 0-2: USB Audio (class 0x01) — isochronous
-    //   iface 3-5: HID (class 0x03) — interrupt IN 64B  ← IMU is here
-    //   iface 6:   HID (class 0x03) — interrupt IN 3B   ← button/control
-    const imuCandidates = []; // interrupt IN endpoints, 64-byte
-
-    for (const iface of usbDevice.configuration.interfaces) {
-      const alt = iface.alternates[0];
-      const cls = alt.interfaceClass;
-      const epSummary = alt.endpoints.map(ep =>
-        `ep=0x${ep.endpointNumber.toString(16)} ${ep.direction} ${ep.type} ${ep.packetSize}B`
-      ).join(' | ');
-      clog(`  iface[${iface.interfaceNumber}] class=0x${cls.toString(16)} ${epSummary || '(no endpoints)'}`, 'lx');
-
-      for (const ep of alt.endpoints) {
-        if (ep.type === 'interrupt' && ep.direction === 'in' && ep.packetSize >= 32) {
-          imuCandidates.push({ ifaceNum: iface.interfaceNumber, ep });
-          clog(`  ★ IMU candidate: iface=${iface.interfaceNumber} ep=0x${ep.endpointNumber.toString(16)} pkt=${ep.packetSize}B`, 'ld');
-        }
-      }
-    }
-
-    if (imuCandidates.length === 0) {
-      clog('No interrupt IN endpoints ≥32B found — unexpected device descriptor', 'le');
-      await usbDevice.close(); usbDevice = null;
-      setStatus('err', 'NO IMU ENDPOINT');
-      return;
-    }
-
-    // ── Claim interfaces ───────────────────────────────────────
-    const claimed = new Set();
-    for (const { ifaceNum } of imuCandidates) {
-      try {
-        await usbDevice.claimInterface(ifaceNum);
-        claimed.add(ifaceNum);
-        clog(`Claimed iface ${ifaceNum}`, 'li');
-      } catch(e) {
-        clog(`Could not claim iface ${ifaceNum}: ${e.message}`, 'lw');
-      }
-    }
-    // Also try iface 0 for control transfers
-    try { await usbDevice.claimInterface(0); claimed.add(0); } catch(_) {}
-
-    const readableEndpoints = imuCandidates.filter(c => claimed.has(c.ifaceNum));
-    if (readableEndpoints.length === 0) {
-      clog('Could not claim any IMU interfaces — HID driver conflict', 'le');
-      clog('On Android: try Settings → Developer Options → Revoke USB authorisations, then reconnect', 'lw');
-      await usbDevice.close(); usbDevice = null;
-      setStatus('err', 'CLAIM FAILED');
-      return;
-    }
-
-    // ── Send activation via control transfer ──────────────────
-    clog('Sending IMU activation commands…', 'li');
-    for (const cmd of ACTIVATION_CMDS) {
-      for (const ifaceIdx of [...claimed]) {
-        try {
-          await usbDevice.controlTransferOut({
-            requestType: 'class', recipient: 'interface',
-            request: 0x09, value: 0x0300, index: ifaceIdx,
-          }, cmd);
-          await new Promise(r => setTimeout(r, 20));
-        } catch(_) {}
-      }
-    }
-    clog('Activation sent — waiting 500ms for sensor spin-up…', 'lx');
-    await new Promise(r => setTimeout(r, 500));
-
-    // ── Start reading ──────────────────────────────────────────
-    src = 'webusb';
-    usbReading = true;
-    gyroQ.identity(); refQ.identity(); imuQ.identity(); lastT = 0;
-    window._usbFirstLog = {}; // reset per-endpoint first-log flags
-
-    setMethod('m-webusb'); showHUD('WEBUSB');
-    setStatus('on', `WEBUSB — reading ${readableEndpoints.length} endpoint(s)`);
-    clog(`Reading ${readableEndpoints.length} interrupt endpoint(s) in parallel…`, 'li');
-
-    document.getElementById('mbtn').textContent = '⊕ RE-CENTRE';
-    document.getElementById('mbtn').onclick = recentre;
-
-    // Run readers in parallel — don't await so we don't block
-    for (const { ifaceNum, ep } of readableEndpoints) {
-      readInterruptLoop(ifaceNum, ep);
-    }
-
-  } catch(e) {
-    clog(`WebUSB error: ${e.message}`, 'le');
-    setStatus('err', 'WEBUSB ERROR');
-    if (usbDevice) { try { await usbDevice.close(); } catch(_){} usbDevice = null; }
-  }
-}
-
-async function readInterruptLoop(ifaceNum, ep) {
-  let frameCount = 0;
-  let noHeaderCount = 0;
-  const epKey = `${ifaceNum}_${ep.endpointNumber}`;
-  clog(`Reader: iface=${ifaceNum} ep=0x${ep.endpointNumber.toString(16)} pkt=${ep.packetSize}B`, 'lx');
-
-  while (usbReading && usbDevice) {
+async function initAndroidUSB(){
     try {
-      const result = await usbDevice.transferIn(ep.endpointNumber, ep.packetSize);
-      if (!result.data || result.data.byteLength === 0) continue;
-      const dv = result.data;
+        usbDev = await navigator.usb.requestDevice({filters:[{vendorId:0x3318, productId:0x0424}]});
+        await usbDev.open();
+        // Android identifies the IMU on Interface 3 or 4
+        try { await usbDev.claimInterface(3); clog("Claimed Interface 3"); }
+        catch(e) { await usbDev.claimInterface(4); clog("Claimed Interface 4"); }
 
-      // ── Log first packet from this endpoint ──────────────────
-      if (!window._usbFirstLog[epKey]) {
-        window._usbFirstLog[epKey] = true;
-        let hex = '';
-        for (let i = 0; i < dv.byteLength; i++) {
-          hex += dv.getUint8(i).toString(16).padStart(2,'0') + ' ';
-          if ((i+1) % 8 === 0) hex += ' ';
-        }
-        clog(`FIRST PACKET iface=${ifaceNum} ep=0x${ep.endpointNumber.toString(16)} ${dv.byteLength}B:`, 'lw');
-        clog(hex.trim(), 'lx');
-        // Int16 scan
-        let i16 = 'i16: ';
-        for (let i = 0; i+1 < dv.byteLength; i+=2) {
-          i16 += `[${String(i).padStart(2)}]=${String(dv.getInt16(i,true)).padStart(7)} `;
-          if ((i/2+1) % 4 === 0) i16 += ' | ';
-        }
-        clog(i16, 'lx');
-      }
+        clog("Sending Activation...");
+        const magic = new Uint8Array([0xaa, 0xc5, 0xd1, 0x21, 0x42, 0x00, 0x19, 0x01]);
+        await usbDev.controlTransferOut({
+            requestType: 'class', recipient: 'interface', request: 0x09, value: 0x0300, index: 3
+        }, magic).catch(()=>{});
 
-      // ── Try to parse as IMU frame ─────────────────────────────
-      const parsed = parseIMUPacket(dv);
-      if (parsed) {
-        frameCount++;
-        noHeaderCount = 0;
-        if (frameCount === 1 || frameCount % 500 === 0) {
-          clog(`iface=${ifaceNum} ep=0x${ep.endpointNumber.toString(16)} #${frameCount} type=${parsed.type}`, 'ld');
-        }
-        if (parsed.type === 'quaternion') {
-          imuQ.set(parsed.qx, parsed.qy, parsed.qz, parsed.qw);
-          applyQ(imuQ);
-        } else {
-          integrateGyro(parsed.gx, parsed.gy, parsed.gz);
-        }
-      } else {
-        noHeaderCount++;
-        // Every 120 packets without a valid frame, log current values
-        // so we can identify the data format
-        if (noHeaderCount % 120 === 0) {
-          let nonzero = '';
-          for (let i = 0; i+1 < dv.byteLength; i+=2) {
-            const v = dv.getInt16(i, true);
-            if (Math.abs(v) > 10) nonzero += `[${i}]=${v} `;
-          }
-          clog(`iface=${ifaceNum} ep=0x${ep.endpointNumber.toString(16)} no-frame #${noHeaderCount}: ${nonzero || 'all zero'}`, 'lx');
-        }
-      }
+        readLoop();
+    } catch(e){ clog("Error: " + e.message); }
+}
 
-    } catch(e) {
-      if (!usbReading) break;
-      if (e.name === 'NetworkError' || e.message?.includes('disconnect')) {
-        clog(`USB disconnected on iface=${ifaceNum}`, 'lw');
-        setStatus('err', 'USB DISCONNECTED');
-        break;
-      }
-      await new Promise(r => setTimeout(r, 20));
+async function readLoop(){
+    while(usbDev && usbDev.opened){
+        try {
+            // Endpoint 4 is the standard interrupt IN for XREAL IMU
+            const result = await usbDev.transferIn(4, 64);
+            if(result.data) parse(result.data);
+        } catch(e){ break; }
     }
-  }
-  clog(`Reader stopped: iface=${ifaceNum} ep=0x${ep.endpointNumber.toString(16)} total=${frameCount} frames`, 'lx');
 }
 
-// readBulkLoop kept for WS compat but not used for WebUSB now
-async function readBulkLoop(eps) {
-  for (const {iface, ep} of eps) readOneEndpoint(iface, ep);
-}
-async function readOneEndpoint(ifaceNum, ep) {}
+function parse(dv){
+    const ts = dv.getUint32(10, true);
+    if(!ts || !lastT){ lastT=ts; return; }
+    const dt = (ts-lastT)/1000000; lastT=ts;
+    const gx = dv.getInt16(26, true)*SCALE;
+    const gy = dv.getInt16(28, true)*SCALE;
+    const gz = dv.getInt16(30, true)*SCALE;
 
-
-async function disconnectUSB() {
-  usbReading = false;
-  if (usbDevice) {
-    try { await usbDevice.close(); } catch(_){}
-    usbDevice = null;
-  }
-  clog('WebUSB disconnected', 'lw');
-}
-
-// ── WS BRIDGE ────────────────────────────────────────────────
-function connectWS(){
-  clog('── WebSocket bridge → ws://localhost:7878 ──','li');
-  if(wsock&&wsock.readyState<2){wsock.close();}
-  tryWS();
-}
-function tryWS(){
-  wsock=new WebSocket('ws://localhost:7878');
-  const timer=setTimeout(()=>{wsock.close();clog('WS: no response — bridge not running','lw');setStatus('err','WS: NOT RUNNING');},2000);
-  wsock.onopen=()=>{
-    clearTimeout(timer);
-    clog('WS connected!','ld');
-    src='ws'; setMethod('m-ws'); showHUD('WS BRIDGE');
-    setStatus('on','WEBSOCKET BRIDGE CONNECTED');
-    document.getElementById('mbtn').textContent='⊕ RE-CENTRE';
-    document.getElementById('mbtn').onclick=recentre;
-  };
-  wsock.onmessage=e=>{
-    try{
-      const d=JSON.parse(e.data);
-      if(d.q){ imuQ.set(d.q.x,d.q.y,d.q.z,d.q.w); applyQ(imuQ); }
-      else if(d.gx!==undefined){ integrateGyro(d.gx,d.gy,d.gz); }
-      else if(d.pitch!==undefined){
-        const q=new THREE.Quaternion();
-        q.setFromEuler(new THREE.Euler(d.pitch*RAD,d.yaw*RAD,d.roll*RAD,'YXZ'));
-        applyQ(q);
-      }
-    }catch(_){}
-  };
-  wsock.onclose=()=>{ if(src==='ws'){setStatus('warn','WS DISCONNECTED');clog('WS closed','lw');}};
-  wsock.onerror=()=>{ clearTimeout(timer); };
-}
-
-// ── DEVICE ORIENTATION ───────────────────────────────────────
-async function connectOrientation(){
-  clog('── DeviceOrientation ──','li');
-  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
-    try{const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){clog('Permission denied','le');return;}}
-    catch(e){clog(`Permission error: ${e.message}`,'le');return;}
-  }
-  let got=false;
-  const handler=e=>{
-    if(e.alpha===null&&e.beta===null){if(!got){clog('No sensor data','lw');window.removeEventListener('deviceorientation',handler);}return;}
-    if(!got){
-      got=true;
-      clog(`DeviceOrientation active — a=${e.alpha?.toFixed(1)} b=${e.beta?.toFixed(1)} g=${e.gamma?.toFixed(1)}`,'ld');
-      src='orient'; setMethod('m-orient'); showHUD('DEVICE ORIENT');
-      setStatus('on','DEVICE ORIENTATION');
-      document.getElementById('mbtn').textContent='⊕ RE-CENTRE';
-      document.getElementById('mbtn').onclick=recentre;
+    if(Math.abs(gx)>0.005 || Math.abs(gy)>0.005){
+        const dq = new THREE.Quaternion().setFromEuler(new THREE.Euler(gx*dt, gy*dt, gz*dt, 'XYZ'));
+        gyroQ.multiply(dq);
+        G.quaternion.copy(refQ).multiply(gyroQ);
     }
-    const q=new THREE.Quaternion();
-    q.setFromEuler(new THREE.Euler((e.beta||0)*RAD,(e.alpha||0)*RAD,-(e.gamma||0)*RAD,'YXZ'));
-    applyQ(q);
-  };
-  window.addEventListener('deviceorientation',handler,true);
-  setTimeout(()=>{if(!got){window.removeEventListener('deviceorientation',handler);clog('No events in 1.5s','lw');}},1500);
 }
-
-// ── DRAG ─────────────────────────────────────────────────────
-function connectDrag(){
-  clog('Manual drag mode','li');
-  src='drag'; setMethod('m-drag'); showHUD('DRAG');
-  setStatus('on','DRAG TO ROTATE'); cv.style.cursor='grab';
-  document.getElementById('mbtn').textContent='⊕ RE-CENTRE';
-  document.getElementById('mbtn').onclick=recentre;
-  cv.onmousedown=e=>{drag.on=true;drag.lx=e.clientX;drag.ly=e.clientY;cv.style.cursor='grabbing';};
-  cv.onmousemove=e=>{if(!drag.on)return;rot(e.clientX-drag.lx,e.clientY-drag.ly);drag.lx=e.clientX;drag.ly=e.clientY;};
-  cv.onmouseup=()=>{drag.on=false;cv.style.cursor='grab';};
-  cv.ontouchstart=e=>{drag.on=true;drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY;};
-  cv.ontouchmove=e=>{if(!drag.on)return;e.preventDefault();rot(e.touches[0].clientX-drag.lx,e.touches[0].clientY-drag.ly);drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY;};
-  cv.ontouchend=()=>drag.on=false;
-}
-function rot(dx,dy){
-  manE.y+=dx*.009; manE.x+=dy*.009;
-  manE.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,manE.x));
-  const q=new THREE.Quaternion(); q.setFromEuler(new THREE.Euler(manE.x,manE.y,0,'YXZ')); applyQ(q);
-}
-
-// ── GYRO INTEGRATION ─────────────────────────────────────────
-const GSCALE = GYRO_SCALE * RAD;  // deg/LSB → rad/s (applied per dt in integrate)
-function integrateGyro(gxDeg,gyDeg,gzDeg){
-  const now=performance.now();
-  if(!lastT){lastT=now;return;}
-  const dt=Math.min((now-lastT)/1000,0.05); lastT=now;
-  // gxDeg etc are already in degrees/s from either WS bridge or USB parse
-  const gx=gxDeg*RAD, gy=gyDeg*RAD, gz=gzDeg*RAD;
-  const n=Math.sqrt(gx*gx+gy*gy+gz*gz);
-  if(n<1e-9)return;
-  const a=n*dt, s=Math.sin(a/2);
-  gyroQ.multiply(new THREE.Quaternion((gx/n)*s,(gy/n)*s,(gz/n)*s,Math.cos(a/2))).normalize();
-  imuQ.copy(refQ).multiply(gyroQ).normalize(); applyQ(imuQ);
-}
-
-function recentre(){
-  refQ.copy(gyroQ).invert();
-  imuQ.identity(); G.quaternion.identity(); manE={x:0,y:0};
-  clog('Re-centred','li');
-}
-
-// ── AUTO CONNECT ─────────────────────────────────────────────
-async function autoConnect(){
-  const btn=document.getElementById('mbtn');
-  btn.disabled=true; btn.textContent='… CONNECTING';
-
-  // 1. WebUSB (works on Android + desktop Chrome, real XREAL gyro)
-  if('usb' in navigator){
-    clog('WebUSB available — tap CONNECT and select XREAL Air in picker','li');
-    clog('Switching to WebUSB mode…','lx');
-    btn.disabled=false; btn.textContent='⬡ AUTO-CONNECT';
-    connectWebUSB();
-    return;
-  }
-
-  // 2. WS bridge (desktop, Python running)
-  clog('Trying WebSocket bridge…','li');
-  const wsOk=await new Promise(res=>{
-    const s=new WebSocket('ws://localhost:7878');
-    const t=setTimeout(()=>{s.close();res(false);},1500);
-    s.onopen=()=>{clearTimeout(t);s.close();res(true);};
-    s.onerror=()=>{clearTimeout(t);res(false);};
-  });
-  if(wsOk){btn.disabled=false;btn.textContent='⬡ AUTO-CONNECT';connectWS();return;}
-
-  // 3. DeviceOrientation
-  clog('Trying DeviceOrientation…','li');
-  const orientOk=await new Promise(res=>{
-    let got=false;
-    const h=e=>{if(e.alpha!==null){got=true;window.removeEventListener('deviceorientation',h);res(true);}};
-    window.addEventListener('deviceorientation',h,true);
-    setTimeout(()=>{if(!got){window.removeEventListener('deviceorientation',h);res(false);}},1500);
-  });
-  if(orientOk){btn.disabled=false;btn.textContent='⬡ AUTO-CONNECT';connectOrientation();return;}
-
-  // 4. Drag fallback
-  clog('No IMU source found — drag mode','lw');
-  btn.disabled=false; btn.textContent='⬡ AUTO-CONNECT';
-  connectDrag();
-}
-
-// ── PYTHON BRIDGE SCRIPT ─────────────────────────────────────
-function showPythonScript(){
-  clog('Save as xreal_bridge.py and run: python xreal_bridge.py','lw');
-  clog('pip install pyusb websockets','lx');
-}
-
-// ── BOOT ─────────────────────────────────────────────────────
-clog('XREAL 3DoF Test ready','li');
-clog('Android Chrome: tap ① WebUSB for direct glasses IMU','lx');
-clog('Desktop Chrome: run xreal_bridge.py then ② WebSocket','lx');
-
+function recentre(){ refQ.copy(gyroQ).invert(); clog("Re-centred."); }
+function animate(){ requestAnimationFrame(animate); rend.render(scene, cam); }
+animate();
 </script>
 </body>
 </html>
