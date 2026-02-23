@@ -3,32 +3,683 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tool Showcase</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>GaltiMoth — Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0c0f;
+            --surface: #111418;
+            --surface2: #181d24;
+            --border: #1e2530;
+            --border-bright: #2a3442;
+            --text: #c8d6e8;
+            --text-dim: #5a6a7e;
+            --text-muted: #3a4a5e;
+            --accent-geo: #00c9a7;
+            --accent-cpt: #4fa3f7;
+            --accent-water: #38bdf8;
+            --accent-eng: #f59e0b;
+            --accent-util: #a78bfa;
+            --accent-3d: #fb7185;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── GRID BACKGROUND ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,201,167,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,201,167,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── HEADER ── */
+        .site-header {
+            position: relative;
+            z-index: 10;
+            padding: 48px 48px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .header-left h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            letter-spacing: -0.02em;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .header-left h1 span {
+            color: var(--accent-geo);
+        }
+
+        .header-sub {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .header-meta {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-align: right;
+            line-height: 1.8;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            background: var(--accent-geo);
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ── MAIN LAYOUT ── */
+        .site-main {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 48px 48px 80px;
+        }
+
+        /* ── GROUP SECTION ── */
+        .group {
+            margin-bottom: 56px;
+        }
+
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .group-icon {
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .group-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .group-accent {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border-bright), transparent);
+        }
+
+        .group-count {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.08em;
+        }
+
+        /* ── CARD GRID ── */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .card:hover {
+            border-color: var(--card-accent, var(--accent-geo));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--card-accent, var(--accent-geo)) inset;
+        }
+
+        /* Accent glow on hover */
+        .card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top left, var(--card-accent, var(--accent-geo)), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .card:hover::after { opacity: 0.04; }
+
+        /* ── THUMBNAIL ── */
+        .card-thumb {
+            height: 110px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-thumb::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(135deg, var(--card-accent, var(--accent-geo)) 0%, transparent 60%);
+            opacity: 0.06;
+        }
+
+        .thumb-emoji {
+            font-size: 2.8rem;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 2px 12px var(--card-accent, var(--accent-geo)));
+        }
+
+        .thumb-tag {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.58rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--card-accent, var(--accent-geo));
+            background: rgba(0,0,0,0.5);
+            padding: 2px 7px;
+            border-radius: 3px;
+            border: 1px solid currentColor;
+            opacity: 0.7;
+        }
+
+        /* ── CARD BODY ── */
+        .card-body {
+            padding: 14px 16px 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: #e2eaf5;
+            line-height: 1.3;
+        }
+
+        .card-desc {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .card-link-hint {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+        .card:hover .card-link-hint {
+            color: var(--card-accent, var(--accent-geo));
+        }
+
+        /* ── FOOTER ── */
+        .site-footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 24px;
+            border-top: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+        }
+
+        @media (max-width: 640px) {
+            .site-header { padding: 28px 20px 20px; flex-direction: column; align-items: flex-start; }
+            .site-main { padding: 28px 20px 60px; }
+            .card-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to Our Tool Showcase</h1>
-    </header>
-    <main>
-        <section class="tools">
-            <div class="tool-card">
-                <div class="tool-header">🔧 Tool 1</div>
-                <p>Description of Tool 1.</p>
-            </div>
-            <div class="tool-card">
-                <div class="tool-header">🛠️ Tool 2</div>
-                <p>Description of Tool 2.</p>
-            </div>
-            <div class="tool-card">
-                <div class="tool-header">⚙️ Tool 3</div>
-                <p>Description of Tool 3.</p>
-            </div>
-            <!-- Add more tools as needed -->
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2026 GaltiMoth</p>
-    </footer>
+
+<header class="site-header">
+    <div class="header-left">
+        <h1>Galti<span>Moth</span></h1>
+        <p class="header-sub">Engineering &amp; Geospatial Tools</p>
+    </div>
+    <div class="header-meta">
+        <span class="status-dot"></span>tools online<br>
+        22 projects<br>
+        github.io
+    </div>
+</header>
+
+<main class="site-main">
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 1: 3D Visualisation -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">🧊</span>
+            <span class="group-title">3D Visualisation</span>
+            <div class="group-accent"></div>
+            <span class="group-count">2 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/3d cpttestworking.html" style="--card-accent: var(--accent-3d)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🗺️</span>
+                    <span class="thumb-tag">3D · CPT</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">3D CPT Test Working</div>
+                    <div class="card-desc">Three-dimensional rendering of cone penetration test data. Visualise borehole logs and soil stratification in 3D space.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/3dnooverlay.html" style="--card-accent: var(--accent-3d)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🔷</span>
+                    <span class="thumb-tag">3D</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">3D No Overlay</div>
+                    <div class="card-desc">Clean 3D scene viewer without overlay elements — useful for presentations or screenshots of 3D geospatial data.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 2: CPT & Soil Analysis -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">🪨</span>
+            <span class="group-title">CPT &amp; Soil Analysis</span>
+            <div class="group-accent"></div>
+            <span class="group-count">3 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/cpt summarizinator.html" style="--card-accent: var(--accent-cpt)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📊</span>
+                    <span class="thumb-tag">CPT</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">CPT Summarizinator</div>
+                    <div class="card-desc">Automatically summarises cone penetration test results — extracts key soil layers, friction ratios, and tip resistance stats.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/fluvial-fining-cpt.html" style="--card-accent: var(--accent-cpt)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🌊</span>
+                    <span class="thumb-tag">CPT · Fluvial</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Fluvial Fining CPT</div>
+                    <div class="card-desc">Analysis tool for identifying upward-fining sequences in fluvial deposits using CPT data — useful for sedimentary environment interpretation.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/TIMS_DIM_SIM.html" style="--card-accent: var(--accent-cpt)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🧮</span>
+                    <span class="thumb-tag">Simulation</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">TIMS DIM SIM</div>
+                    <div class="card-desc">Dimensional simulation tool — models geotechnical parameters across varying input dimensions for sensitivity analysis.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 3: GPS & GNSS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">📡</span>
+            <span class="group-title">GPS &amp; GNSS</span>
+            <div class="group-accent"></div>
+            <span class="group-count">6 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/gnss viewer.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🛰️</span>
+                    <span class="thumb-tag">GNSS</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">GNSS Viewer</div>
+                    <div class="card-desc">Visualise GNSS survey point data on an interactive map. Supports coordinate import and real-time position display.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/gnssviewerandcontour.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🗻</span>
+                    <span class="thumb-tag">GNSS · Contour</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">GNSS Viewer &amp; Contour</div>
+                    <div class="card-desc">Extends the GNSS viewer with contour generation — interpolates elevation from survey points and renders contour lines.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/gps comarinator.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📍</span>
+                    <span class="thumb-tag">GPS · Compare</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">GPS Comarinator</div>
+                    <div class="card-desc">Compare multiple GPS datasets side by side — useful for checking survey repeatability or comparing epochs of measurement.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/gps surface_updating.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🏔️</span>
+                    <span class="thumb-tag">GPS · Surface</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">GPS Surface Updating</div>
+                    <div class="card-desc">Incrementally update a surface model as new GPS survey points are added — tracks change over time across site areas.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/gpx editor.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">✏️</span>
+                    <span class="thumb-tag">GPX · Editor</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">GPX Editor</div>
+                    <div class="card-desc">Edit GPX track files in-browser — modify waypoints, trim tracks, merge routes, or export cleaned data.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/coordinate_visualization.html" style="--card-accent: var(--accent-geo)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🎯</span>
+                    <span class="thumb-tag">Coordinates</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Coordinate Visualisation</div>
+                    <div class="card-desc">Plot and inspect coordinate datasets visually — supports multiple CRS, reprojection, and spatial distribution review.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 4: Groundwater & Environment -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">💧</span>
+            <span class="group-title">Groundwater &amp; Environment</span>
+            <div class="group-accent"></div>
+            <span class="group-count">3 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/groundwater_monitor.html" style="--card-accent: var(--accent-water)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🌊</span>
+                    <span class="thumb-tag">Groundwater</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Groundwater Monitor</div>
+                    <div class="card-desc">Monitor groundwater level data across multiple bores — plot hydrographs, track trends, and flag anomalies.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/unified GWM visualise.html" style="--card-accent: var(--accent-water)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🗂️</span>
+                    <span class="thumb-tag">GWM · Unified</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Unified GWM Visualise</div>
+                    <div class="card-desc">Unified groundwater model visualiser — combines multiple monitoring data sources into a single interactive view.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/enviro gas-dash.html" style="--card-accent: var(--accent-water)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🌫️</span>
+                    <span class="thumb-tag">Environmental</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Enviro Gas Dashboard</div>
+                    <div class="card-desc">Dashboard for environmental gas monitoring data — visualise methane, CO₂, or VOC readings across a site over time.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 5: Engineering & Structural -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">🏗️</span>
+            <span class="group-title">Engineering &amp; Structural</span>
+            <div class="group-accent"></div>
+            <span class="group-count">3 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/interactive pad footing.html" style="--card-accent: var(--accent-eng)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🧱</span>
+                    <span class="thumb-tag">Structural</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Interactive Pad Footing</div>
+                    <div class="card-desc">Interactive pad footing design calculator — input loads and soil parameters to size footing dimensions and check bearing capacity.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/BRE470 Design Process Flowchart.html" style="--card-accent: var(--accent-eng)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📐</span>
+                    <span class="thumb-tag">Design Process</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">BRE470 Design Process Flowchart</div>
+                    <div class="card-desc">Interactive design process flowchart for BRE470 — step through the structural/geotechnical design workflow with decision nodes.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/trig.html" style="--card-accent: var(--accent-eng)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📐</span>
+                    <span class="thumb-tag">Maths</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Trigonometry</div>
+                    <div class="card-desc">Quick trigonometry calculator and visualiser — solve triangles, compute angles, and see geometric relationships interactively.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 6: Photogrammetry & Survey -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">📸</span>
+            <span class="group-title">Photogrammetry &amp; Survey</span>
+            <div class="group-accent"></div>
+            <span class="group-count">2 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/photogramxsect.html" style="--card-accent: var(--accent-util)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📷</span>
+                    <span class="thumb-tag">Photogrammetry</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Photogram Xsect</div>
+                    <div class="card-desc">Extract cross-sections from photogrammetric survey data — slice point clouds or meshes along defined alignments.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/ssm verification wip.html" style="--card-accent: var(--accent-util)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">✅</span>
+                    <span class="thumb-tag">Verification · WIP</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">SSM Verification <span style="opacity:0.5;font-size:0.75em">WIP</span></div>
+                    <div class="card-desc">Work-in-progress tool for surface/settlement model verification — cross-checks model outputs against field measurements.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GROUP 7: Utilities & Conversion -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <section class="group">
+        <div class="group-header">
+            <span class="group-icon">🔧</span>
+            <span class="group-title">Utilities &amp; Conversion</span>
+            <div class="group-accent"></div>
+            <span class="group-count">3 tools</span>
+        </div>
+        <div class="card-grid">
+
+            <a class="card" href="/pages/excel_converter_with_copy.html" style="--card-accent: var(--accent-util)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">📋</span>
+                    <span class="thumb-tag">Excel · Convert</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">Excel Converter with Copy</div>
+                    <div class="card-desc">Convert and reformat Excel data in-browser — paste data in, transform columns, and copy the result directly to clipboard.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/PDFTOMP4.HTML" style="--card-accent: var(--accent-util)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">🎬</span>
+                    <span class="thumb-tag">PDF → Video</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">PDF to MP4</div>
+                    <div class="card-desc">Convert PDF presentations to MP4 video — renders each page as a frame with configurable timing and transitions.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+            <a class="card" href="/pages/ARGV.html" style="--card-accent: var(--accent-util)">
+                <div class="card-thumb">
+                    <span class="thumb-emoji">⌨️</span>
+                    <span class="thumb-tag">CLI · Args</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">ARGV</div>
+                    <div class="card-desc">Command-line argument builder and parser utility — construct, test, and document CLI argument strings for scripts and tools.</div>
+                    <div class="card-link-hint">↗ open tool</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+</main>
+
+<footer class="site-footer">
+    &copy; 2026 GaltiMoth — All rights reserved
+</footer>
+
 </body>
 </html>
