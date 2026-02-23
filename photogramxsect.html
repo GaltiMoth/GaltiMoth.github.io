@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Section Comparison Tool</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+        .main-content {
+            display: flex;
+            gap: 20px;
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        .right-panel {
+            flex: 2;
+        }
+        .data-input {
+            margin-bottom: 20px;
+        }
+        #dataInput {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .controls {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        #canvas {
+            border: 1px solid #ccc;
+            cursor: crosshair;
+            display: block;
+            width: 100%;
+        }
+        .info-panel {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .info-panel div {
+            margin: 5px 0;
+        }
+        button {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #1976D2;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #d32f2f;
+        }
+        .measurement {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .error {
+            color: #d32f2f;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .profiles-list {
+            margin: 15px 0;
+        }
+        .profile-item {
+            background: #f8f8f8;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .profile-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .profile-controls input {
+            width: 70px;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .profile-controls label {
+            font-size: 12px;
+            color: #666;
+        }
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .profile-name {
+            font-weight: bold;
+        }
+        .profile-visibility {
+            cursor: pointer;
+            padding: 4px 8px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cross Section Comparison Tool</h1>
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="data-input">
+                    <label for="dataInput"><strong>Paste cross section data:</strong></label>
+                    <textarea id="dataInput" placeholder="Paste data with format:
+Curvilinear abscissa; Z
+0.00000000; 35.06858063
+0.08310650; 35.07841492
+...
+
+For multiple sections, separate columns with tabs or paste separately"></textarea>
+                    <div class="controls">
+                        <button onclick="addProfile()" class="secondary">Add Profile</button>
+                        <button onclick="clearAll()" class="danger">Clear All</button>
+                    </div>
+                    <div id="errorMsg" class="error"></div>
+                </div>
+                
+                <div class="profiles-list">
+                    <strong>Loaded Profiles:</strong>
+                    <div id="profilesList"></div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="controls">
+                    <button onclick="clearMeasurement()">Clear Measurement</button>
+                    <button onclick="zoomIn()">Zoom In</button>
+                    <button onclick="zoomOut()">Zoom Out</button>
+                    <button onclick="resetZoom()">Reset View</button>
+                </div>
+                <canvas id="canvas" width="900" height="600"></canvas>
+                <div class="info-panel">
+                    <div>Click two points to measure distance</div>
+                    <div id="coords">Current Position: -</div>
+                    <div id="point1">Point 1: -</div>
+                    <div id="point2">Point 2: -</div>
+                    <div id="distance" class="measurement">Distance: -</div>
+                    <div id="vertical" class="measurement">Vertical: -</div>
+                    <div id="horizontal" class="measurement">Horizontal: -</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const colors = ['#2196F3', '#f44336', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#FF5722', '#795548'];
+        
+        let profiles = [];
+        let zoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let measurePoints = [];
+        let globalMinX, globalMaxX, globalMinZ, globalMaxZ;
+        
+        const margin = 60;
+        
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            const columns = [];
+            
+            // Detect if data has multiple columns (tab-separated)
+            const firstDataLine = lines.find(line => 
+                !line.toLowerCase().includes('curvilinear') && 
+                !line.toLowerCase().includes('abscissa') && 
+                line.trim()
+            );
+            
+            if (firstDataLine && firstDataLine.includes('\t')) {
+                // Multi-column format
+                const numColumns = firstDataLine.split('\t').length;
+                for (let i = 0; i < numColumns; i++) {
+                    columns.push([]);
+                }
+                
+                for (let line of lines) {
+                    if (!line.trim()) continue;
+                    if (line.toLowerCase().includes('curvilinear') || line.toLowerCase().includes('abscissa')) continue;
+                    
+                    const parts = line.split('\t');
+                    parts.forEach((part, idx) => {
+                        if (idx < columns.length && part.trim()) {
+                            const vals = part.split(';');
+                            if (vals.length >= 2) {
+                                const x = parseFloat(vals[0].trim());
+                                const z = parseFloat(vals[1].trim());
+                                if (!isNaN(x) && !isNaN(z)) {
+                                    columns[idx].push([x, z]);
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                return columns.filter(col => col.length > 0);
+            } else {
+                // Single column format
+                const parsed = [];
+                for (let line of lines) {
+                    if (!line.trim()) continue;
+                    if (line.toLowerCase().includes('curvilinear') || line.toLowerCase().includes('abscissa')) continue;
+                    
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const x = parseFloat(parts[0].trim());
+                        const z = parseFloat(parts[1].trim());
+                        if (!isNaN(x) && !isNaN(z)) {
+                            parsed.push([x, z]);
+                        }
+                    }
+                }
+                return parsed.length > 0 ? [parsed] : [];
+            }
+        }
+        
+        function addProfile() {
+            const input = document.getElementById('dataInput').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (!input.trim()) {
+                errorMsg.textContent = 'Please paste data first!';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            const parsedColumns = parseData(input);
+            
+            if (parsedColumns.length === 0) {
+                errorMsg.textContent = 'Invalid data format. Please use format: "x_value; z_value" on each line.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            errorMsg.style.display = 'none';
+            
+            parsedColumns.forEach(data => {
+                const profile = {
+                    id: Date.now() + Math.random(),
+                    name: `Profile ${profiles.length + 1}`,
+                    data: data,
+                    color: colors[profiles.length % colors.length],
+                    offsetX: 0,
+                    offsetZ: 0,
+                    visible: true
+                };
+                profiles.push(profile);
+            });
+            
+            updateGlobalBounds();
+            updateProfilesList();
+            draw();
+            
+            document.getElementById('dataInput').value = '';
+        }
+        
+        function updateGlobalBounds() {
+            if (profiles.length === 0) return;
+            
+            globalMinX = Infinity;
+            globalMaxX = -Infinity;
+            globalMinZ = Infinity;
+            globalMaxZ = -Infinity;
+            
+            profiles.forEach(profile => {
+                if (!profile.visible) return;
+                profile.data.forEach(point => {
+                    const x = point[0] + profile.offsetX;
+                    const z = point[1] + profile.offsetZ;
+                    globalMinX = Math.min(globalMinX, x);
+                    globalMaxX = Math.max(globalMaxX, x);
+                    globalMinZ = Math.min(globalMinZ, z);
+                    globalMaxZ = Math.max(globalMaxZ, z);
+                });
+            });
+        }
+        
+        function updateProfilesList() {
+            const list = document.getElementById('profilesList');
+            list.innerHTML = '';
+            
+            profiles.forEach((profile, idx) => {
+                const item = document.createElement('div');
+                item.className = 'profile-item';
+                item.style.borderLeftColor = profile.color;
+                
+                item.innerHTML = `
+                    <div class="profile-header">
+                        <span class="profile-name" style="color: ${profile.color}">${profile.name}</span>
+                        <button class="profile-visibility" onclick="toggleVisibility(${idx})">
+                            ${profile.visible ? '👁️ Hide' : '👁️‍🗨️ Show'}
+                        </button>
+                    </div>
+                    <div class="profile-controls">
+                        <label>X offset:</label>
+                        <input type="number" step="0.1" value="${profile.offsetX}" 
+                               onchange="updateOffset(${idx}, 'x', this.value)">
+                        <label>Z offset:</label>
+                        <input type="number" step="0.1" value="${profile.offsetZ}" 
+                               onchange="updateOffset(${idx}, 'z', this.value)">
+                        <button onclick="removeProfile(${idx})" class="danger" style="padding: 4px 8px; font-size: 11px;">Remove</button>
+                    </div>
+                `;
+                
+                list.appendChild(item);
+            });
+        }
+        
+        function toggleVisibility(idx) {
+            profiles[idx].visible = !profiles[idx].visible;
+            updateGlobalBounds();
+            updateProfilesList();
+            draw();
+        }
+        
+        function updateOffset(idx, axis, value) {
+            const offset = parseFloat(value) || 0;
+            if (axis === 'x') {
+                profiles[idx].offsetX = offset;
+            } else {
+                profiles[idx].offsetZ = offset;
+            }
+            updateGlobalBounds();
+            draw();
+        }
+        
+        function removeProfile(idx) {
+            profiles.splice(idx, 1);
+            updateGlobalBounds();
+            updateProfilesList();
+            draw();
+        }
+        
+        function clearAll() {
+            profiles = [];
+            measurePoints = [];
+            updateProfilesList();
+            clearMeasurement();
+            draw();
+        }
+        
+        function worldToScreen(x, z) {
+            const width = canvas.width - 2 * margin;
+            const height = canvas.height - 2 * margin;
+            
+            const screenX = margin + ((x - globalMinX) / (globalMaxX - globalMinX)) * width * zoom + panX;
+            const screenY = canvas.height - margin - ((z - globalMinZ) / (globalMaxZ - globalMinZ)) * height * zoom + panY;
+            
+            return [screenX, screenY];
+        }
+        
+        function screenToWorld(screenX, screenY) {
+            const width = canvas.width - 2 * margin;
+            const height = canvas.height - 2 * margin;
+            
+            const x = globalMinX + ((screenX - margin - panX) / (width * zoom)) * (globalMaxX - globalMinX);
+            const z = globalMinZ + ((canvas.height - margin - screenY - panY) / (height * zoom)) * (globalMaxZ - globalMinZ);
+            
+            return [x, z];
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (profiles.length === 0) {
+                ctx.fillStyle = '#999';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Paste your data and click "Add Profile"', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= 10; i++) {
+                const x = globalMinX + (globalMaxX - globalMinX) * i / 10;
+                const [sx, sy1] = worldToScreen(x, globalMinZ);
+                const [_, sy2] = worldToScreen(x, globalMaxZ);
+                
+                ctx.beginPath();
+                ctx.moveTo(sx, sy1);
+                ctx.lineTo(sx, sy2);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#666';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(x.toFixed(2), sx, canvas.height - margin + 20);
+            }
+            
+            for (let i = 0; i <= 10; i++) {
+                const z = globalMinZ + (globalMaxZ - globalMinZ) * i / 10;
+                const [sx1, sy] = worldToScreen(globalMinX, z);
+                const [sx2, _] = worldToScreen(globalMaxX, z);
+                
+                ctx.beginPath();
+                ctx.moveTo(sx1, sy);
+                ctx.lineTo(sx2, sy);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#666';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(z.toFixed(2), margin - 10, sy + 5);
+            }
+            
+            // Draw profiles
+            profiles.forEach(profile => {
+                if (!profile.visible) return;
+                
+                ctx.strokeStyle = profile.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                for (let i = 0; i < profile.data.length; i++) {
+                    const x = profile.data[i][0] + profile.offsetX;
+                    const z = profile.data[i][1] + profile.offsetZ;
+                    const [sx, sy] = worldToScreen(x, z);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(sx, sy);
+                    } else {
+                        ctx.lineTo(sx, sy);
+                    }
+                }
+                ctx.stroke();
+            });
+            
+            // Draw measurement points and line
+            if (measurePoints.length > 0) {
+                ctx.fillStyle = '#000';
+                for (let point of measurePoints) {
+                    const [sx, sy] = worldToScreen(point[0], point[1]);
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                if (measurePoints.length === 2) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    const [sx1, sy1] = worldToScreen(measurePoints[0][0], measurePoints[0][1]);
+                    const [sx2, sy2] = worldToScreen(measurePoints[1][0], measurePoints[1][1]);
+                    ctx.moveTo(sx1, sy1);
+                    ctx.lineTo(sx2, sy2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (profiles.length === 0) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const [worldX, worldZ] = screenToWorld(mouseX, mouseY);
+            
+            document.getElementById('coords').textContent = 
+                `Current Position: X=${worldX.toFixed(3)}, Z=${worldZ.toFixed(3)}`;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (profiles.length === 0) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const [worldX, worldZ] = screenToWorld(mouseX, mouseY);
+            
+            measurePoints.push([worldX, worldZ]);
+            
+            if (measurePoints.length === 1) {
+                document.getElementById('point1').textContent = 
+                    `Point 1: X=${worldX.toFixed(3)}, Z=${worldZ.toFixed(3)}`;
+            } else if (measurePoints.length === 2) {
+                document.getElementById('point2').textContent = 
+                    `Point 2: X=${worldX.toFixed(3)}, Z=${worldZ.toFixed(3)}`;
+                
+                const dx = measurePoints[1][0] - measurePoints[0][0];
+                const dz = measurePoints[1][1] - measurePoints[0][1];
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                document.getElementById('distance').textContent = 
+                    `Distance: ${dist.toFixed(3)} units`;
+                document.getElementById('horizontal').textContent = 
+                    `Horizontal: ${Math.abs(dx).toFixed(3)} units`;
+                document.getElementById('vertical').textContent = 
+                    `Vertical: ${Math.abs(dz).toFixed(3)} units`;
+                
+                measurePoints = [];
+            }
+            
+            draw();
+        });
+        
+        function clearMeasurement() {
+            measurePoints = [];
+            document.getElementById('point1').textContent = 'Point 1: -';
+            document.getElementById('point2').textContent = 'Point 2: -';
+            document.getElementById('distance').textContent = 'Distance: -';
+            document.getElementById('horizontal').textContent = 'Horizontal: -';
+            document.getElementById('vertical').textContent = 'Vertical: -';
+            draw();
+        }
+        
+        function zoomIn() {
+            zoom *= 1.2;
+            draw();
+        }
+        
+        function zoomOut() {
+            zoom /= 1.2;
+            draw();
+        }
+        
+        function resetZoom() {
+            zoom = 1;
+            panX = 0;
+            panY = 0;
+            draw();
+        }
+        
+        draw();
+    </script>
+</body>
+</html>

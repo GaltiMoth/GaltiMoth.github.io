@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRE 470 Design Flowchart - Working Platform Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+        
+        .reference-tags {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .info-box strong {
+            color: #1565c0;
+            font-size: 1.1em;
+        }
+        
+        .input-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 0.9em;
+        }
+        
+        .input-group input, .input-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .unit {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .calculate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 20px 0;
+            width: 100%;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .result-item {
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .result-item label {
+            display: block;
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+        
+        .result-item .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            color: #155724;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            color: #856404;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            border-radius: 8px;
+            color: #721c24;
+        }
+        
+        /* Flowchart Styles */
+        .flowchart-step {
+            margin: 30px 0;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .flowchart-box {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .flowchart-box h3 {
+            color: #1e3c72;
+            margin: 0 0 15px 0;
+            font-size: 1.3em;
+        }
+        
+        .flowchart-box p {
+            margin: 10px 0 0 0;
+            line-height: 1.6;
+        }
+        
+        .start-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+        
+        .start-box h3 {
+            color: white;
+        }
+        
+        .success-box {
+            background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%);
+            border-color: #66bb6a;
+            color: white;
+        }
+        
+        .success-box h3 {
+            color: white;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+            border-color: #ffa726;
+            color: white;
+        }
+        
+        .warning-box h3 {
+            color: white;
+        }
+        
+        .final-box {
+            background: linear-gradient(135deg, #26c6da 0%, #00acc1 100%);
+            border-color: #26c6da;
+            color: white;
+        }
+        
+        .final-box h3 {
+            color: white;
+        }
+        
+        .flowchart-decision {
+            background: #fff9c4;
+            border: 3px solid #fbc02d;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 400px;
+            transform: rotate(-1deg);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        
+        .flowchart-decision h3 {
+            color: #f57f17;
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+        }
+        
+        .flowchart-decision p {
+            margin: 0;
+            font-weight: bold;
+            color: #f57f17;
+        }
+        
+        .flowchart-arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 15px 0;
+            animation: bounce 2s infinite;
+        }
+        
+        .calculation-box {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #1e3c72;
+            line-height: 1.8;
+            text-align: left;
+        }
+        
+        .calculation-box h4 {
+            color: #667eea;
+            margin: 0 0 15px 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .calculation-box strong {
+            color: #1e3c72;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ BRE 470 Design Process Flowchart</h1>
+            <p>Interactive Working Platform Design with Complete Working Calculations</p>
+            <div class="reference-tags">
+                <span class="tag">BRE 470 (2004)</span>
+                <span class="tag">Figure A8</span>
+                <span class="tag">Step-by-Step Design</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="info-box">
+                <strong>📋 About This Tool</strong><br>
+                This interactive flowchart implements the exact BRE 470 Figure A8 design methodology with complete working calculations displayed at every step. Follow the sequential process from subgrade characterization through to final platform thickness design.
+            </div>
+            
+            <!-- Step 1: Characterize Subgrade -->
+            <div class="flowchart-step" id="flow_step1">
+                <div class="flowchart-box start-box">
+                    <h3>STEP 1: Characterize Subgrade</h3>
+                    <p>Determine: cu (clay) or φ's, Nγ (sand)</p>
+                </div>
+                
+                <div class="input-section" style="margin-top: 15px;">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Subgrade Type</label>
+                            <select id="flow_subgrade_type" onchange="updateFlowInputs()">
+                                <option value="cohesive">Cohesive (Clay) - use cu</option>
+                                <option value="granular">Granular (Sand) - use φ's</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group" id="flow_cu_group">
+                            <label>Undrained Shear Strength (cu)</label>
+                            <input type="number" id="flow_cu" value="50" step="5">
+                            <span class="unit">kPa</span>
+                        </div>
+                        
+                        <div class="input-group" id="flow_phi_group" style="display: none;">
+                            <label>Friction Angle (φ's)</label>
+                            <input type="number" id="flow_phi_s" value="35" step="0.5" min="25" max="50">
+                            <span class="unit">degrees</span>
+                        </div>
+                        
+                        <div class="input-group" id="flow_gamma_group" style="display: none;">
+                            <label>Unit Weight (γ's)</label>
+                            <input type="number" id="flow_gamma_s" value="20" step="0.5">
+                            <span class="unit">kN/m³</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="flowStep1()">Check Subgrade Suitability →</button>
+                <div id="flow_result1" class="results"></div>
+            </div>
+            
+            <!-- Step 2: Define Load Cases -->
+            <div class="flowchart-step" id="flow_step2" style="display: none;">
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box">
+                    <h3>STEP 2: Define Load Cases</h3>
+                    <p>Characteristic loads q₁k (Case 1) and q₂k (Case 2)<br>
+                    Track dimensions: W (width), L (length)</p>
+                </div>
+                
+                <div class="input-section" style="margin-top: 15px;">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Track Width (W)</label>
+                            <input type="number" id="flow_W" value="1.0" step="0.1">
+                            <span class="unit">m</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Track Length - Case 1 (L1)</label>
+                            <input type="number" id="flow_L1" value="3.0" step="0.1">
+                            <span class="unit">m</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Track Length - Case 2 (L2)</label>
+                            <input type="number" id="flow_L2" value="5.0" step="0.1">
+                            <span class="unit">m</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Load q₁k (Case 1)</label>
+                            <input type="number" id="flow_q1k" value="150" step="10">
+                            <span class="unit">kPa</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Load q₂k (Case 2)</label>
+                            <input type="number" id="flow_q2k" value="200" step="10">
+                            <span class="unit">kPa</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="flowStep2()">Calculate Bearing Resistance →</button>
+                <div id="flow_result2" class="results"></div>
+            </div>
+            
+            <!-- Step 3: Check Bearing Resistance -->
+            <div class="flowchart-step" id="flow_step3" style="display: none;">
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box">
+                    <h3>STEP 3: Check Subgrade Bearing Resistance (Rd)</h3>
+                    <p>Using standard bearing capacity formulas<br>
+                    With load cases:<br>
+                    Case 1: q₁d = 2.0 × q₁k<br>
+                    Case 2: q₂d = 1.5 × q₂k</p>
+                </div>
+                
+                <div id="flow_result3" class="results" style="margin-top: 15px;"></div>
+                
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-decision">
+                    <h3>DECISION</h3>
+                    <p id="flow_decision_text">Is Working Platform Required?</p>
+                </div>
+            </div>
+            
+            <!-- Branch A: Platform NOT Required -->
+            <div class="flowchart-step" id="flow_step4a" style="display: none;">
+                <div class="flowchart-arrow">→ NO (Platform NOT Required)</div>
+                <div class="flowchart-box success-box">
+                    <h3>✅ SUBGRADE ADEQUATE</h3>
+                    <p>Determine requirements for running surface<br>
+                    Ensure subgrade capacity is not compromised</p>
+                </div>
+                
+                <div id="flow_result4a" class="results" style="margin-top: 15px;"></div>
+            </div>
+            
+            <!-- Branch B: Platform Required -->
+            <div class="flowchart-step" id="flow_step4b" style="display: none;">
+                <div class="flowchart-arrow">→ YES (Platform Required)</div>
+                <div class="flowchart-box warning-box">
+                    <h3>⚠️ WORKING PLATFORM REQUIRED</h3>
+                    <p>Rd < γf1·q1k OR Rd < γf2·q2k</p>
+                </div>
+                
+                <!-- Step 4: Platform Material -->
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box">
+                    <h3>STEP 4: Check Platform Material Bearing</h3>
+                    <p>Check upper bearing resistance of platform material alone<br>
+                    Rp = 0.5 × γp × W × Nγp × sγ with load cases:<br>
+                    Case 1: q₁d = 1.6 × q₁k<br>
+                    Case 2: q₂d = 1.2 × q₂k</p>
+                </div>
+                
+                <div class="input-section" style="margin-top: 15px;">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Platform Friction Angle (φ'p)</label>
+                            <input type="number" id="flow_phi_p" value="40" step="0.5" min="30" max="50">
+                            <span class="unit">degrees</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Platform Unit Weight (γp)</label>
+                            <input type="number" id="flow_gamma_p" value="20" step="0.5">
+                            <span class="unit">kN/m³</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="flowStep4()">Check Platform Material →</button>
+                <div id="flow_result4b" class="results"></div>
+            </div>
+            
+            <!-- Step 5: Calculate Thickness -->
+            <div class="flowchart-step" id="flow_step5" style="display: none;">
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box">
+                    <h3>STEP 5: Calculate Required Thickness</h3>
+                    <p>Use method of punching shear with reinforcement calculations</p>
+                </div>
+                
+                <button class="calculate-btn" onclick="flowStep5()">Calculate Platform Thickness →</button>
+                <div id="flow_result5" class="results"></div>
+            </div>
+            
+            <!-- Final Step: Check Minimums -->
+            <div class="flowchart-step" id="flow_step6" style="display: none;">
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box">
+                    <h3>STEP 6: Apply Minimum Thickness</h3>
+                    <p>Minimum platform thickness:<br>
+                    Lesser of 0.5 × track width or 300mm</p>
+                </div>
+                
+                <div id="flow_result6" class="results" style="margin-top: 15px;"></div>
+                
+                <div class="flowchart-arrow">↓</div>
+                <div class="flowchart-box final-box">
+                    <h3>✅ FINAL DESIGN</h3>
+                    <p>Final evaluation - check against criteria and experience</p>
+                </div>
+                
+                <div id="flow_result_final" class="results" style="margin-top: 15px;"></div>
+                
+                <button class="calculate-btn" onclick="resetFlowchart()" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔄 Start New Design</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Bearing capacity tables with interpolation
+        const NgTable = {
+            25: 10.9, 30: 22.4, 35: 48, 40: 109, 45: 272, 50: 763
+        };
+        
+        const KpTanDeltaTable = {
+            30: 2.0, 35: 3.1, 40: 5.5, 45: 10.0, 50: 18.0
+        };
+        
+        function logInterpolate(x, x1, x2, y1, y2) {
+            const logY1 = Math.log(y1);
+            const logY2 = Math.log(y2);
+            const logY = logY1 + (x - x1) * (logY2 - logY1) / (x2 - x1);
+            return Math.exp(logY);
+        }
+        
+        function linearInterpolate(x, x1, x2, y1, y2) {
+            return y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+        }
+        
+        function getNγ(phi) {
+            const angles = Object.keys(NgTable).map(Number).sort((a, b) => a - b);
+            if (phi <= angles[0]) return NgTable[angles[0]];
+            if (phi >= angles[angles.length - 1]) return NgTable[angles[angles.length - 1]];
+            
+            for (let i = 0; i < angles.length - 1; i++) {
+                if (phi >= angles[i] && phi <= angles[i + 1]) {
+                    return logInterpolate(phi, angles[i], angles[i + 1], NgTable[angles[i]], NgTable[angles[i + 1]]);
+                }
+            }
+        }
+        
+        function getKpTanDelta(phi) {
+            const angles = Object.keys(KpTanDeltaTable).map(Number).sort((a, b) => a - b);
+            if (phi <= angles[0]) return KpTanDeltaTable[angles[0]];
+            if (phi >= angles[angles.length - 1]) return KpTanDeltaTable[angles[angles.length - 1]];
+            
+            for (let i = 0; i < angles.length - 1; i++) {
+                if (phi >= angles[i] && phi <= angles[i + 1]) {
+                    return logInterpolate(phi, angles[i], angles[i + 1], KpTanDeltaTable[angles[i]], KpTanDeltaTable[angles[i + 1]]);
+                }
+            }
+        }
+        
+        // Flowchart state
+        let flowchartState = {
+            subgradeType: 'cohesive',
+            cu: null,
+            phi_s: null,
+            gamma_s: null,
+            W: null,
+            L1: null,
+            L2: null,
+            q1k: null,
+            q2k: null,
+            Rd_case1: null,
+            Rd_case2: null,
+            platformRequired: false,
+            phi_p: null,
+            gamma_p: null,
+            D_required: null
+        };
+        
+        function updateFlowInputs() {
+            const subgradeType = document.getElementById('flow_subgrade_type').value;
+            flowchartState.subgradeType = subgradeType;
+            
+            if (subgradeType === 'cohesive') {
+                document.getElementById('flow_cu_group').style.display = 'flex';
+                document.getElementById('flow_phi_group').style.display = 'none';
+                document.getElementById('flow_gamma_group').style.display = 'none';
+            } else {
+                document.getElementById('flow_cu_group').style.display = 'none';
+                document.getElementById('flow_phi_group').style.display = 'flex';
+                document.getElementById('flow_gamma_group').style.display = 'flex';
+            }
+        }
+        
+        function flowStep1() {
+            const subgradeType = document.getElementById('flow_subgrade_type').value;
+            let html = '';
+            let suitable = true;
+            
+            if (subgradeType === 'cohesive') {
+                const cu = parseFloat(document.getElementById('flow_cu').value);
+                flowchartState.cu = cu;
+                
+                if (cu < 20) {
+                    html = '<div class="warning" style="margin-top: 15px;">';
+                    html += '<strong>⚠️ SUBGRADE VERY SOFT</strong><br>';
+                    html += `cu = ${cu} kPa < 20 kPa<br><br>`;
+                    html += '<strong>DO NOT USE THIS DESIGN METHOD</strong><br>';
+                    html += 'Subgrade is too weak for tracked plant. Consider:<br>';
+                    html += '• Ground improvement (vibro-compaction, stone columns, etc.)<br>';
+                    html += '• Deep foundations<br>';
+                    html += '• Alternative construction methods<br>';
+                    html += '• Specialist geotechnical advice required';
+                    html += '</div>';
+                    suitable = false;
+                } else {
+                    html = '<div class="success" style="margin-top: 15px;">';
+                    html += '<strong>✅ SUBGRADE SUITABLE FOR DESIGN</strong><br>';
+                    html += `Cohesive subgrade: cu = ${cu} kPa ≥ 20 kPa<br>`;
+                    html += 'Proceed to define load cases';
+                    html += '</div>';
+                }
+            } else {
+                const phi_s = parseFloat(document.getElementById('flow_phi_s').value);
+                const gamma_s = parseFloat(document.getElementById('flow_gamma_s').value);
+                flowchartState.phi_s = phi_s;
+                flowchartState.gamma_s = gamma_s;
+                
+                if (phi_s < 25) {
+                    html = '<div class="warning" style="margin-top: 15px;">';
+                    html += '<strong>⚠️ SUBGRADE VERY LOOSE</strong><br>';
+                    html += `φ's = ${phi_s}° < 25° (Very loose)<br><br>`;
+                    html += 'Subgrade may be too weak. Consider densification or alternative methods.';
+                    html += '</div>';
+                    suitable = false;
+                } else {
+                    html = '<div class="success" style="margin-top: 15px;">';
+                    html += '<strong>✅ SUBGRADE SUITABLE FOR DESIGN</strong><br>';
+                    html += `Granular subgrade: φ's = ${phi_s}°, γ's = ${gamma_s} kN/m³<br>`;
+                    html += 'Proceed to define load cases';
+                    html += '</div>';
+                }
+            }
+            
+            document.getElementById('flow_result1').innerHTML = html;
+            
+            if (suitable) {
+                document.getElementById('flow_step2').style.display = 'block';
+                document.getElementById('flow_step2').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        function flowStep2() {
+            const W = parseFloat(document.getElementById('flow_W').value);
+            const L1 = parseFloat(document.getElementById('flow_L1').value);
+            const L2 = parseFloat(document.getElementById('flow_L2').value);
+            const q1k = parseFloat(document.getElementById('flow_q1k').value);
+            const q2k = parseFloat(document.getElementById('flow_q2k').value);
+            
+            flowchartState.W = W;
+            flowchartState.L1 = L1;
+            flowchartState.L2 = L2;
+            flowchartState.q1k = q1k;
+            flowchartState.q2k = q2k;
+            
+            const q1d_noPlatform = 2.0 * q1k;
+            const q2d_noPlatform = 1.5 * q2k;
+            
+            let html = '<div class="success" style="margin-top: 15px;">';
+            html += '<strong>✅ LOAD CASES DEFINED</strong><br><br>';
+            html += '<div class="result-grid">';
+            html += `<div class="result-item"><label>Track Width (W)</label><div class="value">${W.toFixed(2)} m</div></div>`;
+            html += `<div class="result-item"><label>Case 1 Length (L1)</label><div class="value">${L1.toFixed(2)} m</div></div>`;
+            html += `<div class="result-item"><label>Case 2 Length (L2)</label><div class="value">${L2.toFixed(2)} m</div></div>`;
+            html += `<div class="result-item"><label>q₁k (Characteristic)</label><div class="value">${q1k.toFixed(0)} kPa</div></div>`;
+            html += `<div class="result-item"><label>q₂k (Characteristic)</label><div class="value">${q2k.toFixed(0)} kPa</div></div>`;
+            html += '</div><br>';
+            html += '<strong>Design Loads (No Platform):</strong><br>';
+            html += `• Case 1: q₁d = 2.0 × ${q1k} = <strong>${q1d_noPlatform.toFixed(0)} kPa</strong><br>`;
+            html += `• Case 2: q₂d = 1.5 × ${q2k} = <strong>${q2d_noPlatform.toFixed(0)} kPa</strong>`;
+            html += '</div>';
+            
+            document.getElementById('flow_result2').innerHTML = html;
+            document.getElementById('flow_step3').style.display = 'block';
+            
+            setTimeout(flowStep3, 500);
+        }
+        
+        function flowStep3() {
+            const { subgradeType, cu, phi_s, gamma_s, W, L1, L2, q1k, q2k } = flowchartState;
+            
+            let Rd_case1, Rd_case2;
+            const Nc = 5.14;
+            let workingHTML = '';
+            
+            if (subgradeType === 'cohesive') {
+                const sc1 = 1 + 0.2 * (W / L1);
+                const sc2 = 1 + 0.2 * (W / L2);
+                Rd_case1 = cu * Nc * sc1;
+                Rd_case2 = cu * Nc * sc2;
+                
+                workingHTML = '<div class="calculation-box">';
+                workingHTML += '<h4>📐 STEP 3 Working Calculations (Cohesive Subgrade):</h4>';
+                workingHTML += '<strong>Formula:</strong> Rd = cu × Nc × sc<br>';
+                workingHTML += `Where: Nc = ${Nc.toFixed(2)} (bearing capacity factor for cohesive soil)<br><br>`;
+                
+                workingHTML += '<strong>Case 1 Calculations:</strong><br>';
+                workingHTML += `Given: cu = ${cu} kPa, W = ${W.toFixed(2)} m, L1 = ${L1.toFixed(2)} m<br><br>`;
+                workingHTML += `Step 1: Calculate shape factor<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = 1 + 0.2(W/L1)<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = 1 + 0.2(${W.toFixed(2)}/${L1.toFixed(2)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = 1 + 0.2(${(W/L1).toFixed(3)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = 1 + ${(0.2*W/L1).toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = ${sc1.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 2: Calculate bearing resistance<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = cu × Nc × sc1<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${cu} × ${Nc.toFixed(2)} × ${sc1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${(cu * Nc).toFixed(1)} × ${sc1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = <strong>${Rd_case1.toFixed(1)} kPa</strong><br><br>`;
+                
+                workingHTML += '<strong>Case 2 Calculations:</strong><br>';
+                workingHTML += `Given: cu = ${cu} kPa, W = ${W.toFixed(2)} m, L2 = ${L2.toFixed(2)} m<br><br>`;
+                workingHTML += `Step 1: Calculate shape factor<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = 1 + 0.2(W/L2)<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = 1 + 0.2(${W.toFixed(2)}/${L2.toFixed(2)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = 1 + 0.2(${(W/L2).toFixed(3)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = 1 + ${(0.2*W/L2).toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = ${sc2.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 2: Calculate bearing resistance<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = cu × Nc × sc2<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${cu} × ${Nc.toFixed(2)} × ${sc2.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${(cu * Nc).toFixed(1)} × ${sc2.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = <strong>${Rd_case2.toFixed(1)} kPa</strong><br>`;
+                
+                workingHTML += '</div>';
+            } else {
+                const Ngs = getNγ(phi_s);
+                const sg1 = 1 - 0.3 * (W / L1);
+                const sg2 = 1 - 0.3 * (W / L2);
+                Rd_case1 = 0.5 * gamma_s * W * Ngs * sg1;
+                Rd_case2 = 0.5 * gamma_s * W * Ngs * sg2;
+                
+                workingHTML = '<div class="calculation-box">';
+                workingHTML += '<h4>📐 STEP 3 Working Calculations (Granular Subgrade):</h4>';
+                workingHTML += '<strong>Formula:</strong> Rd = 0.5 × γ\'s × W × Nγs × sγ<br><br>>';
+                
+                workingHTML += '<strong>Step 1: Get bearing capacity factor from Table A1</strong><br>';
+                workingHTML += `&nbsp;&nbsp;φ\'s = ${phi_s.toFixed(1)}°<br>`;
+                workingHTML += `&nbsp;&nbsp;Nγs = ${Ngs.toFixed(2)} (logarithmic interpolation)<br><br>`;
+                
+                workingHTML += '<strong>Case 1 Calculations:</strong><br>';
+                workingHTML += `Given: γ's = ${gamma_s} kN/m³, W = ${W.toFixed(2)} m, L1 = ${L1.toFixed(2)} m<br><br>`;
+                workingHTML += `Step 2: Calculate shape factor<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = 1 - 0.3(W/L1)<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = 1 - 0.3(${W.toFixed(2)}/${L1.toFixed(2)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = 1 - 0.3(${(W/L1).toFixed(3)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = 1 - ${(0.3*W/L1).toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = ${sg1.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 3: Calculate bearing resistance<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = 0.5 × γ\'s × W × Nγs × sγ1<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = 0.5 × ${gamma_s} × ${W.toFixed(2)} × ${Ngs.toFixed(2)} × ${sg1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${(0.5 * gamma_s * W * Ngs).toFixed(1)} × ${sg1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = <strong>${Rd_case1.toFixed(1)} kPa</strong><br><br>`;
+                
+                workingHTML += '<strong>Case 2 Calculations:</strong><br>';
+                workingHTML += `Given: γ's = ${gamma_s} kN/m³, W = ${W.toFixed(2)} m, L2 = ${L2.toFixed(2)} m<br><br>`;
+                workingHTML += `Step 2: Calculate shape factor<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ2 = 1 - 0.3(W/L2)<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ2 = 1 - 0.3(${W.toFixed(2)}/${L2.toFixed(2)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ2 = 1 - 0.3(${(W/L2).toFixed(3)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ2 = 1 - ${(0.3*W/L2).toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ2 = ${sg2.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 3: Calculate bearing resistance<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = 0.5 × γ\'s × W × Nγs × sγ2<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = 0.5 × ${gamma_s} × ${W.toFixed(2)} × ${Ngs.toFixed(2)} × ${sg2.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = ${(0.5 * gamma_s * W * Ngs).toFixed(1)} × ${sg2.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd = <strong>${Rd_case2.toFixed(1)} kPa</strong><br>`;
+                
+                workingHTML += '</div>';
+            }
+            
+            flowchartState.Rd_case1 = Rd_case1;
+            flowchartState.Rd_case2 = Rd_case2;
+            
+            const q1d = 2.0 * q1k;
+            const q2d = 1.5 * q2k;
+            
+            const case1_ok = Rd_case1 >= q1d;
+            const case2_ok = Rd_case2 >= q2d;
+            const platformRequired = !(case1_ok && case2_ok);
+            
+            flowchartState.platformRequired = platformRequired;
+            
+            let html = workingHTML;
+            
+            html += '<div style="margin-top: 20px;">';
+            html += '<div class="calculation-box">';
+            html += '<h4>📐 Design Load Calculations:</h4>';
+            html += '<strong>Load Factors (No Platform Present):</strong><br>';
+            html += `&nbsp;&nbsp;Case 1: γf1 = 2.0 (operator cannot aid recovery)<br>`;
+            html += `&nbsp;&nbsp;Case 2: γf2 = 1.5 (operator can control load)<br><br>`;
+            html += `<strong>Design Loads:</strong><br>`;
+            html += `&nbsp;&nbsp;q₁d = γf1 × q₁k<br>`;
+            html += `&nbsp;&nbsp;q₁d = 2.0 × ${q1k}<br>`;
+            html += `&nbsp;&nbsp;q₁d = <strong>${q1d.toFixed(0)} kPa</strong><br><br>`;
+            html += `&nbsp;&nbsp;q₂d = γf2 × q₂k<br>`;
+            html += `&nbsp;&nbsp;q₂d = 1.5 × ${q2k}<br>`;
+            html += `&nbsp;&nbsp;q₂d = <strong>${q2d.toFixed(0)} kPa</strong>`;
+            html += '</div></div>';
+            
+            html += '<div style="margin-top: 20px;">';
+            html += '<h4 style="color: #1e3c72;">Subgrade Bearing Capacity Checks:</h4>';
+            html += '<div class="result-grid">';
+            html += `<div class="result-item"><label>Rd (Case 1)</label><div class="value">${Rd_case1.toFixed(1)} kPa</div></div>`;
+            html += `<div class="result-item"><label>q₁d Required</label><div class="value">${q1d.toFixed(0)} kPa</div></div>`;
+            html += `<div class="result-item"><label>Rd (Case 2)</label><div class="value">${Rd_case2.toFixed(1)} kPa</div></div>`;
+            html += `<div class="result-item"><label>q₂d Required</label><div class="value">${q2d.toFixed(0)} kPa</div></div>`;
+            html += '</div><br>';
+            
+            html += '<strong>Capacity Checks:</strong><br>';
+            html += `• Case 1: Rd = ${Rd_case1.toFixed(1)} kPa ${case1_ok ? '≥' : '<'} q₁d = ${q1d.toFixed(0)} kPa ${case1_ok ? '✅ PASS' : '❌ FAIL'}<br>`;
+            html += `• Case 2: Rd = ${Rd_case2.toFixed(1)} kPa ${case2_ok ? '≥' : '<'} q₂d = ${q2d.toFixed(0)} kPa ${case2_ok ? '✅ PASS' : '❌ FAIL'}`;
+            html += '</div>';
+            
+            document.getElementById('flow_result3').innerHTML = html;
+            
+            const decisionText = platformRequired ? 
+                'YES - Working Platform Required (Rd < design loads)' : 
+                'NO - Platform Not Required (Rd ≥ design loads)';
+            document.getElementById('flow_decision_text').textContent = decisionText;
+            
+            setTimeout(() => {
+                document.getElementById('flow_step3').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+            
+            if (platformRequired) {
+                document.getElementById('flow_step4b').style.display = 'block';
+                document.getElementById('flow_step4a').style.display = 'none';
+                setTimeout(() => {
+                    document.getElementById('flow_step4b').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800);
+            } else {
+                document.getElementById('flow_step4a').style.display = 'block';
+                document.getElementById('flow_step4b').style.display = 'none';
+                
+                let html = '<div class="success">';
+                html += '<strong>✅ SUBGRADE IS ADEQUATE</strong><br><br>';
+                html += 'The subgrade bearing capacity exceeds the design loads for both cases.<br>';
+                html += 'A working platform is NOT required.<br><br>';
+                html += '<strong>Requirements:</strong><br>';
+                html += '• Ensure level, well-compacted running surface<br>';
+                html += '• Provide adequate drainage<br>';
+                html += '• Regular inspection and maintenance<br>';
+                html += '• Protect subgrade during construction<br>';
+                html += '• Consider light capping layer for running surface if needed';
+                html += '</div>';
+                
+                document.getElementById('flow_result4a').innerHTML = html;
+                
+                setTimeout(() => {
+                    document.getElementById('flow_step4a').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800);
+            }
+        }
+        
+        function flowStep4() {
+            const { W, L1, L2, q1k, q2k } = flowchartState;
+            const phi_p = parseFloat(document.getElementById('flow_phi_p').value);
+            const gamma_p = parseFloat(document.getElementById('flow_gamma_p').value);
+            
+            flowchartState.phi_p = phi_p;
+            flowchartState.gamma_p = gamma_p;
+            
+            const Ngp = getNγ(phi_p);
+            const sg1 = 1 - 0.3 * (W / L1);
+            const sg2 = 1 - 0.3 * (W / L2);
+            
+            const Rp_case1 = 0.5 * gamma_p * W * Ngp * sg1;
+            const Rp_case2 = 0.5 * gamma_p * W * Ngp * sg2;
+            
+            const q1d_platform = 1.6 * q1k;
+            const q2d_platform = 1.2 * q2k;
+            
+            const case1_ok = Rp_case1 >= q1d_platform;
+            const case2_ok = Rp_case2 >= q2d_platform;
+            const materialOK = case1_ok && case2_ok;
+            
+            let html = '<div class="calculation-box">';
+            html += '<h4>📐 STEP 4 Working Calculations (Platform Material):</h4>';
+            html += '<strong>Formula:</strong> Rp = 0.5 × γp × W × Nγp × sγ<br><br>';
+            
+            html += '<strong>Step 1: Get bearing capacity factor from Table A1</strong><br>';
+            html += `&nbsp;&nbsp;φ\'p = ${phi_p.toFixed(1)}°<br>`;
+            html += `&nbsp;&nbsp;Nγp = ${Ngp.toFixed(2)} (logarithmic interpolation)<br><br>`;
+            
+            html += '<strong>Case 1 Calculations:</strong><br>';
+            html += `Given: γp = ${gamma_p} kN/m³, W = ${W.toFixed(2)} m, L1 = ${L1.toFixed(2)} m<br><br>`;
+            html += `Step 2: Calculate shape factor<br>`;
+            html += `&nbsp;&nbsp;sγ1 = 1 - 0.3(W/L1)<br>`;
+            html += `&nbsp;&nbsp;sγ1 = 1 - 0.3(${W.toFixed(2)}/${L1.toFixed(2)})<br>`;
+            html += `&nbsp;&nbsp;sγ1 = 1 - ${(0.3 * W / L1).toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;sγ1 = ${sg1.toFixed(3)}<br><br>`;
+            
+            html += `Step 3: Calculate platform bearing resistance<br>`;
+            html += `&nbsp;&nbsp;Rp = 0.5 × γp × W × Nγp × sγ1<br>`;
+            html += `&nbsp;&nbsp;Rp = 0.5 × ${gamma_p} × ${W.toFixed(2)} × ${Ngp.toFixed(2)} × ${sg1.toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;Rp = ${(0.5 * gamma_p * W * Ngp).toFixed(1)} × ${sg1.toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;Rp = <strong>${Rp_case1.toFixed(1)} kPa</strong><br><br>`;
+            
+            html += `Step 4: Design load (REDUCED factor with platform present)<br>`;
+            html += `&nbsp;&nbsp;q₁d = 1.6 × q₁k (reduced from 2.0)<br>`;
+            html += `&nbsp;&nbsp;q₁d = 1.6 × ${q1k}<br>`;
+            html += `&nbsp;&nbsp;q₁d = <strong>${q1d_platform.toFixed(0)} kPa</strong><br><br>`;
+            
+            html += '<strong>Case 2 Calculations:</strong><br>';
+            html += `Given: γp = ${gamma_p} kN/m³, W = ${W.toFixed(2)} m, L2 = ${L2.toFixed(2)} m<br><br>`;
+            html += `Step 2: Calculate shape factor<br>`;
+            html += `&nbsp;&nbsp;sγ2 = 1 - 0.3(W/L2)<br>`;
+            html += `&nbsp;&nbsp;sγ2 = 1 - 0.3(${W.toFixed(2)}/${L2.toFixed(2)})<br>`;
+            html += `&nbsp;&nbsp;sγ2 = 1 - ${(0.3 * W / L2).toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;sγ2 = ${sg2.toFixed(3)}<br><br>`;
+            
+            html += `Step 3: Calculate platform bearing resistance<br>`;
+            html += `&nbsp;&nbsp;Rp = 0.5 × γp × W × Nγp × sγ2<br>`;
+            html += `&nbsp;&nbsp;Rp = 0.5 × ${gamma_p} × ${W.toFixed(2)} × ${Ngp.toFixed(2)} × ${sg2.toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;Rp = ${(0.5 * gamma_p * W * Ngp).toFixed(1)} × ${sg2.toFixed(3)}<br>`;
+            html += `&nbsp;&nbsp;Rp = <strong>${Rp_case2.toFixed(1)} kPa</strong><br><br>`;
+            
+            html += `Step 4: Design load (REDUCED factor with platform present)<br>`;
+            html += `&nbsp;&nbsp;q₂d = 1.2 × q₂k (reduced from 1.5)<br>`;
+            html += `&nbsp;&nbsp;q₂d = 1.2 × ${q2k}<br>`;
+            html += `&nbsp;&nbsp;q₂d = <strong>${q2d_platform.toFixed(0)} kPa</strong><br>`;
+            
+            html += '</div>';
+            
+            html += '<div style="margin-top: 20px;">';
+            html += '<h4 style="color: #1e3c72;">Platform Material Capacity Checks:</h4>';
+            html += '<div class="result-grid">';
+            html += `<div class="result-item"><label>Platform φ\'p</label><div class="value">${phi_p.toFixed(1)}°</div></div>`;
+            html += `<div class="result-item"><label>Nγp Factor</label><div class="value">${Ngp.toFixed(1)}</div></div>`;
+            html += `<div class="result-item"><label>Rp (Case 1)</label><div class="value">${Rp_case1.toFixed(1)} kPa</div></div>`;
+            html += `<div class="result-item"><label>q₁d Required</label><div class="value">${q1d_platform.toFixed(0)} kPa</div></div>`;
+            html += `<div class="result-item"><label>Rp (Case 2)</label><div class="value">${Rp_case2.toFixed(1)} kPa</div></div>`;
+            html += `<div class="result-item"><label>q₂d Required</label><div class="value">${q2d_platform.toFixed(0)} kPa</div></div>`;
+            html += '</div><br>';
+            
+            html += '<strong>Material Checks:</strong><br>';
+            html += `• Case 1: Rp = ${Rp_case1.toFixed(1)} kPa ${case1_ok ? '≥' : '<'} q₁d = ${q1d_platform.toFixed(0)} kPa ${case1_ok ? '✅ PASS' : '❌ FAIL'}<br>`;
+            html += `• Case 2: Rp = ${Rp_case2.toFixed(1)} kPa ${case2_ok ? '≥' : '<'} q₂d = ${q2d_platform.toFixed(0)} kPa ${case2_ok ? '✅ PASS' : '❌ FAIL'}<br><br>`;
+            
+            if (materialOK) {
+                html += '<div class="success" style="padding: 15px; margin-top: 10px;">';
+                html += '<strong>✅ PLATFORM MATERIAL IS ADEQUATE</strong><br>';
+                html += 'Platform material provides sufficient bearing capacity.<br>';
+                html += 'Proceed to calculate required thickness.';
+                html += '</div>';
+                
+                document.getElementById('flow_step5').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('flow_step5').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
+            } else {
+                html += '<div class="warning" style="padding: 15px; margin-top: 10px;">';
+                html += '<strong>⚠️ PLATFORM MATERIAL INADEQUATE</strong><br>';
+                html += `Platform material (φ\'p = ${phi_p.toFixed(1)}°) cannot provide adequate bearing capacity.<br>`;
+                html += '<strong>Action Required:</strong> Select higher quality material:<br>';
+                html += '• Try φ\'p = 40° (good quality crushed rock)<br>';
+                html += '• Or φ\'p = 45° (excellent quality well-graded material)<br>';
+                html += '• Ensure heavy compaction to achieve design φ\'';
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            
+            document.getElementById('flow_result4b').innerHTML = html;
+        }
+        
+        function flowStep5() {
+            const { subgradeType, cu, phi_s, gamma_s, phi_p, gamma_p, W, L1, L2, q1k, q2k } = flowchartState;
+            
+            const KpTanDelta = getKpTanDelta(phi_p);
+            const sp1 = 1 + (W / L1);
+            const sp2 = 1 + (W / L2);
+            
+            const q1d = 1.6 * q1k;
+            const q2d = 1.2 * q2k;
+            
+            let D1, D2;
+            let workingHTML = '<div class="calculation-box">';
+            workingHTML += '<h4>📐 STEP 5 Working Calculations (Platform Thickness):</h4>';
+            
+            if (subgradeType === 'cohesive') {
+                workingHTML += '<strong>Formula (Cohesive Subgrade):</strong><br>';
+                workingHTML += 'D = √[W(qd - cu×Nc×sc) / (γp×Kptanδ×sp)]<br><br>';
+                
+                const Nc = 5.14;
+                const sc1 = 1 + 0.2 * (W / L1);
+                const sc2 = 1 + 0.2 * (W / L2);
+                
+                const Rd_sub1 = cu * Nc * sc1;
+                const Rd_sub2 = cu * Nc * sc2;
+                
+                const term1 = q1d - Rd_sub1;
+                const term2 = q2d - Rd_sub2;
+                
+                workingHTML += '<strong>Step 1: Get punching shear coefficient from Table A2</strong><br>';
+                workingHTML += `&nbsp;&nbsp;φ\'p = ${phi_p.toFixed(1)}°<br>`;
+                workingHTML += `&nbsp;&nbsp;Kp tan δ = ${KpTanDelta.toFixed(2)} (logarithmic interpolation)<br><br>`;
+                
+                workingHTML += '<strong>Case 1 Thickness Calculation:</strong><br>';
+                workingHTML += `Given: cu = ${cu} kPa, W = ${W.toFixed(2)} m, L1 = ${L1.toFixed(2)} m, q₁d = ${q1d} kPa<br><br>`;
+                
+                workingHTML += `Step 2: Calculate shape factors<br>`;
+                workingHTML += `&nbsp;&nbsp;sc1 = 1 + 0.2(W/L1) = ${sc1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sp1 = 1 + (W/L1)<br>`;
+                workingHTML += `&nbsp;&nbsp;sp1 = 1 + (${W.toFixed(2)}/${L1.toFixed(2)})<br>`;
+                workingHTML += `&nbsp;&nbsp;sp1 = ${sp1.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 3: Calculate subgrade contribution<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,subgrade = cu × Nc × sc1<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,subgrade = ${cu} × ${Nc.toFixed(2)} × ${sc1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,subgrade = ${Rd_sub1.toFixed(1)} kPa<br><br>`;
+                
+                workingHTML += `Step 4: Calculate load difference<br>`;
+                workingHTML += `&nbsp;&nbsp;Δq = qd - Rd,subgrade<br>`;
+                workingHTML += `&nbsp;&nbsp;Δq = ${q1d} - ${Rd_sub1.toFixed(1)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Δq = ${term1.toFixed(1)} kPa<br>`;
+                if (term1 < 0) {
+                    workingHTML += `&nbsp;&nbsp;(Negative = subgrade helps, use 0 for calculation)<br>`;
+                }
+                workingHTML += '<br>';
+                
+                const useTerm1 = Math.max(0, term1);
+                workingHTML += `Step 5: Calculate thickness<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[W × Δq / (γp × Kptanδ × sp1)]<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[${W.toFixed(2)} × ${useTerm1.toFixed(1)} / (${gamma_p} × ${KpTanDelta.toFixed(2)} × ${sp1.toFixed(3)})]<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[${(W * useTerm1).toFixed(1)} / ${(gamma_p * KpTanDelta * sp1).toFixed(1)}]<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[${(W * useTerm1 / (gamma_p * KpTanDelta * sp1)).toFixed(3)}]<br>`;
+                
+                D1 = useTerm1 > 0 ? Math.sqrt((W * useTerm1) / (gamma_p * KpTanDelta * sp1)) : 0;
+                workingHTML += `&nbsp;&nbsp;D1 = <strong>${D1.toFixed(3)} m</strong><br><br>`;
+                
+                // Case 2
+                workingHTML += '<strong>Case 2 Thickness Calculation:</strong><br>';
+                workingHTML += `Given: cu = ${cu} kPa, W = ${W.toFixed(2)} m, L2 = ${L2.toFixed(2)} m, q₂d = ${q2d} kPa<br><br>`;
+                
+                workingHTML += `Step 2: Calculate shape factors<br>`;
+                workingHTML += `&nbsp;&nbsp;sc2 = 1 + 0.2(W/L2) = ${sc2.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sp2 = 1 + (W/L2) = ${sp2.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 3: Calculate subgrade contribution<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,subgrade = ${cu} × ${Nc.toFixed(2)} × ${sc2.toFixed(3)} = ${Rd_sub2.toFixed(1)} kPa<br><br>`;
+                
+                workingHTML += `Step 4: Calculate load difference<br>`;
+                workingHTML += `&nbsp;&nbsp;Δq = ${q2d} - ${Rd_sub2.toFixed(1)} = ${term2.toFixed(1)} kPa`;
+                if (term2 < 0) {
+                    workingHTML += ` (use 0)`;
+                }
+                workingHTML += '<br><br>';
+                
+                const useTerm2 = Math.max(0, term2);
+                workingHTML += `Step 5: Calculate thickness<br>`;
+                workingHTML += `&nbsp;&nbsp;D2 = √[${W.toFixed(2)} × ${useTerm2.toFixed(1)} / (${gamma_p} × ${KpTanDelta.toFixed(2)} × ${sp2.toFixed(3)})]<br>`;
+                workingHTML += `&nbsp;&nbsp;D2 = √[${(W * useTerm2 / (gamma_p * KpTanDelta * sp2)).toFixed(3)}]<br>`;
+                
+                D2 = useTerm2 > 0 ? Math.sqrt((W * useTerm2) / (gamma_p * KpTanDelta * sp2)) : 0;
+                workingHTML += `&nbsp;&nbsp;D2 = <strong>${D2.toFixed(3)} m</strong><br>`;
+                
+            } else {
+                // Granular subgrade
+                workingHTML += '<strong>Formula (Granular Subgrade):</strong><br>';
+                workingHTML += 'D = √[W(qd - 0.5×γ\'s×W×Nγs×sγ) / (γp×Kptanδ×sp)]<br><br>';
+                
+                const Ngs = getNγ(phi_s);
+                const sg1 = 1 - 0.3 * (W / L1);
+                const sg2 = 1 - 0.3 * (W / L2);
+                
+                const Rd_sub1 = 0.5 * gamma_s * W * Ngs * sg1;
+                const Rd_sub2 = 0.5 * gamma_s * W * Ngs * sg2;
+                
+                const term1 = q1d - Rd_sub1;
+                const term2 = q2d - Rd_sub2;
+                
+                workingHTML += '<strong>Step 1: Get factors from tables</strong><br>';
+                workingHTML += `&nbsp;&nbsp;φ\'s = ${phi_s.toFixed(1)}° → Nγs = ${Ngs.toFixed(2)}<br>`;
+                workingHTML += `&nbsp;&nbsp;φ\'p = ${phi_p.toFixed(1)}° → Kp tan δ = ${KpTanDelta.toFixed(2)}<br><br>`;
+                
+                workingHTML += '<strong>Case 1 Thickness Calculation:</strong><br>';
+                workingHTML += `Given: γ's = ${gamma_s} kN/m³, W = ${W.toFixed(2)} m, L1 = ${L1.toFixed(2)} m<br><br>`;
+                
+                workingHTML += `Step 2: Calculate shape factors<br>`;
+                workingHTML += `&nbsp;&nbsp;sγ1 = 1 - 0.3(W/L1) = ${sg1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;sp1 = 1 + (W/L1) = ${sp1.toFixed(3)}<br><br>`;
+                
+                workingHTML += `Step 3: Calculate subgrade contribution<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,sub = 0.5 × γ\'s × W × Nγs × sγ1<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,sub = 0.5 × ${gamma_s} × ${W.toFixed(2)} × ${Ngs.toFixed(2)} × ${sg1.toFixed(3)}<br>`;
+                workingHTML += `&nbsp;&nbsp;Rd,sub = ${Rd_sub1.toFixed(1)} kPa<br><br>`;
+                
+                workingHTML += `Step 4: Calculate load difference<br>`;
+                workingHTML += `&nbsp;&nbsp;Δq = ${q1d} - ${Rd_sub1.toFixed(1)} = ${term1.toFixed(1)} kPa`;
+                if (term1 < 0) workingHTML += ` (use 0)`;
+                workingHTML += '<br><br>';
+                
+                const useTerm1 = Math.max(0, term1);
+                workingHTML += `Step 5: Calculate thickness<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[${W.toFixed(2)} × ${useTerm1.toFixed(1)} / (${gamma_p} × ${KpTanDelta.toFixed(2)} × ${sp1.toFixed(3)})]<br>`;
+                workingHTML += `&nbsp;&nbsp;D1 = √[${(W * useTerm1 / (gamma_p * KpTanDelta * sp1)).toFixed(3)}]<br>`;
+                
+                D1 = useTerm1 > 0 ? Math.sqrt((W * useTerm1) / (gamma_p * KpTanDelta * sp1)) : 0;
+                workingHTML += `&nbsp;&nbsp;D1 = <strong>${D1.toFixed(3)} m</strong><br><br>`;
+                
+                // Case 2
+                workingHTML += '<strong>Case 2 Thickness Calculation:</strong><br>';
+                workingHTML += `Step 2: sγ2 = ${sg2.toFixed(3)}, sp2 = ${sp2.toFixed(3)}<br>`;
+                workingHTML += `Step 3: Rd,sub = ${Rd_sub2.toFixed(1)} kPa<br>`;
+                workingHTML += `Step 4: Δq = ${q2d} - ${Rd_sub2.toFixed(1)} = ${term2.toFixed(1)} kPa`;
+                if (term2 < 0) workingHTML += ` (use 0)`;
+                workingHTML += '<br>';
+                
+                const useTerm2 = Math.max(0, term2);
+                workingHTML += `Step 5: D2 = √[${(W * useTerm2 / (gamma_p * KpTanDelta * sp2)).toFixed(3)}]<br>`;
+                
+                D2 = useTerm2 > 0 ? Math.sqrt((W * useTerm2) / (gamma_p * KpTanDelta * sp2)) : 0;
+                workingHTML += `&nbsp;&nbsp;D2 = <strong>${D2.toFixed(3)} m</strong><br>`;
+            }
+            
+            const D_required = Math.max(D1, D2);
+            
+            workingHTML += '<br><strong>Governing Thickness:</strong><br>';
+            workingHTML += `&nbsp;&nbsp;D_required = max(D1, D2)<br>`;
+            workingHTML += `&nbsp;&nbsp;D_required = max(${D1.toFixed(3)}, ${D2.toFixed(3)})<br>`;
+            workingHTML += `&nbsp;&nbsp;D_required = <strong>${D_required.toFixed(3)} m (${(D_required*1000).toFixed(0)} mm)</strong><br>`;
+            workingHTML += '</div>';
+            
+            let html = workingHTML;
+            
+            html += '<div style="margin-top: 20px;">';
+            html += '<div class="result-grid">';
+            html += `<div class="result-item"><label>Kp tan δ</label><div class="value">${KpTanDelta.toFixed(2)}</div></div>`;
+            html += `<div class="result-item"><label>Case 1 (D1)</label><div class="value">${D1.toFixed(3)} m</div></div>`;
+            html += `<div class="result-item"><label>Case 2 (D2)</label><div class="value">${D2.toFixed(3)} m</div></div>`;
+            html += `<div class="result-item" style="background: rgba(76, 175, 80, 0.3);"><label>Required D</label><div class="value">${D_required.toFixed(3)} m</div></div>`;
+            html += '</div></div>';
+            
+            flowchartState.D_required = D_required;
+            
+            document.getElementById('flow_result5').innerHTML = html;
+            document.getElementById('flow_step6').style.display = 'block';
+            
+            setTimeout(flowStep6, 500);
+        }
+        
+        function flowStep6() {
+            const { W, D_required } = flowchartState;
+            
+            const D_from_width = 0.5 * W;
+            const D_absolute = 0.3;
+            const D_minimum = Math.min(D_from_width, D_absolute);
+            const D_design = Math.max(D_required, D_minimum);
+            
+            let html = '<div class="calculation-box">';
+            html += '<h4>📐 STEP 6 Working Calculations (Minimum Thickness):</h4>';
+            html += '<strong>Minimum Thickness Rule (BRE 470):</strong><br>';
+            html += 'D_minimum = min(0.5 × W, 0.3 m)<br><br>';
+            
+            html += '<strong>Calculations:</strong><br>';
+            html += `Given: W = ${W.toFixed(2)} m, D_required = ${D_required.toFixed(3)} m<br><br>`;
+            
+            html += `Step 1: Calculate track-width based minimum<br>`;
+            html += `&nbsp;&nbsp;0.5 × W = 0.5 × ${W.toFixed(2)}<br>`;
+            html += `&nbsp;&nbsp;0.5 × W = ${D_from_width.toFixed(3)} m (${(D_from_width*1000).toFixed(0)} mm)<br><br>`;
+            
+            html += `Step 2: Compare with absolute minimum<br>`;
+            html += `&nbsp;&nbsp;Absolute minimum = 0.3 m (300 mm)<br>`;
+            html += `&nbsp;&nbsp;D_minimum = min(${D_from_width.toFixed(3)}, ${D_absolute.toFixed(3)})<br>`;
+            html += `&nbsp;&nbsp;D_minimum = <strong>${D_minimum.toFixed(3)} m (${(D_minimum*1000).toFixed(0)} mm)</strong><br><br>`;
+            
+            html += `Step 3: Apply minimum rule<br>`;
+            html += `&nbsp;&nbsp;D_design = max(D_required, D_minimum)<br>`;
+            html += `&nbsp;&nbsp;D_design = max(${D_required.toFixed(3)}, ${D_minimum.toFixed(3)})<br>`;
+            html += `&nbsp;&nbsp;D_design = <strong>${D_design.toFixed(3)} m</strong><br><br>`;
+            
+            if (D_design > D_required) {
+                html += `<strong>→ Minimum thickness governs: ${(D_design*1000).toFixed(0)} mm</strong><br>`;
+                html += `(Calculated ${(D_required*1000).toFixed(0)} mm < Minimum ${(D_minimum*1000).toFixed(0)} mm)`;
+            } else {
+                html += `<strong>→ Calculated thickness governs: ${(D_design*1000).toFixed(0)} mm</strong><br>`;
+                html += `(Calculated ${(D_required*1000).toFixed(0)} mm ≥ Minimum ${(D_minimum*1000).toFixed(0)} mm)`;
+            }
+            
+            html += '</div>';
+            
+            html += '<div class="success" style="margin-top: 20px;">';
+            html += '<div class="result-grid">';
+            html += `<div class="result-item"><label>Calculated D</label><div class="value">${D_required.toFixed(3)} m</div></div>`;
+            html += `<div class="result-item"><label>Minimum D</label><div class="value">${D_minimum.toFixed(3)} m</div></div>`;
+            html += `<div class="result-item" style="background: rgba(76, 175, 80, 0.5);"><label><strong>DESIGN THICKNESS</strong></label><div class="value" style="font-size: 2em;">${D_design.toFixed(3)} m</div><div style="font-size: 0.8em; margin-top: 5px;">(${(D_design*1000).toFixed(0)} mm)</div></div>`;
+            html += '</div></div>';
+            
+            document.getElementById('flow_result6').innerHTML = html;
+            
+            // Final result
+            let finalHtml = '<div class="success" style="font-size: 1.05em; padding: 25px;">';
+            finalHtml += '<h3 style="color: #1e3c72; font-size: 1.8em; margin-bottom: 20px;">🎉 DESIGN COMPLETE</h3>';
+            finalHtml += `<div style="background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; border-left: 5px solid #43a047; margin-bottom: 20px;">`;
+            finalHtml += `<strong style="font-size: 1.4em;">REQUIRED PLATFORM THICKNESS:</strong><br>`;
+            finalHtml += `<div style="font-size: 2.5em; font-weight: bold; color: #1e3c72; margin: 15px 0;">${D_design.toFixed(3)} m (${(D_design*1000).toFixed(0)} mm)</div>`;
+            finalHtml += `<em>Recommend: ${Math.ceil(D_design*20)*50} mm (rounded up to nearest 50mm for construction)</em>`;
+            finalHtml += `</div>`;
+            
+            finalHtml += '<strong>📋 Design Summary:</strong><br>';
+            finalHtml += `• Subgrade: ${flowchartState.subgradeType === 'cohesive' ? 'cu = '+flowchartState.cu+' kPa' : 'φ\'s = '+flowchartState.phi_s+'°'}<br>`;
+            finalHtml += `• Platform material: φ'p = ${flowchartState.phi_p}°, γp = ${flowchartState.gamma_p} kN/m³<br>`;
+            finalHtml += `• Track dimensions: ${flowchartState.W}m × ${flowchartState.L1}m/${flowchartState.L2}m<br>`;
+            finalHtml += `• Characteristic loads: q₁k = ${flowchartState.q1k} kPa, q₂k = ${flowchartState.q2k} kPa<br><br>`;
+            
+            finalHtml += '<strong>📐 Key Calculation Results:</strong><br>';
+            finalHtml += `• Subgrade bearing (Case 1): ${flowchartState.Rd_case1.toFixed(1)} kPa<br>`;
+            finalHtml += `• Subgrade bearing (Case 2): ${flowchartState.Rd_case2.toFixed(1)} kPa<br>`;
+            finalHtml += `• Required thickness: ${D_required.toFixed(3)} m<br>`;
+            finalHtml += `• Minimum thickness: ${D_minimum.toFixed(3)} m<br>`;
+            finalHtml += `• Design thickness: ${D_design.toFixed(3)} m (${D_design > D_required ? 'minimum governs' : 'calculated governs'})<br><br>`;
+            
+            finalHtml += '<strong>✅ Next Steps:</strong><br>';
+            finalHtml += '• Specify platform material: Well-graded crushed rock/stone<br>';
+            finalHtml += '• Compaction requirement: 95% MDD minimum (AS 1289.5.2.1)<br>';
+            finalHtml += '• Layer thickness: Maximum 300mm per layer<br>';
+            finalHtml += '• Drainage: 1:10 max gradient, perimeter drains<br>';
+            finalHtml += '• Quality control: Field density testing, plate load tests<br>';
+            finalHtml += '• Safety: Edge protection, access ramps, signage';
+            finalHtml += '</div>';
+            
+            document.getElementById('flow_result_final').innerHTML = finalHtml;
+            
+            setTimeout(() => {
+                document.getElementById('flow_result_final').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+        }
+        
+        function resetFlowchart() {
+            flowchartState = {
+                subgradeType: 'cohesive',
+                cu: null,
+                phi_s: null,
+                gamma_s: null,
+                W: null,
+                L1: null,
+                L2: null,
+                q1k: null,
+                q2k: null,
+                Rd_case1: null,
+                Rd_case2: null,
+                platformRequired: false,
+                phi_p: null,
+                gamma_p: null,
+                D_required: null
+            };
+            
+            document.getElementById('flow_result1').innerHTML = '';
+            document.getElementById('flow_result2').innerHTML = '';
+            document.getElementById('flow_result3').innerHTML = '';
+            document.getElementById('flow_result4a').innerHTML = '';
+            document.getElementById('flow_result4b').innerHTML = '';
+            document.getElementById('flow_result5').innerHTML = '';
+            document.getElementById('flow_result6').innerHTML = '';
+            document.getElementById('flow_result_final').innerHTML = '';
+            
+            document.getElementById('flow_step2').style.display = 'none';
+            document.getElementById('flow_step3').style.display = 'none';
+            document.getElementById('flow_step4a').style.display = 'none';
+            document.getElementById('flow_step4b').style.display = 'none';
+            document.getElementById('flow_step5').style.display = 'none';
+            document.getElementById('flow_step6').style.display = 'none';
+            
+            document.getElementById('flow_step1').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shallow Circular Pad Footing Design Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #3498db, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .parameters-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .graphics-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #e74c3c;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .parameter-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .parameter-group h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+        
+        .input-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .input-row:hover {
+            background-color: #f1f2f6;
+        }
+        
+        .input-row label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .input-row input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .input-row input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .input-row .value {
+            font-weight: bold;
+            color: #27ae60;
+            background: #ecf0f1;
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .calculated {
+            background-color: #e8f5e8 !important;
+        }
+        
+        .calculated input {
+            background-color: #e8f5e8;
+            border-color: #27ae60;
+        }
+        
+        #footingDiagram {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 30%, #8B7355 30%, #8B7355 100%);
+            margin-bottom: 20px;
+        }
+        
+        #stressDiagram {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+        
+        .diagram-container {
+            margin-bottom: 25px;
+        }
+        
+        .diagram-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        .assumptions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+        
+        .assumptions h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .assumptions ul {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        .note {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #0c5460;
+        }
+        
+        @media (max-width: 1200px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ Interactive Shallow Circular Pad Footing Design Calculator</h1>
+        
+        <div class="content">
+            <div class="parameters-section">
+                <h2>📋 Design Parameters</h2>
+                
+                <div class="parameter-group">
+                    <h3>🏗️ Foundation Type & Properties</h3>
+                    <div class="input-row">
+                        <label>Foundation Type:</label>
+                        <select id="foundationType" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                            <option value="shallow">Shallow Foundation</option>
+                            <option value="piled">Piled Foundation</option>
+                        </select>
+                        <div class="value">Shallow</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Footing Shape:</label>
+                        <select id="footingShape" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                            <option value="circular">Circular</option>
+                            <option value="square">Square</option>
+                        </select>
+                        <div class="value">Circular</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Footing Depth (m):</label>
+                        <input type="number" id="footingDepth" value="3" step="0.1" min="0">
+                        <div class="value">3.0 m</div>
+                    </div>
+                    <div class="input-row" id="circularDimRow">
+                        <label>Footing Diameter (m):</label>
+                        <input type="number" id="footingDiameter" value="3" step="0.1" min="0">
+                        <div class="value">3.0 m</div>
+                    </div>
+                    <div class="input-row" id="squareDimRow" style="display: none;">
+                        <label>Footing Width (m):</label>
+                        <input type="number" id="footingWidth" value="3" step="0.1" min="0">
+                        <div class="value">3.0 m</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Load Units:</label>
+                        <select id="loadUnits" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                            <option value="kN">Total Load (kN)</option>
+                            <option value="kPa">Distributed Load (kPa)</option>
+                        </select>
+                        <div class="value">Total Load</div>
+                    </div>
+                    <div class="input-row">
+                        <label id="loadLabel">Applied Load (kN):</label>
+                        <input type="number" id="appliedLoad" value="1000" step="10" min="0">
+                        <div class="value">1000 kN</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Applied Moment (kNm):</label>
+                        <input type="number" id="appliedMoment" value="0" step="10" min="0">
+                        <div class="value">0 kNm</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group">
+                    <h3>📊 Soil Data Source</h3>
+                    <div class="input-row">
+                        <label>Data Source:</label>
+                        <select id="soilDataSource" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                            <option value="spt">Manual SPT Input</option>
+                            <option value="cpt_upload">Upload CPT File</option>
+                            <option value="cpt_manual">Manual CPT Input</option>
+                        </select>
+                        <div class="value">Manual SPT</div>
+                    </div>
+                    <div id="cptUploadRow" class="input-row" style="display: none;">
+                        <label>Upload CPT File (.csv):</label>
+                        <input type="file" id="cptFileUpload" accept=".csv" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                        <div class="value">No file selected</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group" id="pilingGroup" style="display: none;">
+                    <h3>🔨 Piling Parameters</h3>
+                    <div class="input-row">
+                        <label>Pile Diameter (m):</label>
+                        <input type="number" id="pileDiameter" value="0.6" step="0.05" min="0.1">
+                        <div class="value">0.6 m</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Pile Length (m):</label>
+                        <input type="number" id="pileLength" value="12" step="0.5" min="1">
+                        <div class="value">12.0 m</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Number of Piles:</label>
+                        <input type="number" id="numberOfPiles" value="4" step="1" min="1">
+                        <div class="value">4</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Pile Spacing (m):</label>
+                        <input type="number" id="pileSpacing" value="2.5" step="0.1" min="1">
+                        <div class="value">2.5 m</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group" id="sptInputGroup">
+                    <h3>🏔️ Soil Properties (SPT Method)</h3>
+                    <div class="input-row">
+                        <label>SPT N (blows/300mm):</label>
+                        <input type="number" id="sptN" value="12" step="1" min="1">
+                        <div class="value">12</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Density (kg/m³):</label>
+                        <input type="number" id="density" value="1700" step="10" min="1000">
+                        <div class="value">1700 kg/m³</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Angle of Repose, Φ (°):</label>
+                        <input type="number" id="angleRepose" value="32" step="1" min="15" max="45">
+                        <div class="value">32°</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Cohesion (kPa):</label>
+                        <input type="number" id="cohesion" value="0" step="1" min="0">
+                        <div class="value">0 kPa</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Poisson's Ratio, ν:</label>
+                        <input type="number" id="poissonRatio" value="0.25" step="0.01" min="0.1" max="0.49">
+                        <div class="value">0.25</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group" id="cptManualGroup" style="display: none;">
+                    <h3>🔧 Manual CPT Data Entry</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; margin-bottom: 10px;">
+                            <strong>Depth (m)</strong>
+                            <strong>qc (MPa)</strong>
+                            <strong>rf (%)</strong>
+                            <strong>u2 (kPa)</strong>
+                            <strong>Action</strong>
+                        </div>
+                        <div id="cptDataRows">
+                            <div class="cpt-data-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; margin-bottom: 8px;">
+                                <input type="number" class="cpt-depth" value="0" step="0.5" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-qc" value="8" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-rf" value="1.2" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-u2" value="0" step="1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <button type="button" onclick="removeCPTRow(this)" style="padding: 6px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
+                            </div>
+                            <div class="cpt-data-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; margin-bottom: 8px;">
+                                <input type="number" class="cpt-depth" value="1" step="0.5" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-qc" value="12" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-rf" value="1.5" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-u2" value="10" step="1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <button type="button" onclick="removeCPTRow(this)" style="padding: 6px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
+                            </div>
+                            <div class="cpt-data-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; margin-bottom: 8px;">
+                                <input type="number" class="cpt-depth" value="3" step="0.5" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-qc" value="15" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-rf" value="1.8" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="number" class="cpt-u2" value="30" step="1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                <button type="button" onclick="removeCPTRow(this)" style="padding: 6px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" onclick="addCPTRow()" style="padding: 8px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">Add Row</button>
+                        <button type="button" onclick="processCPTData()" style="padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; margin-left: 10px;">Process CPT Data</button>
+                    </div>
+                    <div class="input-row">
+                        <label>Foundation Level for Analysis (m):</label>
+                        <input type="number" id="analysisDepth" value="3" step="0.1" min="0">
+                        <div class="value">3.0 m</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group" id="cptDerivedGroup" style="display: none;">
+                    <h3>📈 CPT-Derived Soil Properties</h3>
+                    <div class="input-row calculated">
+                        <label>Average qc at Foundation Level (MPa):</label>
+                        <input type="number" id="derivedQc" readonly>
+                        <div class="value" id="derivedQcValue">15.0 MPa</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Equivalent SPT N:</label>
+                        <input type="number" id="derivedSptN" readonly>
+                        <div class="value" id="derivedSptNValue">37</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Derived Density (kg/m³):</label>
+                        <input type="number" id="derivedDensity" readonly>
+                        <div class="value" id="derivedDensityValue">1850 kg/m³</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Derived Friction Angle (°):</label>
+                        <input type="number" id="derivedAngleRepose" readonly>
+                        <div class="value" id="derivedAngleReposeValue">38°</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Soil Behavior Type Index (Ic):</label>
+                        <input type="number" id="derivedIc" readonly>
+                        <div class="value" id="derivedIcValue">2.1</div>
+                    </div>
+                    <div class="input-row">
+                        <label>Poisson's Ratio, ν:</label>
+                        <input type="number" id="cptPoissonRatio" value="0.25" step="0.01" min="0.1" max="0.49">
+                        <div class="value">0.25</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group">
+                    <h3>🔧 Calculated Properties</h3>
+                    <div class="input-row calculated">
+                        <label>Elastic Modulus (E) [MPa]:</label>
+                        <input type="number" id="elasticModulus" readonly>
+                        <div class="value" id="elasticModulusValue">36 MPa</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Shear Modulus (G) [MPa]:</label>
+                        <input type="number" id="shearModulus" readonly>
+                        <div class="value" id="shearModulusValue">15 MPa</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Dynamic Elastic Modulus (Ed) [MPa]:</label>
+                        <input type="number" id="dynamicElasticModulus" readonly>
+                        <div class="value" id="dynamicElasticModulusValue">110 MPa</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Dynamic Shear Modulus (Gd) [MPa]:</label>
+                        <input type="number" id="dynamicShearModulus" readonly>
+                        <div class="value" id="dynamicShearModulusValue">45 MPa</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>At-rest earth pressure coeff. (Ko):</label>
+                        <input type="number" id="koValue" readonly>
+                        <div class="value" id="koValueDisplay">0.47</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Active earth pressure coeff. (Ka):</label>
+                        <input type="number" id="kaValue" readonly>
+                        <div class="value" id="kaValueDisplay">0.31</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Passive earth pressure coeff. (Kp):</label>
+                        <input type="number" id="kpValue" readonly>
+                        <div class="value" id="kpValueDisplay">3.2</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Soil-Concrete Friction Factor (tan δ):</label>
+                        <input type="number" id="frictionFactor" readonly>
+                        <div class="value" id="frictionFactorDisplay">0.42</div>
+                    </div>
+                    <div class="input-row calculated" id="bearingPressureRow">
+                        <label>Bearing Pressure (kPa):</label>
+                        <input type="number" id="bearingPressure" readonly>
+                        <div class="value" id="bearingPressureValue">142 kPa</div>
+                    </div>
+                    <div class="input-row calculated" id="kvRow">
+                        <label>Dynamic vertical modulus (kv) [kPa/mm]:</label>
+                        <input type="number" id="kvValue" readonly>
+                        <div class="value" id="kvValueDisplay">85.2 kPa/mm</div>
+                    </div>
+                    <div class="input-row calculated" id="settlementRow">
+                        <label>Foundation Settlement (mm):</label>
+                        <input type="number" id="settlementValue" readonly>
+                        <div class="value" id="settlementValueDisplay">12.5 mm</div>
+                    </div>
+                    <div class="input-row calculated" id="krRow">
+                        <label>Rotational spring stiffness (kr) [kNm/rad]:</label>
+                        <input type="number" id="krValue" readonly>
+                        <div class="value" id="krValueDisplay">1250 kNm/rad</div>
+                    </div>
+                    <div class="input-row calculated" id="angleRadRow">
+                        <label>Foundation rotation angle (radians):</label>
+                        <input type="number" id="angleRadValue" readonly>
+                        <div class="value" id="angleRadValueDisplay">0.000 rad</div>
+                    </div>
+                    <div class="input-row calculated" id="angleDegRow">
+                        <label>Foundation rotation angle (degrees):</label>
+                        <input type="number" id="angleDegValue" readonly>
+                        <div class="value" id="angleDegValueDisplay">0.000°</div>
+                    </div>
+                </div>
+                
+                <div class="parameter-group">
+                    <h3>🔍 Calculation Explanations</h3>
+                    <details style="margin-bottom: 15px; background: white; padding: 15px; border-radius: 8px; border: 2px solid #ecf0f1;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 10px;">
+                            📐 Rotational Spring Stiffness (kr) & Foundation Rotation Analysis
+                        </summary>
+                        <div style="margin-top: 15px; line-height: 1.6; color: #2c3e50;">
+                            <p><strong>Purpose:</strong> Rotational spring stiffness represents the foundation's resistance to rotational deformation under moment loads. Combined with applied moments, it determines the foundation rotation angle under combined loading conditions.</p>
+                            
+                            <p><strong>Rotational Spring Stiffness Calculation:</strong></p>
+                            <p>The rotational spring stiffness is calculated using elastic theory based on the foundation shape:</p>
+                            
+                            <p><strong>For Circular Footings:</strong><br>
+                            kr = (8 × G × R³) / (3 × (1 - ν))<br>
+                            where R = radius of circular footing</p>
+                            
+                            <p><strong>For Square Footings:</strong><br>
+                            kr = (2.4 × G × B³) / (1 - ν)<br>
+                            where B = width of square footing</p>
+                            
+                            <p><strong>Foundation Rotation Angle Calculation:</strong></p>
+                            <p>When a moment is applied to the foundation, the rotation angle is determined by:</p>
+                            <p><strong>θ (radians) = Applied Moment (kNm) / kr (kNm/rad)</strong><br>
+                            <strong>θ (degrees) = θ (radians) × 180/π</strong></p>
+                            
+                            <p><strong>Parameters:</strong><br>
+                            • G = Dynamic shear modulus (MPa)<br>
+                            • ν = Poisson's ratio<br>
+                            • Dimensions in meters<br>
+                            • Applied moment in kNm</p>
+                            
+                            <p><strong>Engineering Application:</strong> These values are used in structural analysis to model foundation flexibility effects, particularly important for:</p>
+                            <ul style="margin-left: 20px;">
+                                <li>Tall structures, towers, or foundations subject to wind/seismic loads</li>
+                                <li>Foundations with eccentric loading or overturning moments</li>
+                                <li>Soil-structure interaction analysis</li>
+                                <li>Foundation performance under combined vertical and lateral loads</li>
+                            </ul>
+                            
+                            <p><strong>Typical Ranges:</strong><br>
+                            • kr: 500-5000 kNm/rad for typical shallow foundations in sand<br>
+                            • Foundation rotation: Should typically be limited to 0.005-0.01 radians (0.3-0.6 degrees) for structural serviceability</p>
+                            
+                            <p><strong>Design Considerations:</strong> Excessive foundation rotation can cause structural distress, so both kr and the resulting rotation angle should be evaluated against project-specific acceptance criteria.</p>
+                        </div>
+                    </details>
+                </div>
+                
+                <div class="parameter-group" id="pileCalculations" style="display: none;">
+                    <h3>🔨 Pile Calculations</h3>
+                    <div class="input-row calculated">
+                        <label>Single Pile Capacity (kN):</label>
+                        <input type="number" id="singlePileCapacity" readonly>
+                        <div class="value" id="singlePileCapacityValue">850 kN</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Group Efficiency Factor:</label>
+                        <input type="number" id="groupEfficiency" readonly>
+                        <div class="value" id="groupEfficiencyValue">0.85</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Total Pile Group Capacity (kN):</label>
+                        <input type="number" id="totalPileCapacity" readonly>
+                        <div class="value" id="totalPileCapacityValue">2890 kN</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Safety Factor:</label>
+                        <input type="number" id="pileSafetyFactor" readonly>
+                        <div class="value" id="pileSafetyFactorValue">2.89</div>
+                    </div>
+                    <div class="input-row calculated">
+                        <label>Pile Settlement (mm):</label>
+                        <input type="number" id="pileSettlement" readonly>
+                        <div class="value" id="pileSettlementValue">8.5 mm</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="graphics-section">
+                <h2>📊 Visual Design Representation</h2>
+                
+                <div class="diagram-container">
+                    <div class="diagram-title">Cross-Section View</div>
+                    <canvas id="footingDiagram"></canvas>
+                </div>
+                
+                <div class="diagram-container" id="cptProfileContainer" style="display: none;">
+                    <div class="diagram-title">CPT Profile</div>
+                    <canvas id="cptProfile"></canvas>
+                </div>
+                
+                <div class="diagram-container">
+                    <div class="diagram-title">Stress Distribution</div>
+                    <canvas id="stressDiagram"></canvas>
+                </div>
+                
+                <div class="note">
+                    <strong>Note:</strong> Design assumes raft footing with effective loaded area 8.1m × 4.1m and calculations are based on Western Australian sand correlations.
+                </div>
+            </div>
+        </div>
+        
+        <div class="assumptions">
+            <h3>🔍 Key Design Assumptions:</h3>
+            <ul>
+                <li>The elastic modulus (E) is based on commonly used correlations for SPT values in sand in Western Australia (E = ~3 × SPT N)</li>
+                <li>The shear modulus (G) is calculated using the standard relationship: G = E/2(1+ ν)</li>
+                <li>Small strain (or dynamic moduli) are 3 to 5 times higher than large strain moduli</li>
+                <li>Footing excavations will be checked by a geotechnical engineer and all loose sand to 2m below footing will be excavated and replaced with compacted sand</li>
+                <li>Earth pressure coefficients calculated using Rankine theory</li>
+                <li>Soil-concrete friction factor calculated as tan(δ) where δ = 0.7 × φ (interface friction angle)</li>
+                <li><strong>Shallow Foundations:</strong> Dynamic vertical modulus (kv) calculated using elastic theory; settlement uses immediate elastic settlement formulas with shape factors</li>
+                <li><strong>Square Footings:</strong> Equivalent circular diameter = 1.13 × width for kv calculations; shape factor = 1.12 for settlement</li>
+                <li><strong>Piled Foundations:</strong> Single pile capacity uses SPT correlations (qc = SPT N × 400 kPa); group efficiency based on pile spacing/diameter ratio</li>
+                <li>Pile calculations assume end bearing + skin friction with safety factor of 2.5; group settlement based on equivalent elastic stiffness</li>
+                <li>All calculations assume homogeneous soil conditions and linear elastic behavior</li>
+                <li><strong>Rotational Analysis:</strong> Foundation rotation calculated using linear elastic theory (θ = M/kr); acceptable rotation limits typically 0.005-0.01 radians for serviceability</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Get all input elements and canvas contexts
+        const inputs = {
+            foundationType: document.getElementById('foundationType'),
+            footingShape: document.getElementById('footingShape'),
+            footingDepth: document.getElementById('footingDepth'),
+            footingDiameter: document.getElementById('footingDiameter'),
+            footingWidth: document.getElementById('footingWidth'),
+            loadUnits: document.getElementById('loadUnits'),
+            appliedLoad: document.getElementById('appliedLoad'),
+            appliedMoment: document.getElementById('appliedMoment'),
+            soilDataSource: document.getElementById('soilDataSource'),
+            pileDiameter: document.getElementById('pileDiameter'),
+            pileLength: document.getElementById('pileLength'),
+            numberOfPiles: document.getElementById('numberOfPiles'),
+            pileSpacing: document.getElementById('pileSpacing'),
+            sptN: document.getElementById('sptN'),
+            density: document.getElementById('density'),
+            angleRepose: document.getElementById('angleRepose'),
+            cohesion: document.getElementById('cohesion'),
+            poissonRatio: document.getElementById('poissonRatio'),
+            analysisDepth: document.getElementById('analysisDepth'),
+            cptPoissonRatio: document.getElementById('cptPoissonRatio'),
+            cptFileUpload: document.getElementById('cptFileUpload')
+        };
+        
+        const footingCanvas = document.getElementById('footingDiagram');
+        const stressCanvas = document.getElementById('stressDiagram');
+        const cptCanvas = document.getElementById('cptProfile');
+        const footingCtx = footingCanvas.getContext('2d');
+        const stressCtx = stressCanvas.getContext('2d');
+        const cptCtx = cptCanvas.getContext('2d');
+        
+        // Set canvas dimensions
+        footingCanvas.width = footingCanvas.offsetWidth;
+        footingCanvas.height = footingCanvas.offsetHeight;
+        stressCanvas.width = stressCanvas.offsetWidth;
+        stressCanvas.height = stressCanvas.offsetHeight;
+        cptCanvas.width = cptCanvas.offsetWidth;
+        cptCanvas.height = cptCanvas.offsetHeight;
+        
+        // Global variables for CPT data
+        let cptData = [];
+        let uploadedCptData = [];
+        
+        // Add event listeners to all inputs
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', updateCalculations);
+            input.addEventListener('change', updateCalculations);
+        });
+        
+        // CPT file upload handler
+        inputs.cptFileUpload.addEventListener('change', handleCPTFileUpload);
+        
+        // CPT data management functions
+        function addCPTRow() {
+            const container = document.getElementById('cptDataRows');
+            const newRow = document.createElement('div');
+            newRow.className = 'cpt-data-row';
+            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; margin-bottom: 8px;';
+            newRow.innerHTML = `
+                <input type="number" class="cpt-depth" value="0" step="0.5" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="cpt-qc" value="10" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="cpt-rf" value="1.5" step="0.1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="cpt-u2" value="0" step="1" min="0" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <button type="button" onclick="removeCPTRow(this)" style="padding: 6px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
+            `;
+            container.appendChild(newRow);
+            
+            // Add event listeners to new inputs
+            newRow.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', processCPTData);
+            });
+        }
+        
+        function removeCPTRow(button) {
+            button.parentElement.remove();
+            processCPTData();
+        }
+        
+        function handleCPTFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csvText = e.target.result;
+                    const lines = csvText.split('\n');
+                    uploadedCptData = [];
+                    
+                    // Skip header line and process data
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line) {
+                            const values = line.split(',');
+                            if (values.length >= 3) {
+                                uploadedCptData.push({
+                                    depth: parseFloat(values[0]) || 0,
+                                    qc: parseFloat(values[1]) || 0,
+                                    rf: parseFloat(values[2]) || 0,
+                                    u2: parseFloat(values[3]) || 0
+                                });
+                            }
+                        }
+                    }
+                    
+                    if (uploadedCptData.length > 0) {
+                        document.querySelector('#cptFileUpload').parentElement.querySelector('.value').textContent = 
+                            `${uploadedCptData.length} data points loaded`;
+                        updateCalculations();
+                    }
+                } catch (error) {
+                    alert('Error reading CPT file. Please ensure it has columns: Depth,qc,rf,u2');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function processCPTData() {
+            // Collect manual CPT data
+            const rows = document.querySelectorAll('.cpt-data-row');
+            cptData = [];
+            
+            rows.forEach(row => {
+                const depth = parseFloat(row.querySelector('.cpt-depth').value) || 0;
+                const qc = parseFloat(row.querySelector('.cpt-qc').value) || 0;
+                const rf = parseFloat(row.querySelector('.cpt-rf').value) || 0;
+                const u2 = parseFloat(row.querySelector('.cpt-u2').value) || 0;
+                
+                cptData.push({ depth, qc, rf, u2 });
+            });
+            
+            // Sort by depth
+            cptData.sort((a, b) => a.depth - b.depth);
+            
+            updateCalculations();
+        }
+        
+        function deriveSoilPropertiesFromCPT(analysisDepth) {
+            let activeCptData = inputs.soilDataSource.value === 'cpt_upload' ? uploadedCptData : cptData;
+            
+            if (activeCptData.length === 0) return null;
+            
+            // Interpolate CPT values at the analysis depth
+            let qc_interp, rf_interp, u2_interp;
+            
+            // Find surrounding points
+            let lowerPoint = null, upperPoint = null;
+            for (let i = 0; i < activeCptData.length; i++) {
+                if (activeCptData[i].depth <= analysisDepth) {
+                    lowerPoint = activeCptData[i];
+                }
+                if (activeCptData[i].depth >= analysisDepth && !upperPoint) {
+                    upperPoint = activeCptData[i];
+                    break;
+                }
+            }
+            
+            // Interpolate or use closest point
+            if (lowerPoint && upperPoint && lowerPoint.depth !== upperPoint.depth) {
+                const ratio = (analysisDepth - lowerPoint.depth) / (upperPoint.depth - lowerPoint.depth);
+                qc_interp = lowerPoint.qc + ratio * (upperPoint.qc - lowerPoint.qc);
+                rf_interp = lowerPoint.rf + ratio * (upperPoint.rf - lowerPoint.rf);
+                u2_interp = lowerPoint.u2 + ratio * (upperPoint.u2 - lowerPoint.u2);
+            } else if (lowerPoint) {
+                qc_interp = lowerPoint.qc;
+                rf_interp = lowerPoint.rf;
+                u2_interp = lowerPoint.u2;
+            } else if (upperPoint) {
+                qc_interp = upperPoint.qc;
+                rf_interp = upperPoint.rf;
+                u2_interp = upperPoint.u2;
+            } else {
+                return null;
+            }
+            
+            // Calculate derived properties using standard CPT correlations
+            
+            // 1. Equivalent SPT N (Robertson & Campanella, 1985)
+            const sptN_equiv = qc_interp * 1000 / 400; // qc in kPa, rough correlation
+            
+            // 2. Soil Behavior Type Index (Robertson, 1990)
+            const qt = qc_interp * 1000; // Convert to kPa
+            const fs = qt * rf_interp / 100; // Sleeve friction
+            const Fr = (fs / qt) * 100; // Normalized friction ratio
+            const Qt1 = (qt - 10) / 100; // Normalized cone resistance (simplified)
+            const Ic = Math.sqrt((3.47 - Math.log10(Qt1))**2 + (Math.log10(Fr) + 1.22)**2);
+            
+            // 3. Unit weight (Robertson & Cabal, 2015)
+            const gamma = 1.95 * Math.pow(Qt1, 0.06) * 1000; // kg/m³
+            
+            // 4. Friction angle (Robertson & Campanella, 1983, updated)
+            let phi;
+            if (Ic < 2.95) { // Sandy soils
+                phi = Math.min(17.6 + 11 * Math.log10(qt/100), 45); // degrees
+            } else { // Clayey soils
+                phi = Math.max(15, 30 - 5 * Ic); // degrees
+            }
+            
+            // 5. Elastic modulus (α factor method)
+            let alpha = 2.5; // Conservative for sands
+            if (Ic > 2.6) alpha = 4; // Silts/clays
+            if (Ic < 2.2) alpha = 8; // Clean sands
+            const E_modulus = alpha * qc_interp; // MPa
+            
+            return {
+                qc: qc_interp,
+                rf: rf_interp,
+                u2: u2_interp,
+                sptN: Math.round(sptN_equiv),
+                Ic: Ic,
+                density: Math.round(gamma),
+                frictionAngle: Math.round(phi),
+                elasticModulus: E_modulus
+            };
+        }
+        
+        // Toggle display based on foundation type and footing shape
+        function toggleDisplays() {
+            const foundationType = inputs.foundationType.value;
+            const footingShape = inputs.footingShape.value;
+            const soilDataSource = inputs.soilDataSource.value;
+            const loadUnits = inputs.loadUnits.value;
+            
+            // Show/hide piling sections
+            document.getElementById('pilingGroup').style.display = foundationType === 'piled' ? 'block' : 'none';
+            document.getElementById('pileCalculations').style.display = foundationType === 'piled' ? 'block' : 'none';
+            
+            // Show/hide footing dimension inputs
+            document.getElementById('circularDimRow').style.display = footingShape === 'circular' ? 'flex' : 'none';
+            document.getElementById('squareDimRow').style.display = footingShape === 'square' ? 'flex' : 'none';
+            
+            // Show/hide soil data source inputs
+            document.getElementById('sptInputGroup').style.display = soilDataSource === 'spt' ? 'block' : 'none';
+            document.getElementById('cptUploadRow').style.display = soilDataSource === 'cpt_upload' ? 'flex' : 'none';
+            document.getElementById('cptManualGroup').style.display = soilDataSource === 'cpt_manual' ? 'block' : 'none';
+            document.getElementById('cptDerivedGroup').style.display = 
+                (soilDataSource === 'cpt_upload' || soilDataSource === 'cpt_manual') ? 'block' : 'none';
+            
+            // Show/hide CPT profile visualization
+            document.getElementById('cptProfileContainer').style.display = 
+                (soilDataSource === 'cpt_upload' || soilDataSource === 'cpt_manual') ? 'block' : 'none';
+            
+            // Update load label and units
+            const loadLabel = document.getElementById('loadLabel');
+            if (loadUnits === 'kPa') {
+                loadLabel.textContent = 'Applied Load (kPa):';
+            } else {
+                loadLabel.textContent = 'Applied Load (kN):';
+            }
+            
+            // Show/hide shallow foundation calculations
+            const shallowRows = ['bearingPressureRow', 'kvRow', 'settlementRow', 'krRow', 'angleRadRow', 'angleDegRow'];
+            shallowRows.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.style.display = foundationType === 'shallow' ? 'flex' : 'none';
+                }
+            });
+            
+            // Update dropdown display values
+            document.querySelector('#foundationType').parentElement.querySelector('.value').textContent = 
+                foundationType === 'shallow' ? 'Shallow' : 'Piled';
+            document.querySelector('#footingShape').parentElement.querySelector('.value').textContent = 
+                footingShape === 'circular' ? 'Circular' : 'Square';
+            document.querySelector('#soilDataSource').parentElement.querySelector('.value').textContent = 
+                soilDataSource === 'spt' ? 'Manual SPT' : 
+                soilDataSource === 'cpt_upload' ? 'Upload CPT' : 'Manual CPT';
+            document.querySelector('#loadUnits').parentElement.querySelector('.value').textContent = 
+                loadUnits === 'kPa' ? 'Distributed Load' : 'Total Load';
+        }
+        
+        function updateCalculations() {
+            // Toggle displays first
+            toggleDisplays();
+            
+            // Get current values
+            const foundationType = inputs.foundationType.value;
+            const footingShape = inputs.footingShape.value;
+            const soilDataSource = inputs.soilDataSource.value;
+            const loadUnits = inputs.loadUnits.value;
+            const footingDiameter = parseFloat(inputs.footingDiameter.value);
+            const footingWidth = parseFloat(inputs.footingWidth.value);
+            const appliedLoadInput = parseFloat(inputs.appliedLoad.value);
+            const appliedMoment = parseFloat(inputs.appliedMoment.value);
+            const density = parseFloat(inputs.density.value);
+            
+            // Handle soil properties based on data source
+            let sptN, angleRepose, poissonRatio, cohesion, effectiveDensity;
+            
+            if (soilDataSource === 'spt') {
+                // Use manual SPT inputs
+                sptN = parseFloat(inputs.sptN.value);
+                angleRepose = parseFloat(inputs.angleRepose.value);
+                poissonRatio = parseFloat(inputs.poissonRatio.value);
+                cohesion = parseFloat(inputs.cohesion.value);
+                effectiveDensity = density;
+            } else {
+                // Use CPT-derived properties
+                const analysisDepth = parseFloat(inputs.analysisDepth.value);
+                const cptDerived = deriveSoilPropertiesFromCPT(analysisDepth);
+                
+                if (cptDerived) {
+                    sptN = cptDerived.sptN;
+                    angleRepose = cptDerived.frictionAngle;
+                    poissonRatio = parseFloat(inputs.cptPoissonRatio.value);
+                    cohesion = 0; // Assume cohesionless from CPT
+                    effectiveDensity = cptDerived.density;
+                    
+                    // Update CPT-derived displays
+                    document.getElementById('derivedQc').value = cptDerived.qc.toFixed(1);
+                    document.getElementById('derivedQcValue').textContent = cptDerived.qc.toFixed(1) + ' MPa';
+                    
+                    document.getElementById('derivedSptN').value = cptDerived.sptN;
+                    document.getElementById('derivedSptNValue').textContent = cptDerived.sptN.toString();
+                    
+                    document.getElementById('derivedDensity').value = cptDerived.density;
+                    document.getElementById('derivedDensityValue').textContent = cptDerived.density + ' kg/m³';
+                    
+                    document.getElementById('derivedAngleRepose').value = cptDerived.frictionAngle;
+                    document.getElementById('derivedAngleReposeValue').textContent = cptDerived.frictionAngle + '°';
+                    
+                    document.getElementById('derivedIc').value = cptDerived.Ic.toFixed(2);
+                    document.getElementById('derivedIcValue').textContent = cptDerived.Ic.toFixed(2);
+                } else {
+                    // Fallback to default values if no CPT data
+                    sptN = 12;
+                    angleRepose = 32;
+                    poissonRatio = 0.25;
+                    cohesion = 0;
+                    effectiveDensity = 1700;
+                }
+            }
+            
+            // Calculate footing area and effective dimension
+            let footingArea, effectiveDimension;
+            if (footingShape === 'circular') {
+                footingArea = Math.PI * (footingDiameter / 2) ** 2;
+                effectiveDimension = footingDiameter;
+            } else {
+                footingArea = footingWidth ** 2;
+                effectiveDimension = footingWidth;
+            }
+            
+            // Handle load units conversion
+            let appliedLoad;
+            if (loadUnits === 'kPa') {
+                // Convert from kPa to total kN
+                appliedLoad = appliedLoadInput * footingArea;
+            } else {
+                // Use direct kN input
+                appliedLoad = appliedLoadInput;
+            }
+            
+            // Calculate derived properties
+            const elasticModulus = 3 * sptN; // E = 3 * SPT N (MPa)
+            const shearModulus = elasticModulus / (2 * (1 + poissonRatio)); // G = E/2(1+ν)
+            const dynamicElasticModulus = elasticModulus * 3; // Dynamic moduli 3-5 times static
+            const dynamicShearModulus = shearModulus * 3;
+            
+            // Calculate earth pressure coefficients using Rankine theory
+            const angleRad = angleRepose * Math.PI / 180;
+            const ka = Math.tan(Math.PI/4 - angleRad/2) ** 2;
+            const kp = Math.tan(Math.PI/4 + angleRad/2) ** 2;
+            const ko = 1 - Math.sin(angleRad); // At-rest coefficient
+            
+            // Calculate soil-concrete friction factor (δ = 0.7 * φ for concrete on sand)
+            const frictionAngle = 0.7 * angleRepose * Math.PI / 180;
+            const frictionFactor = Math.tan(frictionAngle);
+            
+            // Foundation-specific calculations
+            let bearingPressure = 0, kv = 0, settlement = 0, kr = 0, rotationAngleRad = 0, rotationAngleDeg = 0;
+            let singlePileCapacity = 0, groupEfficiency = 1, totalPileCapacity = 0, pileSafetyFactor = 0, pileSettlement = 0;
+            
+            if (foundationType === 'shallow') {
+                // Shallow foundation calculations
+                bearingPressure = appliedLoad / footingArea; // kPa
+                
+                // Dynamic vertical modulus calculation (different for circular vs square)
+                if (footingShape === 'circular') {
+                    kv = dynamicElasticModulus * 1000 / (effectiveDimension * 1000 * (1 - poissonRatio ** 2));
+                } else {
+                    // For square footings, use equivalent circular diameter = 1.13 * width
+                    const equivalentDiameter = 1.13 * effectiveDimension;
+                    kv = dynamicElasticModulus * 1000 / (equivalentDiameter * 1000 * (1 - poissonRatio ** 2));
+                }
+                
+                // Settlement calculation (elastic theory)
+                const shapeFactorCircular = 1.0;
+                const shapeFactorSquare = 1.12;
+                const shapeFactor = footingShape === 'circular' ? shapeFactorCircular : shapeFactorSquare;
+                settlement = bearingPressure * effectiveDimension * 1000 * (1 - poissonRatio ** 2) * shapeFactor / (dynamicElasticModulus * 1000);
+                
+                // Rotational spring stiffness calculation (kr)
+                if (footingShape === 'circular') {
+                    // For circular footings: kr = (8 * G * R^3) / (3 * (1 - ν))
+                    const radius = effectiveDimension / 2; // meters
+                    kr = (8 * dynamicShearModulus * Math.pow(radius, 3)) / (3 * (1 - poissonRatio)) * 1000; // Convert to kNm/rad
+                } else {
+                    // For square footings: kr = (2.4 * G * B^3) / (1 - ν)
+                    kr = (2.4 * dynamicShearModulus * Math.pow(effectiveDimension, 3)) / (1 - poissonRatio) * 1000; // Convert to kNm/rad
+                }
+                
+                // Foundation rotation angle calculations
+                if (kr > 0 && appliedMoment > 0) {
+                    rotationAngleRad = appliedMoment / kr; // radians
+                    rotationAngleDeg = rotationAngleRad * 180 / Math.PI; // degrees
+                } else {
+                    rotationAngleRad = 0;
+                    rotationAngleDeg = 0;
+                }
+            } else {
+                // Piled foundation calculations
+                const pileDiameter = parseFloat(inputs.pileDiameter.value);
+                const pileLength = parseFloat(inputs.pileLength.value);
+                const numberOfPiles = parseInt(inputs.numberOfPiles.value);
+                const pileSpacing = parseFloat(inputs.pileSpacing.value);
+                
+                // Single pile capacity (simplified method)
+                const pileArea = Math.PI * (pileDiameter / 2) ** 2;
+                const pilePerimeter = Math.PI * pileDiameter;
+                
+                // End bearing capacity (using SPT correlation)
+                const qc = sptN * 400; // kPa (SPT to qc correlation)
+                const endBearing = qc * pileArea; // kN
+                
+                // Skin friction capacity
+                const averageStress = effectiveDensity * 9.81 * pileLength / 2 / 1000; // kPa (average stress along pile)
+                const skinFriction = frictionFactor * averageStress * pilePerimeter * pileLength; // kN
+                
+                singlePileCapacity = (endBearing + skinFriction) / 2.5; // Apply safety factor
+                
+                // Group efficiency (simplified)
+                const spacingDiameterRatio = pileSpacing / pileDiameter;
+                if (spacingDiameterRatio >= 3) {
+                    groupEfficiency = 0.9;
+                } else if (spacingDiameterRatio >= 2.5) {
+                    groupEfficiency = 0.85;
+                } else {
+                    groupEfficiency = 0.75;
+                }
+                
+                totalPileCapacity = singlePileCapacity * numberOfPiles * groupEfficiency;
+                pileSafetyFactor = totalPileCapacity / appliedLoad;
+                
+                // Pile settlement (simplified elastic method)
+                const pileStiffness = dynamicElasticModulus * 1000 * pileArea / pileLength; // kN/m
+                const groupStiffness = pileStiffness * numberOfPiles * groupEfficiency;
+                pileSettlement = appliedLoad / groupStiffness * 1000; // mm
+            }
+            
+            // Update calculated values in the DOM
+            document.getElementById('elasticModulus').value = elasticModulus.toFixed(1);
+            document.getElementById('elasticModulusValue').textContent = elasticModulus.toFixed(1) + ' MPa';
+            
+            document.getElementById('shearModulus').value = shearModulus.toFixed(1);
+            document.getElementById('shearModulusValue').textContent = shearModulus.toFixed(1) + ' MPa';
+            
+            document.getElementById('dynamicElasticModulus').value = dynamicElasticModulus.toFixed(1);
+            document.getElementById('dynamicElasticModulusValue').textContent = dynamicElasticModulus.toFixed(1) + ' MPa';
+            
+            document.getElementById('dynamicShearModulus').value = dynamicShearModulus.toFixed(1);
+            document.getElementById('dynamicShearModulusValue').textContent = dynamicShearModulus.toFixed(1) + ' MPa';
+            
+            document.getElementById('koValue').value = ko.toFixed(2);
+            document.getElementById('koValueDisplay').textContent = ko.toFixed(2);
+            
+            document.getElementById('kaValue').value = ka.toFixed(2);
+            document.getElementById('kaValueDisplay').textContent = ka.toFixed(2);
+            
+            document.getElementById('kpValue').value = kp.toFixed(2);
+            document.getElementById('kpValueDisplay').textContent = kp.toFixed(2);
+            
+            document.getElementById('frictionFactor').value = frictionFactor.toFixed(3);
+            document.getElementById('frictionFactorDisplay').textContent = frictionFactor.toFixed(3);
+            
+            if (foundationType === 'shallow') {
+                document.getElementById('bearingPressure').value = bearingPressure.toFixed(1);
+                document.getElementById('bearingPressureValue').textContent = bearingPressure.toFixed(1) + ' kPa';
+                
+                document.getElementById('kvValue').value = kv.toFixed(1);
+                document.getElementById('kvValueDisplay').textContent = kv.toFixed(1) + ' kPa/mm';
+                
+                document.getElementById('settlementValue').value = settlement.toFixed(1);
+                document.getElementById('settlementValueDisplay').textContent = settlement.toFixed(1) + ' mm';
+                
+                document.getElementById('krValue').value = kr.toFixed(0);
+                document.getElementById('krValueDisplay').textContent = kr.toFixed(0) + ' kNm/rad';
+                
+                document.getElementById('angleRadValue').value = rotationAngleRad.toFixed(6);
+                document.getElementById('angleRadValueDisplay').textContent = rotationAngleRad.toFixed(6) + ' rad';
+                
+                document.getElementById('angleDegValue').value = rotationAngleDeg.toFixed(3);
+                document.getElementById('angleDegValueDisplay').textContent = rotationAngleDeg.toFixed(3) + '°';
+            } else {
+                document.getElementById('singlePileCapacity').value = singlePileCapacity.toFixed(0);
+                document.getElementById('singlePileCapacityValue').textContent = singlePileCapacity.toFixed(0) + ' kN';
+                
+                document.getElementById('groupEfficiency').value = groupEfficiency.toFixed(2);
+                document.getElementById('groupEfficiencyValue').textContent = groupEfficiency.toFixed(2);
+                
+                document.getElementById('totalPileCapacity').value = totalPileCapacity.toFixed(0);
+                document.getElementById('totalPileCapacityValue').textContent = totalPileCapacity.toFixed(0) + ' kN';
+                
+                document.getElementById('pileSafetyFactor').value = pileSafetyFactor.toFixed(2);
+                document.getElementById('pileSafetyFactorValue').textContent = pileSafetyFactor.toFixed(2);
+                
+                document.getElementById('pileSettlement').value = pileSettlement.toFixed(1);
+                document.getElementById('pileSettlementValue').textContent = pileSettlement.toFixed(1) + ' mm';
+            }
+            
+            // Update input display values
+            Object.entries(inputs).forEach(([key, input]) => {
+                const valueDiv = input.parentElement.querySelector('.value');
+                if (valueDiv && !input.readOnly && input.type === 'number') {
+                    let unit = '';
+                    switch(key) {
+                        case 'footingDepth':
+                        case 'footingDiameter':
+                        case 'footingWidth':
+                        case 'pileDiameter':
+                        case 'pileLength':
+                        case 'pileSpacing':
+                        case 'analysisDepth':
+                            unit = ' m';
+                            break;
+                        case 'appliedLoad':
+                            unit = loadUnits === 'kPa' ? ' kPa' : ' kN';
+                            break;
+                        case 'appliedMoment':
+                            unit = ' kNm';
+                            break;
+                        case 'density':
+                            unit = ' kg/m³';
+                            break;
+                        case 'angleRepose':
+                            unit = '°';
+                            break;
+                        case 'cohesion':
+                            unit = ' kPa';
+                            break;
+                    }
+                    const decimals = ['poissonRatio', 'cptPoissonRatio'].includes(key) ? 2 : (['numberOfPiles'].includes(key) ? 0 : 1);
+                    valueDiv.textContent = parseFloat(input.value).toFixed(decimals) + unit;
+                }
+            });
+            
+            // Redraw diagrams
+            drawFootingDiagram();
+            drawStressDiagram();
+            if (soilDataSource === 'cpt_upload' || soilDataSource === 'cpt_manual') {
+                drawCPTProfile();
+            }
+        }
+        
+        function drawFootingDiagram() {
+            const ctx = footingCtx;
+            const canvas = footingCanvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const foundationType = inputs.foundationType.value;
+            const footingShape = inputs.footingShape.value;
+            const footingDepth = parseFloat(inputs.footingDepth.value);
+            const footingDiameter = parseFloat(inputs.footingDiameter.value);
+            const footingWidth = parseFloat(inputs.footingWidth.value);
+            const appliedLoad = parseFloat(inputs.appliedLoad.value);
+            
+            // Scale factors
+            const scale = Math.min(canvas.width, canvas.height) / 10;
+            const centerX = canvas.width / 2;
+            const groundLevel = canvas.height * 0.3;
+            
+            // Draw ground surface
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, groundLevel);
+            
+            // Draw soil
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, groundLevel, canvas.width, canvas.height - groundLevel);
+            
+            // Draw soil layers
+            for (let i = 1; i < footingDepth + 3; i++) {
+                const y = groundLevel + (i * scale * 0.8);
+                if (y < canvas.height) {
+                    ctx.strokeStyle = '#654321';
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+            
+            if (foundationType === 'shallow') {
+                // Draw shallow foundation
+                const effectiveDimension = footingShape === 'circular' ? footingDiameter : footingWidth;
+                const footingDisplayWidth = effectiveDimension * scale * 0.8;
+                const footingHeight = 0.5 * scale;
+                const footingY = groundLevel + footingDepth * scale * 0.8;
+                
+                // Calculate settlement for visualization
+                const settlement = parseFloat(document.getElementById('settlementValue').value) || 0;
+                const settlementOffset = (settlement / 10) * scale * 0.1;
+                
+                ctx.fillStyle = '#708090';
+                if (footingShape === 'circular') {
+                    // Draw circular footing
+                    ctx.beginPath();
+                    ctx.ellipse(centerX, footingY + footingHeight/2 + settlementOffset, footingDisplayWidth/2, footingHeight/2, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Original position outline
+                    if (settlement > 0) {
+                        ctx.strokeStyle = '#A0A0A0';
+                        ctx.setLineDash([5, 5]);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.ellipse(centerX, footingY + footingHeight/2, footingDisplayWidth/2, footingHeight/2, 0, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                } else {
+                    // Draw square footing
+                    ctx.fillRect(centerX - footingDisplayWidth/2, footingY + settlementOffset, footingDisplayWidth, footingHeight);
+                    
+                    // Original position outline
+                    if (settlement > 0) {
+                        ctx.strokeStyle = '#A0A0A0';
+                        ctx.setLineDash([5, 5]);
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(centerX - footingDisplayWidth/2, footingY, footingDisplayWidth, footingHeight);
+                        ctx.setLineDash([]);
+                    }
+                }
+                
+                // Settlement visualization
+                if (settlement > 0) {
+                    ctx.strokeStyle = '#FF6347';
+                    ctx.fillStyle = '#FF6347';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + footingDisplayWidth/2 + 20, footingY + footingHeight/2);
+                    ctx.lineTo(centerX + footingDisplayWidth/2 + 20, footingY + footingHeight/2 + settlementOffset);
+                    ctx.stroke();
+                    
+                    // Arrow head
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + footingDisplayWidth/2 + 20, footingY + footingHeight/2 + settlementOffset);
+                    ctx.lineTo(centerX + footingDisplayWidth/2 + 15, footingY + footingHeight/2 + settlementOffset - 5);
+                    ctx.lineTo(centerX + footingDisplayWidth/2 + 25, footingY + footingHeight/2 + settlementOffset - 5);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Settlement label
+                    ctx.fillStyle = '#FF6347';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${settlement.toFixed(1)}mm`, centerX + footingDisplayWidth/2 + 30, footingY + footingHeight/2 + settlementOffset/2);
+                }
+                
+                // Load arrows
+                const numArrows = 5;
+                ctx.strokeStyle = '#FF4500';
+                ctx.fillStyle = '#FF4500';
+                ctx.lineWidth = 3;
+                
+                for (let i = 0; i < numArrows; i++) {
+                    const x = centerX - footingDisplayWidth/2 + (i * footingDisplayWidth/(numArrows-1));
+                    const arrowLength = Math.max((appliedLoad / 2000) * scale, 20);
+                    const arrowTop = footingY + settlementOffset;
+                    
+                    // Arrow shaft
+                    ctx.beginPath();
+                    ctx.moveTo(x, arrowTop - arrowLength);
+                    ctx.lineTo(x, arrowTop);
+                    ctx.stroke();
+                    
+                    // Arrow head
+                    ctx.beginPath();
+                    ctx.moveTo(x, arrowTop);
+                    ctx.lineTo(x - 5, arrowTop - 10);
+                    ctx.lineTo(x + 5, arrowTop - 10);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                // Labels
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${appliedLoad} kN`, centerX, footingY + settlementOffset - Math.max((appliedLoad / 2000) * scale, 20) - 20);
+                
+                ctx.textAlign = 'left';
+                ctx.fillText(`${footingDepth}m`, 10, footingY + settlementOffset + footingHeight/2);
+                
+                ctx.textAlign = 'center';
+                const dimLabel = footingShape === 'circular' ? `Ø ${footingDiameter}m` : `${footingWidth}m × ${footingWidth}m`;
+                ctx.fillText(dimLabel, centerX, footingY + settlementOffset + footingHeight + 20);
+                
+            } else {
+                // Draw piled foundation
+                const numberOfPiles = parseInt(inputs.numberOfPiles.value);
+                const pileDiameter = parseFloat(inputs.pileDiameter.value);
+                const pileLength = parseFloat(inputs.pileLength.value);
+                const pileSpacing = parseFloat(inputs.pileSpacing.value);
+                
+                const pileCapWidth = Math.max(footingDiameter || footingWidth || 3, pileSpacing) * scale * 0.8;
+                const pileCapHeight = 0.4 * scale;
+                const pileCapY = groundLevel + footingDepth * scale * 0.8;
+                
+                const pileSettlement = parseFloat(document.getElementById('pileSettlement').value) || 0;
+                const settlementOffset = (pileSettlement / 10) * scale * 0.1;
+                
+                // Draw pile cap
+                ctx.fillStyle = '#708090';
+                ctx.fillRect(centerX - pileCapWidth/2, pileCapY + settlementOffset, pileCapWidth, pileCapHeight);
+                
+                // Draw piles
+                const pileDisplayDiameter = Math.max(pileDiameter * scale * 0.8, 8);
+                const pileDisplayLength = pileLength * scale * 0.8;
+                
+                // Arrange piles in a square pattern
+                const pilesPerSide = Math.ceil(Math.sqrt(numberOfPiles));
+                let pileIndex = 0;
+                
+                for (let row = 0; row < pilesPerSide && pileIndex < numberOfPiles; row++) {
+                    for (let col = 0; col < pilesPerSide && pileIndex < numberOfPiles; col++) {
+                        const pileX = centerX - (pilesPerSide - 1) * pileDisplayDiameter + col * pileDisplayDiameter * 2;
+                        const pileY = pileCapY + pileCapHeight + settlementOffset;
+                        
+                        ctx.fillStyle = '#654321';
+                        ctx.fillRect(pileX - pileDisplayDiameter/2, pileY, pileDisplayDiameter, Math.min(pileDisplayLength, canvas.height - pileY));
+                        
+                        // Pile outline
+                        ctx.strokeStyle = '#2F4F4F';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(pileX - pileDisplayDiameter/2, pileY, pileDisplayDiameter, Math.min(pileDisplayLength, canvas.height - pileY));
+                        
+                        pileIndex++;
+                    }
+                }
+                
+                // Load arrows on pile cap
+                const numArrows = 3;
+                ctx.strokeStyle = '#FF4500';
+                ctx.fillStyle = '#FF4500';
+                ctx.lineWidth = 3;
+                
+                for (let i = 0; i < numArrows; i++) {
+                    const x = centerX - pileCapWidth/2 + (i * pileCapWidth/(numArrows-1));
+                    const arrowLength = Math.max((appliedLoad / 3000) * scale, 15);
+                    const arrowTop = pileCapY + settlementOffset;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, arrowTop - arrowLength);
+                    ctx.lineTo(x, arrowTop);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, arrowTop);
+                    ctx.lineTo(x - 4, arrowTop - 8);
+                    ctx.lineTo(x + 4, arrowTop - 8);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                // Labels
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${appliedLoad} kN`, centerX, pileCapY + settlementOffset - Math.max((appliedLoad / 3000) * scale, 15) - 15);
+                
+                ctx.textAlign = 'left';
+                ctx.fillText(`${numberOfPiles} piles`, 10, pileCapY + settlementOffset + pileCapHeight/2);
+                ctx.fillText(`Ø ${pileDiameter}m`, 10, pileCapY + settlementOffset + pileCapHeight/2 + 15);
+                ctx.fillText(`L=${pileLength}m`, 10, pileCapY + settlementOffset + pileCapHeight/2 + 30);
+                
+                if (pileSettlement > 0) {
+                    ctx.fillStyle = '#FF6347';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`Settlement: ${pileSettlement.toFixed(1)}mm`, canvas.width - 10, pileCapY + settlementOffset + pileCapHeight + 15);
+                }
+            }
+            
+            // Ground level label
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('Ground Level', canvas.width - 10, groundLevel - 5);
+        }
+        
+        function drawStressDiagram() {
+            const ctx = stressCtx;
+            const canvas = stressCanvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const foundationType = inputs.foundationType.value;
+            const footingShape = inputs.footingShape.value;
+            const footingDiameter = parseFloat(inputs.footingDiameter.value);
+            const footingWidth = parseFloat(inputs.footingWidth.value);
+            
+            const centerX = canvas.width / 2;
+            const baseY = canvas.height - 50;
+            const maxHeight = canvas.height - 100;
+            
+            if (foundationType === 'shallow') {
+                const bearingPressure = parseFloat(document.getElementById('bearingPressure').value);
+                const effectiveDimension = footingShape === 'circular' ? footingDiameter : footingWidth;
+                
+                // Draw footing base
+                const footingDisplayWidth = Math.min(canvas.width * 0.6, 200);
+                ctx.fillStyle = '#708090';
+                
+                if (footingShape === 'circular') {
+                    ctx.beginPath();
+                    ctx.ellipse(centerX, baseY + 10, footingDisplayWidth/2, 10, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(centerX - footingDisplayWidth/2, baseY, footingDisplayWidth, 20);
+                }
+                
+                // Draw stress distribution
+                const stressHeight = Math.min((bearingPressure / 300) * maxHeight, maxHeight);
+                
+                ctx.fillStyle = 'rgba(255, 69, 0, 0.6)';
+                ctx.fillRect(centerX - footingDisplayWidth/2, baseY - stressHeight, footingDisplayWidth, stressHeight);
+                
+                ctx.strokeStyle = '#FF4500';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(centerX - footingDisplayWidth/2, baseY - stressHeight, footingDisplayWidth, stressHeight);
+                
+                // Grid lines and labels
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const y = baseY - (i * maxHeight / 10);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - footingDisplayWidth/2 - 20, y);
+                    ctx.lineTo(centerX + footingDisplayWidth/2 + 20, y);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${(i * 30).toFixed(0)} kPa`, centerX - footingDisplayWidth/2 - 25, y + 4);
+                }
+                
+                // Labels
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Bearing Pressure: ${bearingPressure.toFixed(1)} kPa`, centerX, 30);
+                
+                const settlement = parseFloat(document.getElementById('settlementValue').value);
+                const kv = parseFloat(document.getElementById('kvValue').value);
+                const kr = parseFloat(document.getElementById('krValue').value);
+                const rotationAngleDeg = parseFloat(document.getElementById('angleDegValue').value);
+                
+                ctx.fillText(`Settlement: ${settlement.toFixed(1)} mm`, centerX, 50);
+                ctx.fillText(`kv: ${kv.toFixed(1)} kPa/mm`, centerX, 70);
+                ctx.fillText(`kr: ${kr.toFixed(0)} kNm/rad`, centerX, 90);
+                if (rotationAngleDeg > 0) {
+                    ctx.fillText(`Rotation: ${rotationAngleDeg.toFixed(3)}°`, centerX, 110);
+                }
+                
+                const dimLabel = footingShape === 'circular' ? `Diameter: ${effectiveDimension}m` : `Width: ${effectiveDimension}m`;
+                ctx.fillText(dimLabel, centerX, baseY + 40);
+                
+            } else {
+                // Piled foundation stress diagram
+                const numberOfPiles = parseInt(inputs.numberOfPiles.value);
+                const singlePileCapacity = parseFloat(document.getElementById('singlePileCapacity').value);
+                const totalCapacity = parseFloat(document.getElementById('totalPileCapacity').value);
+                const appliedLoad = parseFloat(inputs.appliedLoad.value);
+                
+                // Draw pile group representation
+                const pilesPerSide = Math.ceil(Math.sqrt(numberOfPiles));
+                const pileSpacing = 40;
+                const totalWidth = (pilesPerSide - 1) * pileSpacing + 20;
+                
+                let pileIndex = 0;
+                for (let row = 0; row < pilesPerSide && pileIndex < numberOfPiles; row++) {
+                    for (let col = 0; col < pilesPerSide && pileIndex < numberOfPiles; col++) {
+                        const pileX = centerX - totalWidth/2 + col * pileSpacing + 10;
+                        const pileY = baseY;
+                        
+                        // Draw pile
+                        ctx.fillStyle = '#654321';
+                        ctx.fillRect(pileX - 10, pileY, 20, 20);
+                        ctx.strokeStyle = '#2F4F4F';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(pileX - 10, pileY, 20, 20);
+                        
+                        // Load on each pile
+                        const loadPerPile = appliedLoad / numberOfPiles;
+                        const loadHeight = (loadPerPile / singlePileCapacity) * 60;
+                        
+                        ctx.fillStyle = 'rgba(255, 69, 0, 0.6)';
+                        ctx.fillRect(pileX - 8, pileY - loadHeight, 16, loadHeight);
+                        
+                        pileIndex++;
+                    }
+                }
+                
+                // Grid lines for load scale
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const y = baseY - (i * 60 / 10);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - totalWidth/2 - 30, y);
+                    ctx.lineTo(centerX + totalWidth/2 + 30, y);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'right';
+                    const loadValue = (i * singlePileCapacity / 10).toFixed(0);
+                    ctx.fillText(`${loadValue} kN`, centerX - totalWidth/2 - 35, y + 3);
+                }
+                
+                // Labels
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Applied Load: ${appliedLoad} kN`, centerX, 30);
+                ctx.fillText(`Total Capacity: ${totalCapacity.toFixed(0)} kN`, centerX, 50);
+                
+                const safetyFactor = parseFloat(document.getElementById('pileSafetyFactor').value);
+                const pileSettlement = parseFloat(document.getElementById('pileSettlement').value);
+                ctx.fillText(`Safety Factor: ${safetyFactor.toFixed(2)}`, centerX, 70);
+                ctx.fillText(`Settlement: ${pileSettlement.toFixed(1)} mm`, centerX, 90);
+                
+                ctx.fillText(`${numberOfPiles} Piles @ ${singlePileCapacity.toFixed(0)} kN each`, centerX, baseY + 40);
+            }
+            
+            // Y-axis label
+            ctx.save();
+            ctx.translate(20, canvas.height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            const yAxisLabel = foundationType === 'shallow' ? 'Stress (kPa)' : 'Load per Pile (kN)';
+            ctx.fillText(yAxisLabel, 0, 0);
+            ctx.restore();
+        }
+        
+        function drawCPTProfile() {
+            // This function would draw CPT data profile - placeholder for now
+            const ctx = cptCtx;
+            const canvas = cptCanvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('CPT Profile Visualization', canvas.width/2, canvas.height/2);
+            ctx.fillText('(Feature under development)', canvas.width/2, canvas.height/2 + 20);
+        }
+        
+        // Initial calculation and drawing
+        updateCalculations();
+    </script>
+</body>
+</html>

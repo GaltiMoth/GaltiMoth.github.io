@@ -1,0 +1,2263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Analysis Dashboard - CSV & Excel Support</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-section {
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(102, 126, 234, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(118, 75, 162, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-small {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 2px;
+        }
+
+        .btn-small:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(23, 162, 184, 0.3);
+        }
+
+        .paste-area {
+            width: 100%;
+            min-height: 150px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-top: 20px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .paste-area:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .data-preview {
+            margin: 30px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.85em;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .trend-analysis {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .trend-analysis h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .trend-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .trend-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .trend-item h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .trend-stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .trend-stat .label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .trend-stat .value {
+            color: #333;
+        }
+
+        .trend-increasing {
+            border-left-color: #28a745;
+        }
+
+        .trend-decreasing {
+            border-left-color: #dc3545;
+        }
+
+        .trend-no-trend {
+            border-left-color: #6c757d;
+        }
+
+        .significance-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .significant {
+            background: #28a745;
+            color: white;
+        }
+
+        .not-significant {
+            background: #6c757d;
+            color: white;
+        }
+
+        .charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .chart-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .axis-controls {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .axis-controls h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .axis-control-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .axis-control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .axis-control-group label {
+            font-size: 0.8em;
+            color: #555;
+            font-weight: bold;
+            min-width: 35px;
+        }
+
+        .axis-control-group input {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.8em;
+            width: 120px;
+        }
+
+        .axis-control-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        .axis-control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .ternary-plots-section {
+            margin-top: 40px;
+        }
+
+        .ternary-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .control-group select {
+            padding: 6px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .control-group select:hover {
+            border-color: #667eea;
+        }
+
+        .ternary-plots-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 1200px) {
+            .ternary-plots-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ternary-plots-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .ternary-plot-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .ternary-plot {
+            width: 100%;
+            height: 450px;
+        }
+
+        .ternary-legend {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+            user-select: none;
+        }
+
+        .legend-item:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+        .legend-item.hidden {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .legend-item.hidden .legend-color {
+            border-color: #999;
+            background-color: #f0f0f0 !important;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .trend-results {
+                grid-template-columns: 1fr;
+            }
+
+            .ternary-plots-container {
+                grid-template-columns: 1fr;
+            }
+
+            .axis-control-row {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .axis-control-group input {
+                width: 140px;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1199px) {
+            .ternary-plots-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Ternary plot specific styles */
+        .ternary-grid-line {
+            stroke: #ccc;
+            stroke-width: 0.8;
+            opacity: 0.6;
+        }
+
+        .ternary-grid-label {
+            font-size: 11px;
+            fill: #555;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        .ternary-major-grid {
+            stroke: #888;
+            stroke-width: 1.2;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Gas Analysis Dashboard</h1>
+
+        <div class="upload-section">
+            <div>
+                <h3 style="margin-top: 20px; color: #333;">Paste your data directly:</h3>
+                <textarea class="paste-area" id="pasteArea" placeholder="Paste your data from Excel here (copy and paste directly from Excel)&#10;Make sure to include headers like: DATE, TECH.ID, CH4, CO2, O2, BALANCE, Type, Stage, etc.&#10;The data will be automatically detected as tab-separated when pasted from Excel"></textarea>
+                <button class="btn" onclick="processPastedData()">Process Pasted Data</button>
+            </div>
+        </div>
+
+        <div id="status"></div>
+        <div class="data-preview" id="dataPreview" style="display: none;">
+            <h3>Data Preview</h3>
+            <div id="dataTable"></div>
+        </div>
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <div class="chart-title">CO2</div>
+                <div class="axis-controls">
+                    <h4>📊 Axis Controls</h4>
+                    <div class="axis-control-row">
+                        <div class="axis-control-group">
+                            <label>X-Min:</label>
+                            <input type="date" id="co2XMin" onchange="updateChartAxis('co2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>X-Max:</label>
+                            <input type="date" id="co2XMax" onchange="updateChartAxis('co2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Min:</label>
+                            <input type="number" id="co2YMin" step="0.1" placeholder="Auto" onchange="updateChartAxis('co2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Max:</label>
+                            <input type="number" id="co2YMax" step="0.1" placeholder="Auto" onchange="updateChartAxis('co2')">
+                        </div>
+                    </div>
+                    <div class="axis-control-row">
+                        <button class="btn-small" onclick="resetChartAxis('co2')">Reset to Auto</button>
+                        <button class="btn-small" onclick="setAxisToDataRange('co2')">Fit to Data</button>
+                        <div class="axis-control-group">
+                            <input type="checkbox" id="co2Smooth" onchange="toggleSmoothing('co2')" checked>
+                            <label for="co2Smooth" style="cursor: pointer;">Smooth Lines</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-actions">
+                    <button class="btn-secondary" onclick="saveChartAsPNG('co2Chart')">Save as PNG</button>
+                    <button class="btn-secondary" onclick="copyChartData('co2')">Copy Data</button>
+                </div>
+                <canvas id="co2Chart"></canvas>
+            </div>
+
+            <div class="chart-wrapper">
+                <div class="chart-title">CH4</div>
+                <div class="axis-controls">
+                    <h4>📊 Axis Controls</h4>
+                    <div class="axis-control-row">
+                        <div class="axis-control-group">
+                            <label>X-Min:</label>
+                            <input type="date" id="ch4XMin" onchange="updateChartAxis('ch4')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>X-Max:</label>
+                            <input type="date" id="ch4XMax" onchange="updateChartAxis('ch4')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Min:</label>
+                            <input type="number" id="ch4YMin" step="0.1" placeholder="Auto" onchange="updateChartAxis('ch4')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Max:</label>
+                            <input type="number" id="ch4YMax" step="0.1" placeholder="Auto" onchange="updateChartAxis('ch4')">
+                        </div>
+                    </div>
+                    <div class="axis-control-row">
+                        <button class="btn-small" onclick="resetChartAxis('ch4')">Reset to Auto</button>
+                        <button class="btn-small" onclick="setAxisToDataRange('ch4')">Fit to Data</button>
+                        <div class="axis-control-group">
+                            <input type="checkbox" id="ch4Smooth" onchange="toggleSmoothing('ch4')" checked>
+                            <label for="ch4Smooth" style="cursor: pointer;">Smooth Lines</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-actions">
+                    <button class="btn-secondary" onclick="saveChartAsPNG('ch4Chart')">Save as PNG</button>
+                    <button class="btn-secondary" onclick="copyChartData('ch4')">Copy Data</button>
+                </div>
+                <canvas id="ch4Chart"></canvas>
+            </div>
+
+            <div class="chart-wrapper">
+                <div class="chart-title">O2</div>
+                <div class="axis-controls">
+                    <h4>📊 Axis Controls</h4>
+                    <div class="axis-control-row">
+                        <div class="axis-control-group">
+                            <label>X-Min:</label>
+                            <input type="date" id="o2XMin" onchange="updateChartAxis('o2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>X-Max:</label>
+                            <input type="date" id="o2XMax" onchange="updateChartAxis('o2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Min:</label>
+                            <input type="number" id="o2YMin" step="0.1" placeholder="Auto" onchange="updateChartAxis('o2')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Max:</label>
+                            <input type="number" id="o2YMax" step="0.1" placeholder="Auto" onchange="updateChartAxis('o2')">
+                        </div>
+                    </div>
+                    <div class="axis-control-row">
+                        <button class="btn-small" onclick="resetChartAxis('o2')">Reset to Auto</button>
+                        <button class="btn-small" onclick="setAxisToDataRange('o2')">Fit to Data</button>
+                        <div class="axis-control-group">
+                            <input type="checkbox" id="o2Smooth" onchange="toggleSmoothing('o2')" checked>
+                            <label for="o2Smooth" style="cursor: pointer;">Smooth Lines</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-actions">
+                    <button class="btn-secondary" onclick="saveChartAsPNG('o2Chart')">Save as PNG</button>
+                    <button class="btn-secondary" onclick="copyChartData('o2')">Copy Data</button>
+                </div>
+                <canvas id="o2Chart"></canvas>
+            </div>
+
+            <div class="chart-wrapper">
+                <div class="chart-title">Internal Flow</div>
+                <div class="axis-controls">
+                    <h4>📊 Axis Controls</h4>
+                    <div class="axis-control-row">
+                        <div class="axis-control-group">
+                            <label>X-Min:</label>
+                            <input type="date" id="flowXMin" onchange="updateChartAxis('flow')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>X-Max:</label>
+                            <input type="date" id="flowXMax" onchange="updateChartAxis('flow')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Min:</label>
+                            <input type="number" id="flowYMin" step="0.1" placeholder="Auto" onchange="updateChartAxis('flow')">
+                        </div>
+                        <div class="axis-control-group">
+                            <label>Y-Max:</label>
+                            <input type="number" id="flowYMax" step="0.1" placeholder="Auto" onchange="updateChartAxis('flow')">
+                        </div>
+                    </div>
+                    <div class="axis-control-row">
+                        <button class="btn-small" onclick="resetChartAxis('flow')">Reset to Auto</button>
+                        <button class="btn-small" onclick="setAxisToDataRange('flow')">Fit to Data</button>
+                        <div class="axis-control-group">
+                            <input type="checkbox" id="flowSmooth" onchange="toggleSmoothing('flow')" checked>
+                            <label for="flowSmooth" style="cursor: pointer;">Smooth Lines</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-actions">
+                    <button class="btn-secondary" onclick="saveChartAsPNG('flowChart')">Save as PNG</button>
+                    <button class="btn-secondary" onclick="copyChartData('internalflow')">Copy Data</button>
+                </div>
+                <canvas id="flowChart"></canvas>
+            </div>
+        </div>
+        <div class="ternary-plots-section">
+            <h2 style="text-align: center; color: #333; margin-bottom: 20px;">🔺 Ternary Gas Composition Plots</h2>
+            <div class="ternary-plots-container">
+                <div class="ternary-plot-wrapper">
+                    <div class="chart-title">Grouped by Type</div>
+                    <div class="chart-actions">
+                        <button class="btn-secondary" onclick="saveTernaryAsPNG('ternaryByType')">Save as PNG</button>
+                        <button class="btn-secondary" onclick="copyTernaryData('ByType')">Copy Data</button>
+                    </div>
+                    <div id="ternaryByType" class="ternary-plot"></div>
+                    <div class="ternary-legend" id="ternaryLegendType"></div>
+                    <p style="font-size: 0.8em; color: #666; text-align: center; margin-top: 10px;">
+                        💡 Click legend items to show/hide groups • Grid lines show 10%, 20%... 90% composition
+                    </p>
+                </div>
+
+                <div class="ternary-plot-wrapper">
+                    <div class="chart-title">Grouped by Stage</div>
+                    <div class="chart-actions">
+                        <button class="btn-secondary" onclick="saveTernaryAsPNG('ternaryByStage')">Save as PNG</button>
+                        <button class="btn-secondary" onclick="copyTernaryData('ByStage')">Copy Data</button>
+                    </div>
+                    <div id="ternaryByStage" class="ternary-plot"></div>
+                    <div class="ternary-legend" id="ternaryLegendStage"></div>
+                    <p style="font-size: 0.8em; color: #666; text-align: center; margin-top: 10px;">
+                        💡 Click legend items to show/hide groups • Grid lines show 10%, 20%... 90% composition
+                    </p>
+                </div>
+                <div class="ternary-plot-wrapper">
+                    <div class="chart-title">Grouped by Year</div>
+                    <div class="chart-actions">
+                        <button class="btn-secondary" onclick="saveTernaryAsPNG('ternaryByYear')">Save as PNG</button>
+                        <button class="btn-secondary" onclick="copyTernaryData('ByYear')">Copy Data</button>
+                    </div>
+                    <div id="ternaryByYear" class="ternary-plot"></div>
+                    <div class="ternary-legend" id="ternaryLegendYear"></div>
+                    <p style="font-size: 0.8em; color: #666; text-align: center; margin-top: 10px;">
+                        💡 Click legend items to show/hide groups • Grid lines show 10%, 20%... 90% composition
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="trend-analysis" id="trendAnalysis" style="display: none;">
+        <h2>📈 Mann-Kendall Trend Analysis</h2>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            Statistical analysis of monotonic trends in time series data (α = 0.05)
+        </p>
+        <div class="trend-results" id="trendResults"></div>
+    </div>
+    <script>
+        let parsedData = [];
+        let co2Chart = null;
+        let ch4Chart = null;
+        let o2Chart = null;
+        let flowChart = null;
+        let ternaryPlots = {}; // Store ternary plot information
+        let groupVisibility = {}; // Track which groups are visible in ternary plots
+
+        const colorPalette = [
+            '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe',
+            '#43e97b', '#38f9d7', '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3',
+            '#fdbb2d', '#22c1c3', '#ff9a9e', '#fecfef', '#ffeaa7', '#fab1a0',
+            '#fd79a8', '#fdcb6e', '#6c5ce7', '#a29bfe', '#74b9ff', '#0984e3'
+        ];
+
+        function getColorForId(id, index) {
+            return colorPalette[index % colorPalette.length];
+        }
+
+        // New Axis Control Functions
+        function toggleSmoothing(chartType) {
+            let chart;
+            switch (chartType) {
+                case 'co2':
+                    chart = co2Chart;
+                    break;
+                case 'ch4':
+                    chart = ch4Chart;
+                    break;
+                case 'o2':
+                    chart = o2Chart;
+                    break;
+                case 'flow':
+                    chart = flowChart;
+                    break;
+                default:
+                    return;
+            }
+
+            if (!chart) return;
+
+            const checkbox = document.getElementById(`${chartType}Smooth`);
+            const tension = checkbox.checked ? 0.1 : 0;
+
+            // Update tension for all datasets
+            chart.data.datasets.forEach(dataset => {
+                dataset.tension = tension;
+            });
+
+            chart.update('none'); // Update without animation for better performance
+            
+            const smoothness = checkbox.checked ? 'smooth' : 'sharp';
+            showStatus(`${chartType.toUpperCase()} lines set to ${smoothness}`, 'success');
+        }
+
+        function updateChartAxis(chartType) {
+            let chart;
+            switch (chartType) {
+                case 'co2':
+                    chart = co2Chart;
+                    break;
+                case 'ch4':
+                    chart = ch4Chart;
+                    break;
+                case 'o2':
+                    chart = o2Chart;
+                    break;
+                case 'flow':
+                    chart = flowChart;
+                    break;
+                default:
+                    return;
+            }
+
+            if (!chart) return;
+
+            const xMinInput = document.getElementById(`${chartType}XMin`);
+            const xMaxInput = document.getElementById(`${chartType}XMax`);
+            const yMinInput = document.getElementById(`${chartType}YMin`);
+            const yMaxInput = document.getElementById(`${chartType}YMax`);
+
+            const xMin = xMinInput.value ? new Date(xMinInput.value) : undefined;
+            const xMax = xMaxInput.value ? new Date(xMaxInput.value) : undefined;
+            const yMin = yMinInput.value !== '' ? parseFloat(yMinInput.value) : undefined;
+            const yMax = yMaxInput.value !== '' ? parseFloat(yMaxInput.value) : undefined;
+
+            // Update chart options
+            chart.options.scales.x.min = xMin;
+            chart.options.scales.x.max = xMax;
+            chart.options.scales.y.min = yMin;
+            chart.options.scales.y.max = yMax;
+
+            chart.update('none'); // Update without animation for better performance
+            
+            showStatus(`${chartType.toUpperCase()} axis updated`, 'success');
+        }
+
+        function resetChartAxis(chartType) {
+            const xMinInput = document.getElementById(`${chartType}XMin`);
+            const xMaxInput = document.getElementById(`${chartType}XMax`);
+            const yMinInput = document.getElementById(`${chartType}YMin`);
+            const yMaxInput = document.getElementById(`${chartType}YMax`);
+
+            // Clear input values
+            xMinInput.value = '';
+            xMaxInput.value = '';
+            yMinInput.value = '';
+            yMaxInput.value = '';
+
+            // Update chart to auto-scale
+            updateChartAxis(chartType);
+            
+            showStatus(`${chartType.toUpperCase()} axis reset to auto-scale`, 'success');
+        }
+
+        function setAxisToDataRange(chartType) {
+            if (parsedData.length === 0) {
+                showStatus('No data available to fit axis', 'error');
+                return;
+            }
+
+            let parameterName;
+            switch (chartType) {
+                case 'co2':
+                    parameterName = 'co2';
+                    break;
+                case 'ch4':
+                    parameterName = 'ch4';
+                    break;
+                case 'o2':
+                    parameterName = 'o2';
+                    break;
+                case 'flow':
+                    parameterName = 'internalflow';
+                    break;
+                default:
+                    return;
+            }
+
+            // Calculate data ranges
+            const dates = parsedData.map(d => d.date).sort((a, b) => a - b);
+            const values = parsedData.map(d => d[parameterName]).filter(v => v !== undefined && v !== null);
+
+            if (dates.length === 0 || values.length === 0) {
+                showStatus('No valid data for axis fitting', 'error');
+                return;
+            }
+
+            const minDate = dates[0];
+            const maxDate = dates[dates.length - 1];
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+
+            // Add some padding to Y values (5% on each side)
+            const valueRange = maxValue - minValue;
+            const padding = valueRange * 0.05;
+            const paddedMinValue = Math.max(0, minValue - padding); // Don't go below 0
+            const paddedMaxValue = maxValue + padding;
+
+            // Set input values
+            const xMinInput = document.getElementById(`${chartType}XMin`);
+            const xMaxInput = document.getElementById(`${chartType}XMax`);
+            const yMinInput = document.getElementById(`${chartType}YMin`);
+            const yMaxInput = document.getElementById(`${chartType}YMax`);
+
+            xMinInput.value = minDate.toISOString().split('T')[0];
+            xMaxInput.value = maxDate.toISOString().split('T')[0];
+            yMinInput.value = paddedMinValue.toFixed(2);
+            yMaxInput.value = paddedMaxValue.toFixed(2);
+
+            // Update chart
+            updateChartAxis(chartType);
+            
+            showStatus(`${chartType.toUpperCase()} axis fitted to data range`, 'success');
+        }
+
+        // Mann-Kendall Test Implementation
+        function mannKendallTest(data) {
+            const n = data.length;
+            if (n < 3) {
+                return {
+                    S: 0,
+                    variance: 0,
+                    z: 0,
+                    pValue: 1,
+                    trend: 'insufficient data',
+                    significant: false
+                };
+            }
+
+            let S = 0;
+            for (let i = 0; i < n - 1; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const diff = data[j].value - data[i].value;
+                    if (diff > 0) S += 1;
+                    else if (diff < 0) S -= 1;
+                }
+            }
+
+            const variance = (n * (n - 1) * (2 * n + 5)) / 18;
+
+            let z;
+            if (S > 0) {
+                z = (S - 1) / Math.sqrt(variance);
+            } else if (S < 0) {
+                z = (S + 1) / Math.sqrt(variance);
+            } else {
+                z = 0;
+            }
+
+            const pValue = 2 * (1 - normalCDF(Math.abs(z)));
+
+            let trend;
+            if (pValue < 0.05) {
+                trend = S > 0 ? 'increasing' : 'decreasing';
+            } else {
+                trend = 'no trend';
+            }
+
+            return {
+                S: S,
+                variance: variance,
+                z: z,
+                pValue: pValue,
+                trend: trend,
+                significant: pValue < 0.05
+            };
+        }
+
+        function normalCDF(x) {
+            return (1 + erf(x / Math.sqrt(2))) / 2;
+        }
+
+        function erf(x) {
+            const a1 = 0.254829592;
+            const a2 = -0.284496736;
+            const a3 = 1.421413741;
+            const a4 = -1.453152027;
+            const a5 = 1.061405429;
+            const p = 0.3275911;
+
+            const sign = x >= 0 ? 1 : -1;
+            x = Math.abs(x);
+
+            const t = 1.0 / (1.0 + p * x);
+            const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+            return sign * y;
+        }
+
+        function sensSlope(data) {
+            const n = data.length;
+            if (n < 2) return 0;
+
+            const slopes = [];
+            for (let i = 0; i < n - 1; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const timeDiff = data[j].time - data[i].time;
+                    if (timeDiff !== 0) {
+                        slopes.push((data[j].value - data[i].value) / timeDiff);
+                    }
+                }
+            }
+
+            slopes.sort((a, b) => a - b);
+            const mid = Math.floor(slopes.length / 2);
+            return slopes.length % 2 === 0 ?
+                (slopes[mid - 1] + slopes[mid]) / 2 :
+                slopes[mid];
+        }
+
+        function performTrendAnalysis() {
+            if (parsedData.length === 0) return;
+
+            const grouped = {};
+            parsedData.forEach(row => {
+                if (!grouped[row.id]) grouped[row.id] = [];
+                grouped[row.id].push(row);
+            });
+
+            const trendResults = [];
+            const parameters = ['co2', 'ch4', 'o2', 'balance', 'internalflow'];
+
+            Object.keys(grouped).forEach(id => {
+                const sortedData = grouped[id].sort((a, b) => a.date - b.date);
+
+                parameters.forEach(param => {
+                    if (sortedData[0][param] !== undefined) {
+                        const timeSeriesData = sortedData.map((row, index) => ({
+                            time: index,
+                            value: row[param]
+                        }));
+
+                        const mkResult = mannKendallTest(timeSeriesData);
+                        const slope = sensSlope(timeSeriesData);
+
+                        trendResults.push({
+                            id: id,
+                            parameter: param,
+                            n: timeSeriesData.length,
+                            S: mkResult.S,
+                            z: mkResult.z,
+                            pValue: mkResult.pValue,
+                            trend: mkResult.trend,
+                            significant: mkResult.significant,
+                            slope: slope
+                        });
+                    }
+                });
+            });
+
+            displayTrendResults(trendResults);
+        }
+
+        function displayTrendResults(results) {
+            const trendAnalysis = document.getElementById('trendAnalysis');
+            const trendResults = document.getElementById('trendResults');
+
+            let html = '';
+
+            results.forEach(result => {
+                const trendClass = result.trend === 'increasing' ? 'trend-increasing' :
+                    result.trend === 'decreasing' ? 'trend-decreasing' : 'trend-no-trend';
+
+                const significanceClass = result.significant ? 'significant' : 'not-significant';
+                const significanceText = result.significant ? 'Significant' : 'Not Significant';
+
+                html += `
+                <div class="trend-item ${trendClass}">
+                    <h3>
+                        ${result.id} - ${result.parameter.toUpperCase()}
+                        <span class="significance-badge ${significanceClass}">${significanceText}</span>
+                    </h3>
+                    <div class="trend-stat">
+                        <span class="label">Trend:</span>
+                        <span class="value">${result.trend}</span>
+                    </div>
+                    <div class="trend-stat">
+                        <span class="label">Mann-Kendall S:</span>
+                        <span class="value">${result.S}</span>
+                    </div>
+                    <div class="trend-stat">
+                        <span class="label">Z-score:</span>
+                        <span class="value">${result.z.toFixed(3)}</span>
+                    </div>
+                    <div class="trend-stat">
+                        <span class="label">P-value:</span>
+                        <span class="value">${result.pValue.toFixed(4)}</span>
+                    </div>
+                    <div class="trend-stat">
+                        <span class="label">Sen's Slope:</span>
+                        <span class="value">${result.slope.toFixed(6)}</span>
+                    </div>
+                    <div class="trend-stat">
+                        <span class="label">Sample Size:</span>
+                        <span class="value">${result.n}</span>
+                    </div>
+                </div>
+            `;
+            });
+
+            trendResults.innerHTML = html;
+            trendAnalysis.style.display = 'block';
+        }
+
+        // Improved Ternary Plot Functions with proper percentage grid lines
+        function createTernaryPlot(containerId, data, groupBy = 'id') {
+            const container = d3.select(`#${containerId}`);
+            container.selectAll("*").remove();
+
+            const margin = {
+                top: 40,
+                right: 40,
+                bottom: 60,
+                left: 40
+            };
+            const width = 380 - margin.left - margin.right;
+            const height = 450 - margin.top - margin.bottom;
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Create proper equilateral triangle
+            const size = Math.min(width, height) * 0.8;
+            const h = size * Math.sqrt(3) / 2; // Height of equilateral triangle
+            
+            const vertices = [
+                [width/2, (height - h)/2], // CH4 (top)
+                [width/2 - size/2, (height - h)/2 + h], // CO2 (bottom left)
+                [width/2 + size/2, (height - h)/2 + h]  // Balance (bottom right)
+            ];
+
+            // Draw triangle outline
+            g.append("path")
+                .attr("d", `M${vertices[0][0]},${vertices[0][1]} L${vertices[1][0]},${vertices[1][1]} L${vertices[2][0]},${vertices[2][1]} Z`)
+                .attr("fill", "none")
+                .attr("stroke", "#333")
+                .attr("stroke-width", 2);
+
+            // Add simple, clean percentage grid lines at 20% increments only
+            const gridPercentages = [20, 40, 60, 80];
+            
+            gridPercentages.forEach(pct => {
+                const t = pct / 100;
+                
+                // CH4 grid lines (parallel to base, showing constant CH4 percentages)
+                const ch4_left = [
+                    vertices[1][0] + t * (vertices[0][0] - vertices[1][0]),
+                    vertices[1][1] + t * (vertices[0][1] - vertices[1][1])
+                ];
+                const ch4_right = [
+                    vertices[2][0] + t * (vertices[0][0] - vertices[2][0]),
+                    vertices[2][1] + t * (vertices[0][1] - vertices[2][1])
+                ];
+                
+                g.append("line")
+                    .attr("x1", ch4_left[0])
+                    .attr("y1", ch4_left[1])
+                    .attr("x2", ch4_right[0])
+                    .attr("y2", ch4_right[1])
+                    .attr("class", "ternary-major-grid");
+
+                // CO2 grid lines (parallel to right side, showing constant CO2 percentages)
+                const co2_top = [
+                    vertices[0][0] + t * (vertices[2][0] - vertices[0][0]),
+                    vertices[0][1] + t * (vertices[2][1] - vertices[0][1])
+                ];
+                const co2_bottom = [
+                    vertices[1][0] + t * (vertices[2][0] - vertices[1][0]),
+                    vertices[1][1] + t * (vertices[2][1] - vertices[1][1])
+                ];
+                
+                g.append("line")
+                    .attr("x1", co2_top[0])
+                    .attr("y1", co2_top[1])
+                    .attr("x2", co2_bottom[0])
+                    .attr("y2", co2_bottom[1])
+                    .attr("class", "ternary-major-grid");
+
+                // Balance grid lines (parallel to left side, showing constant Balance percentages)
+                const balance_top = [
+                    vertices[0][0] + t * (vertices[1][0] - vertices[0][0]),
+                    vertices[0][1] + t * (vertices[1][1] - vertices[0][1])
+                ];
+                const balance_bottom = [
+                    vertices[2][0] + t * (vertices[1][0] - vertices[2][0]),
+                    vertices[2][1] + t * (vertices[1][1] - vertices[2][1])
+                ];
+                
+                g.append("line")
+                    .attr("x1", balance_top[0])
+                    .attr("y1", balance_top[1])
+                    .attr("x2", balance_bottom[0])
+                    .attr("y2", balance_bottom[1])
+                    .attr("class", "ternary-major-grid");
+                
+                // Add percentage labels
+                // CH4 labels (left side)
+                g.append("text")
+                    .attr("x", ch4_left[0] - 25)
+                    .attr("y", ch4_left[1] + 5)
+                    .attr("class", "ternary-grid-label")
+                    .attr("text-anchor", "middle")
+                    .text(`${pct}%`);
+                
+                // CO2 labels (right side)
+                g.append("text")
+                    .attr("x", co2_bottom[0] + 20)
+                    .attr("y", co2_bottom[1] + 5)
+                    .attr("class", "ternary-grid-label")
+                    .attr("text-anchor", "middle")
+                    .attr("transform", `rotate(-60, ${co2_bottom[0] + 20}, ${co2_bottom[1] + 5})`)
+                    .text(`${pct}%`);
+                
+                // Balance labels (bottom)
+                g.append("text")
+                    .attr("x", balance_bottom[0])
+                    .attr("y", balance_bottom[1] + 20)
+                    .attr("class", "ternary-grid-label")
+                    .attr("text-anchor", "middle")
+                    .attr("transform", `rotate(60, ${balance_bottom[0]}, ${balance_bottom[1] + 20})`)
+                    .text(`${pct}%`);
+            });
+
+            // Add corner labels with better positioning
+            g.append("text")
+                .attr("x", vertices[0][0])
+                .attr("y", vertices[0][1] - 20)
+                .attr("text-anchor", "middle")
+                .attr("font-weight", "bold")
+                .attr("font-size", "14px")
+                .text("CH4");
+
+            g.append("text")
+                .attr("x", vertices[1][0] - 20)
+                .attr("y", vertices[1][1] + 30)
+                .attr("text-anchor", "middle")
+                .attr("font-weight", "bold")
+                .attr("font-size", "14px")
+                .text("CO2");
+
+            g.append("text")
+                .attr("x", vertices[2][0] + 20)
+                .attr("y", vertices[2][1] + 30)
+                .attr("text-anchor", "middle")
+                .attr("font-weight", "bold")
+                .attr("font-size", "14px")
+                .text("Balance");
+
+            // Process data for ternary coordinates
+            const ternaryData = data.map(d => {
+                const total = d.ch4 + d.co2 + d.balance;
+                if (total === 0) return null;
+
+                const ch4_norm = d.ch4 / total;
+                const co2_norm = d.co2 / total;
+                const balance_norm = d.balance / total;
+
+                // Convert normalized values to triangle coordinates using barycentric coordinates
+                const x = vertices[0][0] * ch4_norm + vertices[1][0] * co2_norm + vertices[2][0] * balance_norm;
+                const y = vertices[0][1] * ch4_norm + vertices[1][1] * co2_norm + vertices[2][1] * balance_norm;
+
+                return {
+                    ...d,
+                    x: x,
+                    y: y,
+                    ch4_norm: ch4_norm,
+                    co2_norm: co2_norm,
+                    balance_norm: balance_norm
+                };
+            }).filter(d => d !== null);
+
+            // Get unique groups based on groupBy parameter
+            let uniqueGroups;
+            switch (groupBy) {
+                case 'type':
+                    uniqueGroups = [...new Set(ternaryData.map(d => d.type || 'Unknown'))];
+                    break;
+                case 'stage':
+                    uniqueGroups = [...new Set(ternaryData.map(d => d.stage || 'Unknown'))];
+                    break;
+                case 'year':
+                    uniqueGroups = [...new Set(ternaryData.map(d => d.date.getFullYear()))];
+                    break;
+                case 'id':
+                default:
+                    uniqueGroups = [...new Set(ternaryData.map(d => d.id))];
+                    break;
+            }
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(uniqueGroups)
+                .range(colorPalette);
+
+            // Initialize visibility for all groups if not set
+            const visibilityKey = `${containerId}_${groupBy}`;
+            if (!groupVisibility[visibilityKey]) {
+                groupVisibility[visibilityKey] = {};
+            }
+
+            uniqueGroups.forEach(group => {
+                if (groupVisibility[visibilityKey][group] === undefined) {
+                    groupVisibility[visibilityKey][group] = true;
+                }
+            });
+
+            // Add data points
+            g.selectAll(".data-point")
+                .data(ternaryData)
+                .enter()
+                .append("circle")
+                .attr("class", "data-point")
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("r", 4)
+                .attr("fill", d => {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+                    return colorScale(groupValue);
+                })
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1)
+                .attr("opacity", d => {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+                    return groupVisibility[visibilityKey][groupValue] ? 0.8 : 0;
+                })
+                .attr("pointer-events", d => {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+                    return groupVisibility[visibilityKey][groupValue] ? "auto" : "none";
+                })
+                .on("mouseover", function(event, d) {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+
+                    if (!groupVisibility[visibilityKey][groupValue]) return;
+
+                    // Tooltip
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "ternary-tooltip")
+                        .style("position", "absolute")
+                        .style("background", "rgba(0,0,0,0.8)")
+                        .style("color", "white")
+                        .style("padding", "8px")
+                        .style("border-radius", "4px")
+                        .style("font-size", "12px")
+                        .style("pointer-events", "none")
+                        .style("z-index", "1000");
+
+                    tooltip.html(`
+                    <strong>ID:</strong> ${d.id}<br>
+                    <strong>Date:</strong> ${d.date.toLocaleDateString()}<br>
+                    ${d.type ? `<strong>Type:</strong> ${d.type}<br>` : ''}
+                    ${d.stage ? `<strong>Stage:</strong> ${d.stage}<br>` : ''}
+                    <strong>CH4:</strong> ${d.ch4.toFixed(2)} (${(d.ch4_norm * 100).toFixed(1)}%)<br>
+                    <strong>CO2:</strong> ${d.co2.toFixed(2)} (${(d.co2_norm * 100).toFixed(1)}%)<br>
+                    <strong>Balance:</strong> ${d.balance.toFixed(2)} (${(d.balance_norm * 100).toFixed(1)}%)
+                `)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+
+                    d3.select(this).attr("r", 6);
+                })
+                .on("mouseout", function() {
+                    d3.selectAll(".ternary-tooltip").remove();
+                    d3.select(this).attr("r", 4);
+                });
+
+            return {
+                colorScale,
+                uniqueGroups: uniqueGroups,
+                containerId,
+                groupBy,
+                visibilityKey
+            };
+        }
+
+        function createTernaryLegend(legendId, colorScale, uniqueGroups, plotInfo) {
+            const legend = document.getElementById(legendId);
+
+            if (!legend) {
+                console.error(`Legend element not found: ${legendId}`);
+                console.log('Available elements with "legend" in ID:',
+                    Array.from(document.querySelectorAll('[id*="legend"]')).map(el => el.id));
+                return;
+            }
+
+            legend.innerHTML = '';
+
+            uniqueGroups.forEach(group => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.dataset.groupId = group;
+
+                // Add click handler for toggling
+                item.addEventListener('click', () => {
+                    groupVisibility[plotInfo.visibilityKey][group] = !groupVisibility[plotInfo.visibilityKey][group];
+                    item.classList.toggle('hidden', !groupVisibility[plotInfo.visibilityKey][group]);
+
+                    // Redraw the ternary plot
+                    updateTernaryPlotVisibility(plotInfo);
+                });
+
+                const color = document.createElement('div');
+                color.className = 'legend-color';
+                color.style.backgroundColor = colorScale(group);
+
+                const label = document.createElement('span');
+                label.textContent = group;
+
+                item.appendChild(color);
+                item.appendChild(label);
+                legend.appendChild(item);
+
+                // Set initial state
+                if (!groupVisibility[plotInfo.visibilityKey][group]) {
+                    item.classList.add('hidden');
+                }
+            });
+        }
+
+        function updateTernaryPlotVisibility(plotInfo) {
+            const {
+                containerId,
+                groupBy,
+                visibilityKey
+            } = plotInfo;
+            const svg = d3.select(`#${containerId} svg`);
+
+            // Update opacity and pointer events of data points
+            svg.selectAll('.data-point')
+                .attr('opacity', function(d) {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+                    return groupVisibility[visibilityKey][groupValue] ? 0.8 : 0;
+                })
+                .attr('pointer-events', function(d) {
+                    let groupValue;
+                    switch (groupBy) {
+                        case 'type':
+                            groupValue = d.type || 'Unknown';
+                            break;
+                        case 'stage':
+                            groupValue = d.stage || 'Unknown';
+                            break;
+                        case 'year':
+                            groupValue = d.date.getFullYear();
+                            break;
+                        default:
+                            groupValue = d.id;
+                            break;
+                    }
+                    return groupVisibility[visibilityKey][groupValue] ? 'auto' : 'none';
+                });
+        }
+
+        function createTernaryPlotsWithExistingStructure() {
+            console.log('Creating ternary plots with existing HTML structure...');
+
+            // Check which elements exist
+            const typeContainer = document.getElementById('ternaryByType');
+            const stageContainer = document.getElementById('ternaryByStage');
+            const yearContainer = document.getElementById('ternaryByYear');
+            const typeLegend = document.getElementById('ternaryLegendType');
+            const stageLegend = document.getElementById('ternaryLegendStage');
+            const yearLegend = document.getElementById('ternaryLegendYear');
+
+            console.log('Container elements found:');
+            console.log('- ternaryByType:', typeContainer);
+            console.log('- ternaryByStage:', stageContainer);
+            console.log('- ternaryByYear:', yearContainer);
+            console.log('Legend elements found:');
+            console.log('- ternaryLegendType:', typeLegend);
+            console.log('- ternaryLegendStage:', stageLegend);
+            console.log('- ternaryLegendYear:', yearLegend);
+
+            try {
+                // Create plot by Type
+                if (typeContainer) {
+                    console.log('Creating ternary plot by Type...');
+                    const typePlotInfo = createTernaryPlot('ternaryByType', parsedData, 'type');
+                    if (typeLegend) {
+                        createTernaryLegend('ternaryLegendType', typePlotInfo.colorScale, typePlotInfo.uniqueGroups, typePlotInfo);
+                    } else {
+                        console.warn('Type legend container not found, skipping legend creation');
+                    }
+                } else {
+                    console.error('Type plot container not found');
+                }
+
+                // Create plot by Stage  
+                if (stageContainer) {
+                    console.log('Creating ternary plot by Stage...');
+                    const stagePlotInfo = createTernaryPlot('ternaryByStage', parsedData, 'stage');
+                    if (stageLegend) {
+                        createTernaryLegend('ternaryLegendStage', stagePlotInfo.colorScale, stagePlotInfo.uniqueGroups, stagePlotInfo);
+                    } else {
+                        console.warn('Stage legend container not found, skipping legend creation');
+                    }
+                } else {
+                    console.error('Stage plot container not found');
+                }
+
+                // Create plot by Year
+                if (yearContainer) {
+                    console.log('Creating ternary plot by Year...');
+                    const yearPlotInfo = createTernaryPlot('ternaryByYear', parsedData, 'year');
+                    if (yearLegend) {
+                        createTernaryLegend('ternaryLegendYear', yearPlotInfo.colorScale, yearPlotInfo.uniqueGroups, yearPlotInfo);
+                    } else {
+                        console.warn('Year legend container not found, skipping legend creation');
+                    }
+                } else {
+                    console.error('Year plot container not found');
+                }
+
+                console.log('Ternary plot creation completed');
+                showStatus('Ternary plots created successfully with percentage grid lines (Type, Stage, Year)', 'success');
+
+            } catch (error) {
+                console.error('Error creating ternary plots with existing structure:', error);
+                showStatus(`Error creating ternary plots: ${error.message}`, 'error');
+
+                // List all available elements for debugging
+                const allElements = document.querySelectorAll('[id*="ternary"]');
+                console.log('All ternary elements available:', Array.from(allElements).map(el => ({
+                    id: el.id,
+                    tagName: el.tagName
+                })));
+            }
+        }
+
+        function saveTernaryAsPNG(ternaryId) {
+            // Handle the new ternary plot IDs
+            const validIds = ['ternaryByType', 'ternaryByStage', 'ternaryByYear'];
+
+            if (!validIds.includes(ternaryId)) {
+                console.error(`Invalid ternary ID: ${ternaryId}`);
+                showStatus('Invalid ternary plot ID for export', 'error');
+                return;
+            }
+
+            const svg = document.querySelector(`#${ternaryId} svg`);
+            if (!svg) {
+                console.error(`SVG not found for ID: ${ternaryId}`);
+                showStatus('SVG element not found for export', 'error');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const data = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                const link = document.createElement('a');
+                link.download = `${ternaryId}_ternary_plot.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showStatus('Ternary plot saved as PNG', 'success');
+            };
+
+            img.onerror = function() {
+                showStatus('Error saving ternary plot as PNG', 'error');
+            };
+
+            img.src = 'data:image/svg+xml;base64,' + btoa(data);
+        }
+
+        function copyTernaryData(plotType) {
+            if (parsedData.length === 0) {
+                showStatus('No data to copy!', 'error');
+                return;
+            }
+
+            let csvContent = 'ID,Date,Type,Stage,CH4,CO2,Balance,CH4%,CO2%,Balance%\n';
+
+            parsedData.forEach(row => {
+                const total = row.ch4 + row.co2 + row.balance;
+                const ch4Pct = total > 0 ? (row.ch4 / total * 100).toFixed(2) : 0;
+                const co2Pct = total > 0 ? (row.co2 / total * 100).toFixed(2) : 0;
+                const balancePct = total > 0 ? (row.balance / total * 100).toFixed(2) : 0;
+
+                csvContent += `${row.id},${row.date.toLocaleDateString('en-GB')},${row.type || ''},${row.stage || ''},${row.ch4},${row.co2},${row.balance},${ch4Pct},${co2Pct},${balancePct}\n`;
+            });
+
+            navigator.clipboard.writeText(csvContent).then(() => {
+                showStatus(`Ternary ${plotType} data copied to clipboard!`, 'success');
+            }).catch(err => {
+                showStatus('Failed to copy data to clipboard', 'error');
+            });
+        }
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const pasteArea = document.getElementById('pasteArea');
+        const status = document.getElementById('status');
+
+        function showStatus(message, type = 'info') {
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function handleFile(file) {
+            showStatus(`Processing file: ${file.name}`, 'info');
+            const reader = new FileReader();
+
+            // Check file extension to determine how to parse
+            const fileName = file.name.toLowerCase();
+            const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+            if (isExcel) {
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    parseXLSX(data);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    parseCSV(content);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function parseXLSX(data) {
+            try {
+                const workbook = XLSX.read(data, {
+                    type: 'array'
+                });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                    header: 1,
+                    defval: "",
+                    raw: false
+                });
+
+                if (jsonData.length < 2) {
+                    showStatus('Excel file appears to be empty or has no data rows!', 'error');
+                    return;
+                }
+
+                // Convert to objects with headers
+                const headers = jsonData[0];
+                const rows = jsonData.slice(1).map(row => {
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header] = row[index] || '';
+                    });
+                    return obj;
+                });
+
+                // Filter out empty rows
+                const filteredRows = rows.filter(row => {
+                    return Object.values(row).some(value => value !== '' && value != null);
+                });
+
+                showStatus(`Successfully parsed Excel file with ${filteredRows.length} rows`, 'success');
+                processData(filteredRows);
+
+            } catch (error) {
+                showStatus(`Error parsing Excel file: ${error.message}`, 'error');
+            }
+        }
+
+        function parseCSV(csvContent) {
+            Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        showStatus(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`, 'error');
+                        return;
+                    }
+                    processData(results.data);
+                }
+            });
+        }
+
+        function processPastedData() {
+            const pastedContent = pasteArea.value.trim();
+            if (!pastedContent) {
+                showStatus('Please paste some data first!', 'error');
+                return;
+            }
+
+            const lines = pastedContent.split('\n');
+            console.log('First line (headers):', lines[0]);
+
+            // Try different delimiters to find the best one
+            let delimiter = '\t'; // Default to tab (most common from Excel)
+            if (lines[0].includes('\t')) {
+                delimiter = '\t';
+            } else if (lines[0].includes(',')) {
+                delimiter = ',';
+            } else {
+                // Try to detect space-separated with quoted fields
+                delimiter = ' ';
+            }
+
+            console.log('Detected delimiter:', delimiter === '\t' ? 'TAB' : delimiter);
+
+            Papa.parse(pastedContent, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                delimiter: delimiter,
+                delimitersToGuess: ['\t', ',', ' ', ';', '|'],
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        console.log('Parsing errors:', results.errors);
+                        showStatus(`Data parsing errors: ${results.errors.map(e => e.message).join(', ')}`, 'error');
+                        return;
+                    }
+                    console.log('Raw parsed data sample:', results.data[0]);
+                    console.log('Raw field names:', results.meta.fields);
+                    processData(results.data);
+                }
+            });
+        }
+
+        function processData(data) {
+            if (data.length === 0) {
+                showStatus('No data found!', 'error');
+                return;
+            }
+
+            console.log('Processing data, first row:', data[0]);
+
+            const normalizedData = data.map(row => {
+                const newRow = {};
+                Object.keys(row).forEach(key => {
+                    if (key && key.trim()) { // Only process non-empty keys
+                        const normalizedKey = key.toLowerCase().replace(/\s+/g, '').replace(/[%\.]/g, '');
+                        newRow[normalizedKey] = row[key];
+                    }
+                });
+                return newRow;
+            });
+
+            // Check available columns before mapping
+            const availableColumns = Object.keys(normalizedData[0]);
+            console.log('Available columns after normalization:', availableColumns);
+
+            // Enhanced column mapping
+            normalizedData.forEach((row, index) => {
+                // Map various ID column formats
+                if (!row.id) {
+                    if (row.techid) row.id = row.techid;
+                    else if (row.stationid) row.id = row.stationid;
+                    else if (row.station) row.id = row.station;
+                    // If still no ID, create a default one based on row index
+                    if (!row.id) {
+                        row.id = `Station_${index + 1}`;
+                    }
+                }
+
+                // Handle missing date - create a default date sequence
+                if (!row.date) {
+                    // Create sequential dates starting from today, going backwards
+                    const baseDate = new Date();
+                    baseDate.setDate(baseDate.getDate() - (normalizedData.length - index));
+                    row.date = baseDate;
+                    console.log(`Created default date for row ${index}: ${row.date.toLocaleDateString()}`);
+                }
+            });
+
+            const requiredColumns = ['id', 'date', 'ch4', 'co2'];
+            const finalAvailableColumns = Object.keys(normalizedData[0]);
+            const missingColumns = requiredColumns.filter(col => !finalAvailableColumns.includes(col));
+
+            if (missingColumns.length > 0) {
+                let helpText = '\n\nColumn mapping help:';
+                if (missingColumns.includes('id')) {
+                    helpText += '\n- For ID: Use TECH.ID, Station ID, or similar';
+                }
+                if (missingColumns.includes('date')) {
+                    helpText += '\n- For DATE: Use DATE column (will create default dates if missing)';
+                }
+                showStatus(`Missing required columns: ${missingColumns.join(', ')}.\n\nAvailable columns: ${finalAvailableColumns.join(', ')}.${helpText}`, 'error');
+                return;
+            }
+
+            // Process each row
+            normalizedData.forEach(row => {
+                // Parse date (if it's a string)
+                if (row.date && typeof row.date === 'string') {
+                    const parts = row.date.split('/');
+                    if (parts.length === 3) {
+                        row.date = new Date(parts[2], parts[1] - 1, parts[0]);
+                    } else {
+                        row.date = new Date(row.date);
+                    }
+                }
+
+                // Parse numeric values
+                row.ch4 = parseFloat(row.ch4) || 0;
+                row.co2 = parseFloat(row.co2) || 0;
+                row.o2 = parseFloat(row.o2) || 0;
+                row.balance = parseFloat(row.balance) || 0;
+                row.internalflow = parseFloat(row.internalflow) || 0;
+
+                // Parse text fields
+                row.type = row.type || '';
+                row.stage = row.stage || '';
+
+                // Calculate balance of gases if not provided
+                if (row.balance === 0 && (row.o2 > 0 || finalAvailableColumns.includes('resnitrogen'))) {
+                    const nitrogen = parseFloat(row.resnitrogen) || 0;
+                    row.balance = row.o2 + nitrogen;
+                }
+            });
+
+            normalizedData.sort((a, b) => a.date - b.date);
+            parsedData = normalizedData;
+
+            // Reset group visibility for new data
+            groupVisibility = {};
+            ternaryPlots = {};
+
+            showStatus(`Successfully loaded ${parsedData.length} data points from ${[...new Set(parsedData.map(d => d.id))].length} different stations!`, 'success');
+            displayDataPreview();
+            createCharts();
+
+            // Create ternary plots with improved grid lines
+            setTimeout(() => {
+                createTernaryPlotsWithExistingStructure();
+            }, 1000);
+
+            performTrendAnalysis();
+        }
+
+        function displayDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            const tableDiv = document.getElementById('dataTable');
+
+            let html = '<table class="data-table"><thead><tr><th>ID</th><th>Date</th><th>Type</th><th>Stage</th><th>CH4</th><th>CO2</th><th>O2</th><th>Balance</th><th>Internal Flow</th></tr></thead><tbody>';
+            const sample = parsedData.slice(0, 10);
+            sample.forEach(row => {
+                html += `<tr>
+                <td>${row.id}</td>
+                <td>${row.date.toLocaleDateString()}</td>
+                <td>${row.type || '-'}</td>
+                <td>${row.stage || '-'}</td>
+                <td>${row.ch4}</td>
+                <td>${row.co2}</td>
+                <td>${row.o2}</td>
+                <td>${row.balance}</td>
+                <td>${row.internalflow}</td>
+            </tr>`;
+            });
+            html += '</tbody></table>';
+
+            if (parsedData.length > 10) {
+                html += `<p style="margin-top: 10px; color: #666;">Showing first 10 rows of ${parsedData.length} total rows.</p>`;
+            }
+
+            tableDiv.innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        function createCharts() {
+            if (parsedData.length === 0) return;
+
+            const grouped = {};
+            parsedData.forEach(row => {
+                if (!grouped[row.id]) grouped[row.id] = [];
+                grouped[row.id].push(row);
+            });
+
+            Object.keys(grouped).forEach(id => {
+                grouped[id].sort((a, b) => a.date - b.date);
+            });
+
+            if (co2Chart) co2Chart.destroy();
+            if (ch4Chart) ch4Chart.destroy();
+            if (o2Chart) o2Chart.destroy();
+            if (flowChart) flowChart.destroy();
+
+            const ids = Object.keys(grouped);
+
+            const co2Datasets = ids.map((id, i) => ({
+                label: id,
+                data: grouped[id].map(row => ({
+                    x: row.date,
+                    y: row.co2
+                })),
+                borderColor: getColorForId(id, i),
+                backgroundColor: getColorForId(id, i) + '20',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }));
+
+            const ch4Datasets = ids.map((id, i) => ({
+                label: id,
+                data: grouped[id].map(row => ({
+                    x: row.date,
+                    y: row.ch4
+                })),
+                borderColor: getColorForId(id, i),
+                backgroundColor: getColorForId(id, i) + '20',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }));
+
+            const o2Datasets = ids.map((id, i) => ({
+                label: id,
+                data: grouped[id].map(row => ({
+                    x: row.date,
+                    y: row.o2
+                })),
+                borderColor: getColorForId(id, i),
+                backgroundColor: getColorForId(id, i) + '20',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }));
+
+            const flowDatasets = ids.map((id, i) => ({
+                label: id,
+                data: grouped[id].map(row => ({
+                    x: row.date,
+                    y: row.internalflow
+                })),
+                borderColor: getColorForId(id, i),
+                backgroundColor: getColorForId(id, i) + '20',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }));
+
+            const commonOptions = {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month',
+                            tooltipFormat: 'dd/MM/yyyy'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: ''
+                        }
+                    }
+                }
+            };
+
+            const co2Ctx = document.getElementById('co2Chart').getContext('2d');
+            const co2Options = {
+                ...commonOptions
+            };
+            co2Options.scales.y.title.text = 'CO2 Reading';
+            co2Chart = new Chart(co2Ctx, {
+                type: 'line',
+                data: {
+                    datasets: co2Datasets
+                },
+                options: co2Options
+            });
+
+            const ch4Ctx = document.getElementById('ch4Chart').getContext('2d');
+            const ch4Options = {
+                ...commonOptions
+            };
+            ch4Options.scales.y.title.text = 'CH4 Reading';
+            ch4Chart = new Chart(ch4Ctx, {
+                type: 'line',
+                data: {
+                    datasets: ch4Datasets
+                },
+                options: ch4Options
+            });
+
+            const o2Ctx = document.getElementById('o2Chart').getContext('2d');
+            const o2Options = {
+                ...commonOptions
+            };
+            o2Options.scales.y.title.text = 'O2 Reading';
+            o2Chart = new Chart(o2Ctx, {
+                type: 'line',
+                data: {
+                    datasets: o2Datasets
+                },
+                options: o2Options
+            });
+
+            const flowCtx = document.getElementById('flowChart').getContext('2d');
+            const flowOptions = {
+                ...commonOptions
+            };
+            flowOptions.scales.y.title.text = 'Internal Flow Reading';
+            flowChart = new Chart(flowCtx, {
+                type: 'line',
+                data: {
+                    datasets: flowDatasets
+                },
+                options: flowOptions
+            });
+        }
+
+        function saveChartAsPNG(chartId) {
+            let chart;
+            let filename;
+
+            switch (chartId) {
+                case 'co2Chart':
+                    chart = co2Chart;
+                    filename = 'co2_chart.png';
+                    break;
+                case 'ch4Chart':
+                    chart = ch4Chart;
+                    filename = 'ch4_chart.png';
+                    break;
+                case 'o2Chart':
+                    chart = o2Chart;
+                    filename = 'o2_chart.png';
+                    break;
+                case 'flowChart':
+                    chart = flowChart;
+                    filename = 'flow_chart.png';
+                    break;
+            }
+
+            if (chart) {
+                const canvas = chart.canvas;
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+        }
+
+        function copyChartData(chartType) {
+            if (parsedData.length === 0) {
+                showStatus('No data to copy!', 'error');
+                return;
+            }
+
+            const grouped = {};
+            parsedData.forEach(row => {
+                if (!grouped[row.id]) grouped[row.id] = [];
+                grouped[row.id].push(row);
+            });
+
+            let csvContent = `ID,Date,${chartType.toUpperCase()}\n`;
+
+            Object.keys(grouped).forEach(id => {
+                grouped[id].forEach(row => {
+                    const value = row[chartType];
+                    csvContent += `${id},${row.date.toLocaleDateString('en-GB')},${value}\n`;
+                });
+            });
+
+            navigator.clipboard.writeText(csvContent).then(() => {
+                showStatus(`${chartType.toUpperCase()} chart data copied to clipboard!`, 'success');
+            }).catch(err => {
+                showStatus('Failed to copy data to clipboard', 'error');
+            });
+        }
+
+        function createEmptyChart(canvasId, message) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: message,
+                        data: [],
+                        borderColor: '#ddd',
+                        backgroundColor: 'rgba(221, 221, 221, 0.1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: canvasId === 'co2Chart' ? 'CO2 Reading' : canvasId === 'ch4Chart' ? 'CH4 Reading' : canvasId === 'o2Chart' ? 'O2 Reading' : 'Internal Flow Reading'
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (canvasId === 'co2Chart') co2Chart = chart;
+            else if (canvasId === 'ch4Chart') ch4Chart = chart;
+            else if (canvasId === 'o2Chart') o2Chart = chart;
+            else if (canvasId === 'flowChart') flowChart = chart;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize empty charts
+            createEmptyChart('co2Chart', 'No data loaded');
+            createEmptyChart('ch4Chart', 'No data loaded');
+            createEmptyChart('o2Chart', 'No data loaded');
+            createEmptyChart('flowChart', 'No data loaded');
+
+            console.log('🔧 Gas Analysis Dashboard loaded with axis controls and smoothing toggle');
+            console.log('✅ Each chart now has X/Y min/max controls');
+            console.log('✅ Reset to Auto and Fit to Data buttons available');
+            console.log('✅ Smooth/Sharp line toggle for all time series charts');
+            console.log('✅ Grid lines show 10%, 20%, 30%... 90% composition in ternary plots');
+        });
+    </script>
+</body>
+
+</html>

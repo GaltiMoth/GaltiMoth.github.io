@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated Borehole Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .input-section, .map-section { background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        .cross-section { grid-column: 1 / -1; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        textarea { width: 100%; height: 300px; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-family: monospace; font-size: 12px; resize: vertical; }
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 10px 5px 0 0; transition: transform 0.2s; }
+        button:hover { transform: translateY(-2px); }
+        button.export-btn { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+        button.overlay-btn { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+        button.overlay-btn.active { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+        #map { height: 400px; width: 100%; border-radius: 5px; border: 2px solid #ddd; }
+        #crossSection { width: 100%; height: 500px; border: 2px solid #ddd; border-radius: 5px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd; }
+        .legend-color { width: 20px; height: 20px; border-radius: 3px; cursor: pointer; border: 1px solid #ccc; }
+        .info-panel { background: white; padding: 15px; border-radius: 5px; margin-top: 10px; border: 1px solid #ddd; }
+        .controls { display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+        .controls-3d { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; background: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-group label { font-weight: bold; color: #333; font-size: 12px; }
+        select { padding: 5px; border: 1px solid #ddd; border-radius: 3px; }
+        input[type="range"] { width: 80px; }
+        .borehole-label { background: rgba(255, 255, 255, 0.9); padding: 2px 6px; border-radius: 3px; font-size: 12px; font-weight: bold; color: #333; border: 1px solid #ccc; pointer-events: none; }
+        .color-picker { width: 20px; height: 20px; border: none; border-radius: 3px; cursor: pointer; }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+        #exportCanvas { display: none; }
+        .three-container { position: relative; height: 600px; width: 100%; border: 2px solid #ddd; border-radius: 5px; overflow: hidden; background: #f8f9fa; }
+        .three-overlay { position: absolute; top: 10px; left: 10px; z-index: 100; background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 5px; font-size: 12px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .navigation-controls { position: absolute; bottom: 10px; right: 10px; z-index: 100; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 2px; width: 80px; height: 80px; }
+        .nav-btn { background: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #333; transition: background-color 0.2s; user-select: none; }
+        .nav-btn:hover { background: rgba(255, 255, 255, 1); border-color: #999; }
+        .nav-btn:active { background: rgba(200, 200, 200, 0.9); }
+        .nav-btn.center { background: rgba(100, 150, 255, 0.9); color: white; border-color: #4a90e2; }
+        .nav-btn.center:hover { background: rgba(100, 150, 255, 1); }
+        .soil-properties-panel { background: #f0f8ff; padding: 20px; border: 2px solid #4682b4; border-radius: 8px; margin: 10px 0; display: none; }
+        .calculated-props { background: #f0f8ff; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; }
+        .overlay-controls { position: absolute; top: 10px; right: 100px; z-index: 100; display: flex; gap: 10px; background: rgba(255, 255, 255, 0.95); padding: 8px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .opacity-control { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .opacity-control input[type="range"] { width: 60px; }
+        .png-uploader-section { grid-column: 1 / -1; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .uploader-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .toggle-btn { background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .custom-overlay-panel { display: none; background: white; border: 1px solid #ddd; border-radius: 5px; padding: 20px; }
+        .file-upload-section, .calibration-section, .image-preview-section { margin-bottom: 20px; }
+        .action-buttons { display: flex; gap: 10px; }
+        .btn-success { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .btn-danger { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .btn-secondary { background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .help-text { font-size: 12px; color: #666; margin-top: 5px; }
+        #imagePreview { max-width: 100%; max-height: 300px; border: 1px solid #ccc; cursor: crosshair; display: none; }
+        .calib-grid { display: grid; grid-template-columns: 80px 80px 120px 100px 100px; gap: 8px; align-items: center; margin: 8px 0; }
+        .calib-grid input, .calib-grid select { padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; }
+        .calib-point { margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+		.horizon-manager { grid-column: 1 / -1; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; }
+		.horizon-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+		.horizon-item { display: grid; grid-template-columns: 30px 150px 80px 80px 80px 80px 100px 100px 1fr auto; gap: 8px; align-items: center; padding: 10px; background: white; border-radius: 5px; border: 1px solid #ddd; font-size: 12px; }
+		.horizon-item input[type="color"] { width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; }
+		.horizon-item input[type="text"], .horizon-item input[type="number"], .horizon-item select { padding: 5px; border: 1px solid #ddd; border-radius: 3px; }
+		.horizon-item button { padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; }
+		.btn-remove { background: #dc3545; color: white; }
+		.line-manager { grid-column: 1 / -1; background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 20px; border: 2px solid #ffc107; }
+		.line-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+		.line-item { display: grid; grid-template-columns: 30px 150px 1fr 80px 80px auto; gap: 8px; align-items: center; padding: 10px; background: white; border-radius: 5px; border: 1px solid #ddd; font-size: 12px; }
+		.line-item.active { border: 2px solid #28a745; background: #f0fff0; }
+		.line-item input[type="color"] { width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; }
+		.line-item input[type="text"] { padding: 5px; border: 1px solid #ddd; border-radius: 3px; }
+		.line-item button { padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; }
+		.btn-activate { background: #28a745; color: white; }
+		.borehole-manager { grid-column: 1 / -1; background: #e7f3ff; padding: 20px; border-radius: 8px; margin-top: 20px; border: 2px solid #2196F3; }
+		.borehole-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
+		.borehole-item { display: grid; grid-template-columns: 30px 100px 150px 1fr auto; gap: 8px; align-items: center; padding: 8px; background: white; border-radius: 5px; border: 1px solid #ddd; font-size: 12px; }
+		.borehole-item.hidden { opacity: 0.5; background: #f5f5f5; }
+		.borehole-item input[type="text"] { padding: 5px; border: 1px solid #ddd; border-radius: 3px; width: 100%; }
+		.borehole-info { font-size: 11px; color: #666; }
+		.btn-reset { background: #ffc107; color: black; }
+		.soil-name-manager { grid-column: 1 / -1; background: #f3e5f5; padding: 20px; border-radius: 8px; margin-top: 20px; border: 2px solid #9c27b0; }
+		.soil-name-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; max-height: 250px; overflow-y: auto; }
+		.soil-name-item { display: grid; grid-template-columns: 80px 1fr 100px auto; gap: 8px; align-items: center; padding: 8px; background: white; border-radius: 5px; border: 1px solid #ddd; font-size: 12px; }
+		.soil-name-item input[type="text"] { padding: 5px; border: 1px solid #ddd; border-radius: 3px; width: 100%; }
+		.soil-code { font-weight: bold; font-family: monospace; background: #f5f5f5; padding: 4px 8px; border-radius: 3px; }
+		.soil-usage { font-size: 11px; color: #666; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Integrated Borehole Analysis</h1>
+            <p>Upload borehole data and analyze geological formations</p>
+        </div>
+        <div class="content">
+            <div class="input-section">
+                <div class="section-title">Data Input</div>
+                <textarea id="dataInput" placeholder="Paste your borehole data here...
+Format: test Easting Northing Groundlevel depth depthToGW U1name U1depth U2name U2depth U3name U3depth
+
+Example:
+BH01 401887.3 6467794 9.05 10 10 GC 0.6 - - - -
+BH02 401963.1 6467679 10.38 10 10 GC 0.7 SC 1.9 z 2.6"></textarea>
+                <button onclick="parseData()">Parse Data</button>
+                <button onclick="loadSampleData()">Load Sample Data</button>
+                <button onclick="clearData()">Clear</button>
+                <div class="info-panel"><div id="dataInfo">No data loaded</div></div>
+            </div>
+            <div class="map-section">
+                <div class="section-title">Map View</div>
+                <div id="map"></div>
+                <div class="controls">
+                    <label><input type="checkbox" id="showBestFitLine" checked onchange="toggleBestFitLine()">Show Best Fit Line</label>
+                </div>
+                <div class="info-panel"><div id="mapInfo">Click on boreholes to see details</div></div>
+            </div>
+        </div>
+        <div class="line-manager">
+			<div class="section-title">Cross-Section Lines Manager</div>
+			<div style="display: flex; gap: 10px; margin-bottom: 15px;">
+				<button onclick="addNewLine()">Add New Line</button>
+				<button onclick="startDrawingMode()" id="drawModeBtn">Draw Line on Map</button>
+				<button onclick="deleteAllLines()" style="background: #dc3545;">Delete All Lines</button>
+			</div>
+			<div class="line-list" id="lineList"></div>
+			<div id="drawingInstructions" style="display: none; background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; border: 2px solid #ffc107;">
+				<strong>Drawing Mode:</strong> Click map twice to create line.
+				<button onclick="cancelDrawingMode()" style="background: #dc3545; margin-left: 10px;">Cancel</button>
+			</div>
+		</div>
+        <div class="borehole-manager">
+			<div class="section-title">Borehole Display Manager</div>
+			<div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+				<button onclick="showAllBoreholes()">Show All</button>
+				<button onclick="hideAllBoreholes()">Hide All</button>
+				<button onclick="resetAllBoreholeLabelss()" class="btn-reset">Reset All Labels</button>
+				<span style="margin-left: auto; font-size: 12px; color: #666;">
+					<span id="visibleBoreholeCount">0</span> of <span id="totalBoreholeCount">0</span> visible
+				</span>
+			</div>
+			<div class="borehole-list" id="boreholeList"></div>
+		</div>
+        <div class="soil-name-manager">
+			<div class="section-title">Soil Type Display Names</div>
+			<div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+				<button onclick="resetAllSoilNames()" class="btn-reset">Reset All to Defaults</button>
+				<span style="margin-left: auto; font-size: 12px; color: #666;">
+					Customize how soil types are labeled in cross-sections and exports
+				</span>
+			</div>
+			<div class="soil-name-list" id="soilNameList"></div>
+		</div>
+
+
+        <div class="cross-section">
+            <div class="section-title">Cross Section</div>
+            <div class="controls">
+                <label><input type="checkbox" id="showUnitLabels" checked onchange="generateCrossSection()">Show Unit Labels</label>
+                <button onclick="generateCrossSection()">Regenerate</button>
+                <button class="export-btn" onclick="exportToPNG()">Export to PNG</button>
+            </div>
+            <canvas id="crossSection"></canvas>
+            <div class="legend" id="legend"></div>
+			<div class="horizon-manager">
+				<div class="section-title">Horizontal Reference Lines/Planes</div>
+				<div style="display: flex; gap: 10px; margin-bottom: 15px;">
+					<button onclick="addHorizon()">Add New Horizon</button>
+					<button onclick="clearAllHorizons()" style="background: #dc3545;">Clear All</button>
+				</div>
+				<div class="horizon-list" id="horizonList"></div>
+			</div>
+            <div class="soil-properties-panel" id="soilPropertiesPanel">
+                <h4 id="soilPropertiesTitle">Edit Soil Properties</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div><label>SPT N Value:</label><input type="number" id="soilSptN" min="1" max="100" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                    <div><label>Density (kg/m³):</label><input type="number" id="soilDensity" min="1000" max="2500" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                    <div><label>Friction Angle (°):</label><input type="number" id="soilFrictionAngle" min="15" max="50" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                    <div><label>Cohesion (kPa):</label><input type="number" id="soilCohesion" min="0" max="200" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                    <div><label>Elastic Modulus (MPa):</label><input type="number" id="soilElasticModulus" min="5" max="500" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                    <div><label>Poisson's Ratio:</label><input type="number" id="soilPoissonRatio" min="0.1" max="0.49" step="0.01" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                </div>
+                <div style="margin-bottom: 15px;"><label>Description:</label><input type="text" id="soilDescription" placeholder="e.g., Dense Silty Sand" style="width: 100%; padding: 5px; margin-top: 3px;"></div>
+                <div class="calculated-props">
+                    <h5>Calculated Properties:</h5>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; color: #666;">
+                        <div>Shear Modulus: <span id="calcShearModulus">--</span> MPa</div>
+                        <div>Dynamic E-Mod: <span id="calcDynamicModulus">--</span> MPa</div>
+                        <div>At-rest K₀: <span id="calcK0">--</span></div>
+                        <div>Active Kₐ: <span id="calcKa">--</span></div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button onclick="saveSoilProperties()" style="background: #28a745; color: white; padding: 8px 16px; margin-right: 10px; border: none; border-radius: 4px;">Save Properties</button>
+                    <button onclick="cancelSoilEdit()" style="background: #6c757d; color: white; padding: 8px 16px; margin-right: 10px; border: none; border-radius: 4px;">Cancel</button>
+                    <button onclick="resetToDefaults()" style="background: #ffc107; color: black; padding: 8px 16px; border: none; border-radius: 4px;">Reset to Defaults</button>
+                </div>
+            </div>
+        </div>
+        <div class="cross-section">
+            <div class="section-title">3D Geological Model</div>
+            <div class="controls-3d">
+                <div class="control-group">
+                    <label>Vertical Exaggeration:</label>
+                    <input type="range" id="verticalExaggeration" min="1" max="20" value="5" onchange="update3DView()">
+                    <span id="verticalExagValue">5x</span>
+                </div>
+                <button onclick="reset3DView()">Reset View</button>
+                <button onclick="animate3DView()">Auto Rotate</button>
+                <button class="overlay-btn" id="toggleMapOverlay" onclick="toggleMapOverlay()">Show Map Overlay</button>
+                <button class="overlay-btn" onclick="refreshMapOverlay()">Refresh Overlay</button>
+            </div>
+            <div class="three-container">
+                <div id="threeContainer"></div>
+                <div class="three-overlay">
+                    <strong>3D Controls:</strong><br>
+                    • Pinch/Wheel: Zoom<br>
+                    • Single touch + drag: Rotate<br>
+                    • Two finger drag: Pan<br>
+                    • Double-tap: Reset view
+                </div>
+                <div class="overlay-controls">
+                    <div class="opacity-control">
+                        <label>Overlay Opacity:</label>
+                        <input type="range" id="overlayOpacity" min="0" max="100" value="60" onchange="updateOverlayOpacity()">
+                        <span id="opacityValue">60%</span>
+                    </div>
+                </div>
+                <div class="navigation-controls">
+                    <div class="nav-btn" onclick="snapToView('northwest')" title="Northwest">NW</div>
+                    <div class="nav-btn" onclick="snapToView('north')" title="North">N</div>
+                    <div class="nav-btn" onclick="snapToView('northeast')" title="Northeast">NE</div>
+                    <div class="nav-btn" onclick="snapToView('west')" title="West">W</div>
+                    <div class="nav-btn center" onclick="reset3DView()" title="Reset View">⌂</div>
+                    <div class="nav-btn" onclick="snapToView('east')" title="East">E</div>
+                    <div class="nav-btn" onclick="snapToView('southwest')" title="Southwest">SW</div>
+                    <div class="nav-btn" onclick="snapToView('south')" title="South">S</div>
+                    <div class="nav-btn" onclick="snapToView('southeast')" title="Southeast">SE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <canvas id="exportCanvas" style="display: none;"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let boreholeData = [], soilProperties = {}, soilDisplayNames = {}, map = null, markers = [], bestFitLine = null, editingSoilType = null;
+        let mapOverlayMesh = null, mapOverlayTexture = null, showMapOverlay = false, mapOverlayCanvas = null;
+        let scene, camera, renderer, animationId = null, isAutoRotating = false;
+        let horizons = [];
+		let horizonCounter = 0;
+		
+		// Cross-section lines management
+		let crossSectionLines = [];
+		let activeCrossSectionLineId = null;
+		let lineCounter = 0;
+		let isDrawingMode = false;
+		let drawingStartPoint = null;
+		let tempDrawingLine = null;
+		let linePolylines = {};
+		
+        const soilColors = {
+            'L': '#FAFA08', 'MD': '#ADAD11', 'D': '#7D7D09', 'VD': '#E84848', 'FILL': '#FF00EA',
+            'GC': '#8B4513', 'SC': '#DEB887', 'OH': '#2F4F4F', 'CH': '#696969', 'MH': '#A0522D',
+            'SP': '#F4A460', 'SM': '#CD853F', 'SM-SC': '#D2691E', 'z': '#4682B4', '-': '#FFFFFF'
+        };
+        
+        function utmToLatLng(easting, northing, zone, hemisphere) {
+            const a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996;
+            const e = Math.sqrt(f * (2 - f)), e1sq = e * e / (1 - e * e);
+            const x = easting - 500000, y = northing - 10000000;
+            const lonOrigin = 117 * Math.PI / 180;
+            const M = y / k0;
+            const mu = M / (a * (1 - e * e / 4 - 3 * e * e * e * e / 64));
+            const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+            const fp = mu + (3 * e1 / 2) * Math.sin(2 * mu) + (21 * e1 * e1 / 16) * Math.sin(4 * mu);
+            const N1 = a / Math.sqrt(1 - e * e * Math.sin(fp) * Math.sin(fp));
+            const D = x / (N1 * k0);
+            const lat = fp - (N1 * Math.tan(fp) / a) * (D * D / 2);
+            const lon = lonOrigin + D / Math.cos(fp);
+            return { lat: lat * 180 / Math.PI, lng: lon * 180 / Math.PI };
+        }
+        
+        function latLngToUTM(lat, lng) {
+            const a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996;
+            const latRad = lat * Math.PI / 180, lonRad = lng * Math.PI / 180;
+            const lonOrigin = 117 * Math.PI / 180;
+            const e = Math.sqrt(f * (2 - f));
+            const N = a / Math.sqrt(1 - e * e * Math.sin(latRad) * Math.sin(latRad));
+            const T = Math.tan(latRad) * Math.tan(latRad);
+            const C = (e * e / (1 - e * e)) * Math.cos(latRad) * Math.cos(latRad);
+            const A = (lonRad - lonOrigin) * Math.cos(latRad);
+            const M = a * ((1 - e * e / 4 - 3 * e * e * e * e / 64) * latRad -
+                (3 * e * e / 8 + 3 * e * e * e * e / 32) * Math.sin(2 * latRad) +
+                (15 * e * e * e * e / 256) * Math.sin(4 * latRad));
+            const easting = k0 * N * (A + (1 - T + C) * A * A * A / 6) + 500000;
+            const northing = k0 * (M + N * Math.tan(latRad) * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)) + 10000000;
+            return { easting, northing };
+        }
+        
+        function getDefaultSoilProperties(soilType) {
+            const defaults = {
+                'L': { sptN: 8, density: 1700, frictionAngle: 32, cohesion: 0, elasticModulus: 10, poissonRatio: 0.30, description: 'Loose Sand/Soil' },
+                'MD': { sptN: 20, density: 1800, frictionAngle: 34, cohesion: 0, elasticModulus: 50, poissonRatio: 0.25, description: 'Medium Dense Sand/Soil' },
+                'D': { sptN: 40, density: 1900, frictionAngle: 36, cohesion: 0, elasticModulus: 75, poissonRatio: 0.20, description: 'Dense Sand/Soil' },
+                'GC': { sptN: 15, density: 1850, frictionAngle: 34, cohesion: 5, elasticModulus: 45, poissonRatio: 0.25, description: 'Clayey Gravel' },
+                'SC': { sptN: 12, density: 1700, frictionAngle: 32, cohesion: 3, elasticModulus: 36, poissonRatio: 0.25, description: 'Clayey Sand' },
+                '-': { sptN: 10, density: 1700, frictionAngle: 30, cohesion: 0, elasticModulus: 30, poissonRatio: 0.25, description: 'No Data' }
+            };
+            return defaults[soilType] || defaults['-'];
+        }        
+        function createBestFitLine() {
+            if (boreholeData.length < 2) return;
+            const n = boreholeData.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            boreholeData.forEach(bh => { sumX += bh.easting; sumY += bh.northing; sumXY += bh.easting * bh.northing; sumX2 += bh.easting * bh.easting; });
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX), intercept = (sumY - slope * sumX) / n;
+            const eastings = boreholeData.map(bh => bh.easting), northings = boreholeData.map(bh => bh.northing);
+            const padding = Math.max(Math.max(...eastings) - Math.min(...eastings), Math.max(...northings) - Math.min(...northings)) * 0.2;
+            const startEasting = Math.min(...eastings) - padding, endEasting = Math.max(...eastings) + padding;
+            const startNorthing = slope * startEasting + intercept, endNorthing = slope * endEasting + intercept;
+            const startLatLng = utmToLatLng(startEasting, startNorthing, 50, 'S'), endLatLng = utmToLatLng(endEasting, endNorthing, 50, 'S');
+            lineCounter++;
+            crossSectionLines.push({
+                id: lineCounter, name: 'Best Fit Line',
+                startLat: startLatLng.lat, startLng: startLatLng.lng,
+                endLat: endLatLng.lat, endLng: endLatLng.lng,
+                startEasting: startEasting, startNorthing: startNorthing,
+                endEasting: endEasting, endNorthing: endNorthing,
+                color: '#ff6600', visible: true
+            });
+            activeCrossSectionLineId = lineCounter;
+            updateLineList();
+        }
+        
+        function handleMapClick(e) {
+            if (!isDrawingMode) return;
+            if (!drawingStartPoint) {
+                drawingStartPoint = e.latlng;
+                const marker = L.circleMarker(drawingStartPoint, {
+                    radius: 6, fillColor: '#00ff00', color: '#ffffff', weight: 2, opacity: 1, fillOpacity: 0.8
+                }).addTo(map);
+                tempDrawingLine = { startMarker: marker };
+            } else {
+                const endPoint = e.latlng;
+                const startUTM = latLngToUTM(drawingStartPoint.lat, drawingStartPoint.lng);
+                const endUTM = latLngToUTM(endPoint.lat, endPoint.lng);
+                lineCounter++;
+                crossSectionLines.push({
+                    id: lineCounter, name: `Line ${lineCounter}`,
+                    startLat: drawingStartPoint.lat, startLng: drawingStartPoint.lng,
+                    endLat: endPoint.lat, endLng: endPoint.lng,
+                    startEasting: startUTM.easting, startNorthing: startUTM.northing,
+                    endEasting: endUTM.easting, endNorthing: endUTM.northing,
+                    color: '#' + Math.floor(Math.random()*16777215).toString(16),
+                    visible: true
+                });
+                activeCrossSectionLineId = lineCounter;
+                if (tempDrawingLine && tempDrawingLine.startMarker) map.removeLayer(tempDrawingLine.startMarker);
+                drawingStartPoint = null; tempDrawingLine = null;
+                cancelDrawingMode();
+                updateLineList(); plotCrossSectionLines(); generateCrossSection();
+            }
+        }
+        
+        function startDrawingMode() {
+            isDrawingMode = true; drawingStartPoint = null;
+            document.getElementById('drawingInstructions').style.display = 'block';
+            document.getElementById('drawModeBtn').style.background = '#28a745';
+            document.getElementById('drawModeBtn').textContent = 'Drawing...';
+        }
+        
+        function cancelDrawingMode() {
+            isDrawingMode = false; drawingStartPoint = null;
+            if (tempDrawingLine && tempDrawingLine.startMarker) map.removeLayer(tempDrawingLine.startMarker);
+            tempDrawingLine = null;
+            document.getElementById('drawingInstructions').style.display = 'none';
+            document.getElementById('drawModeBtn').style.background = '';
+            document.getElementById('drawModeBtn').textContent = 'Draw Line on Map';
+        }
+        
+        function addNewLine() {
+            if (boreholeData.length < 2) { alert('Load borehole data first'); return; }
+            const eastings = boreholeData.map(bh => bh.easting), northings = boreholeData.map(bh => bh.northing);
+            const centerEasting = (Math.min(...eastings) + Math.max(...eastings)) / 2;
+            const centerNorthing = (Math.min(...northings) + Math.max(...northings)) / 2;
+            const extent = Math.max(Math.max(...eastings) - Math.min(...eastings), Math.max(...northings) - Math.min(...northings));
+            const startEasting = centerEasting - extent / 3, endEasting = centerEasting + extent / 3;
+            const startLatLng = utmToLatLng(startEasting, centerNorthing, 50, 'S');
+            const endLatLng = utmToLatLng(endEasting, centerNorthing, 50, 'S');
+            lineCounter++;
+            crossSectionLines.push({
+                id: lineCounter, name: `Line ${lineCounter}`,
+                startLat: startLatLng.lat, startLng: startLatLng.lng,
+                endLat: endLatLng.lat, endLng: endLatLng.lng,
+                startEasting: startEasting, startNorthing: centerNorthing,
+                endEasting: endEasting, endNorthing: centerNorthing,
+                color: '#' + Math.floor(Math.random()*16777215).toString(16),
+                visible: true
+            });
+            activeCrossSectionLineId = lineCounter;
+            updateLineList(); plotCrossSectionLines(); generateCrossSection();
+        }
+        
+        function deleteLine(lineId) {
+            crossSectionLines = crossSectionLines.filter(line => line.id !== lineId);
+            if (linePolylines[lineId]) { map.removeLayer(linePolylines[lineId]); delete linePolylines[lineId]; }
+            if (activeCrossSectionLineId === lineId) {
+                activeCrossSectionLineId = crossSectionLines.length > 0 ? crossSectionLines[0].id : null;
+                if (activeCrossSectionLineId) generateCrossSection();
+            }
+            updateLineList();
+        }
+        
+        function deleteAllLines() {
+            if (crossSectionLines.length > 0 && confirm('Delete all lines?')) {
+                crossSectionLines = []; activeCrossSectionLineId = null; lineCounter = 0;
+                Object.values(linePolylines).forEach(p => map.removeLayer(p));
+                linePolylines = {}; updateLineList();
+                const canvas = document.getElementById('crossSection'), ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function setActiveLine(lineId) {
+            activeCrossSectionLineId = lineId;
+            updateLineList(); generateCrossSection();
+        }
+        
+        function updateLineVisibility(lineId, visible) {
+            const line = crossSectionLines.find(l => l.id === lineId);
+            if (line) { line.visible = visible; plotCrossSectionLines(); }
+        }
+        
+        function updateLineName(lineId, name) {
+            const line = crossSectionLines.find(l => l.id === lineId);
+            if (line) { line.name = name; updateLineList(); }
+        }
+        
+        function updateLineColor(lineId, color) {
+            const line = crossSectionLines.find(l => l.id === lineId);
+            if (line) { line.color = color; plotCrossSectionLines(); }
+        }
+        
+        function updateLineList() {
+            const list = document.getElementById('lineList');
+            list.innerHTML = '';
+            if (crossSectionLines.length === 0) {
+                list.innerHTML = '<div style="color: #666; font-style: italic;">No lines. Click "Add New Line" or "Draw Line on Map".</div>';
+                return;
+            }
+            crossSectionLines.forEach(line => {
+                const item = document.createElement('div');
+                item.className = 'line-item';
+                if (line.id === activeCrossSectionLineId) item.classList.add('active');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox'; checkbox.checked = line.visible;
+                checkbox.onchange = (e) => updateLineVisibility(line.id, e.target.checked);
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text'; nameInput.value = line.name;
+                nameInput.onchange = (e) => updateLineName(line.id, e.target.value);
+                const length = Math.sqrt(Math.pow(line.endEasting - line.startEasting, 2) + Math.pow(line.endNorthing - line.startNorthing, 2));
+                const angle = Math.atan2(line.endNorthing - line.startNorthing, line.endEasting - line.startEasting) * 180 / Math.PI;
+                const infoText = document.createElement('span');
+                infoText.style.fontSize = '11px'; infoText.style.color = '#666';
+                infoText.textContent = `${length.toFixed(0)}m, ${angle.toFixed(0)}°`;
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color'; colorInput.value = line.color;
+                colorInput.onchange = (e) => updateLineColor(line.id, e.target.value);
+                const activateBtn = document.createElement('button');
+                activateBtn.className = 'btn-activate';
+                activateBtn.textContent = line.id === activeCrossSectionLineId ? 'Active' : 'Activate';
+                activateBtn.disabled = line.id === activeCrossSectionLineId;
+                activateBtn.onclick = () => setActiveLine(line.id);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-remove'; deleteBtn.textContent = '×';
+                deleteBtn.onclick = () => deleteLine(line.id);
+                item.appendChild(checkbox); item.appendChild(nameInput); item.appendChild(infoText);
+                item.appendChild(colorInput); item.appendChild(activateBtn); item.appendChild(deleteBtn);
+                list.appendChild(item);
+            });
+        }
+        
+        function plotCrossSectionLines() {
+            if (!map) return;
+            Object.values(linePolylines).forEach(p => map.removeLayer(p));
+            linePolylines = {};
+            crossSectionLines.forEach(line => {
+                if (!line.visible) return;
+                const isActive = line.id === activeCrossSectionLineId;
+                const polyline = L.polyline([[line.startLat, line.startLng], [line.endLat, line.endLng]], {
+                    color: line.color, weight: isActive ? 4 : 3,
+                    opacity: isActive ? 1.0 : 0.6,
+                    dashArray: isActive ? null : '10, 5'
+                }).addTo(map);
+                linePolylines[line.id] = polyline;
+            });
+        }
+        
+        function sortBoreholesByLine(line) {
+            const dx = line.endEasting - line.startEasting, dy = line.endNorthing - line.startNorthing;
+            const lineLength = Math.sqrt(dx * dx + dy * dy);
+            const unitDirection = { x: dx / lineLength, y: dy / lineLength };
+            boreholeData.forEach(bh => {
+                const toBorehole = { x: bh.easting - line.startEasting, y: bh.northing - line.startNorthing };
+                bh.distanceAlongLine = toBorehole.x * unitDirection.x + toBorehole.y * unitDirection.y;
+                bh.distanceFromLine = Math.abs(toBorehole.x * unitDirection.y - toBorehole.y * unitDirection.x);
+            });
+            return [...boreholeData].sort((a, b) => a.distanceAlongLine - b.distanceAlongLine);
+        }        
+        function updateBoreholeList() {
+            const list = document.getElementById('boreholeList');
+            list.innerHTML = '';
+            if (boreholeData.length === 0) {
+                list.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px;">No boreholes loaded. Load data to manage boreholes.</div>';
+                document.getElementById('visibleBoreholeCount').textContent = '0';
+                document.getElementById('totalBoreholeCount').textContent = '0';
+                return;
+            }
+            
+            let visibleCount = 0;
+            boreholeData.forEach(bh => {
+                if (bh.visible) visibleCount++;
+                
+                const item = document.createElement('div');
+                item.className = 'borehole-item';
+                if (!bh.visible) item.classList.add('hidden');
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = bh.visible;
+                checkbox.onchange = (e) => toggleBoreholeVisibility(bh.name, e.target.checked);
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = bh.name;
+                nameSpan.style.fontWeight = 'bold';
+                
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.value = bh.customLabel;
+                labelInput.placeholder = 'Display label';
+                labelInput.onchange = (e) => updateBoreholeLabel(bh.name, e.target.value);
+                
+                const infoSpan = document.createElement('span');
+                infoSpan.className = 'borehole-info';
+                infoSpan.textContent = `Ground: ${bh.groundLevel}m | Depth: ${bh.depth}m | GW: ${bh.depthToGW}m`;
+                
+                const resetBtn = document.createElement('button');
+                resetBtn.className = 'btn-reset';
+                resetBtn.textContent = 'Reset Label';
+                resetBtn.style.padding = '4px 8px';
+                resetBtn.style.fontSize = '11px';
+                resetBtn.onclick = () => resetBoreholeLabel(bh.name);
+                
+                item.appendChild(checkbox);
+                item.appendChild(nameSpan);
+                item.appendChild(labelInput);
+                item.appendChild(infoSpan);
+                item.appendChild(resetBtn);
+                
+                list.appendChild(item);
+            });
+            
+            document.getElementById('visibleBoreholeCount').textContent = visibleCount;
+            document.getElementById('totalBoreholeCount').textContent = boreholeData.length;
+        }
+        
+        function toggleBoreholeVisibility(boreholeName, visible) {
+            const bh = boreholeData.find(b => b.name === boreholeName);
+            if (bh) {
+                bh.visible = visible;
+                updateBoreholeList();
+                plotOnMap();
+                generateCrossSection();
+            }
+        }
+        
+        function updateBoreholeLabel(boreholeName, newLabel) {
+            const bh = boreholeData.find(b => b.name === boreholeName);
+            if (bh) {
+                bh.customLabel = newLabel.trim() || bh.name;
+                generateCrossSection();
+            }
+        }
+        
+        function resetBoreholeLabel(boreholeName) {
+            const bh = boreholeData.find(b => b.name === boreholeName);
+            if (bh) {
+                bh.customLabel = bh.name;
+                updateBoreholeList();
+                generateCrossSection();
+            }
+        }
+        
+        function resetAllBoreholeLabelss() {
+            boreholeData.forEach(bh => {
+                bh.customLabel = bh.name;
+            });
+            updateBoreholeList();
+            generateCrossSection();
+        }
+        
+        function showAllBoreholes() {
+            boreholeData.forEach(bh => {
+                bh.visible = true;
+            });
+            updateBoreholeList();
+            updateSoilNameList();
+            plotOnMap();
+            generateCrossSection();
+        }
+        
+        function hideAllBoreholes() {
+            if (confirm('Hide all boreholes? You can show them again individually or use "Show All".')) {
+                boreholeData.forEach(bh => {
+                    bh.visible = false;
+                });
+                updateBoreholeList();
+                plotOnMap();
+                generateCrossSection();
+            }
+        }        
+        function updateSoilNameList() {
+            const list = document.getElementById('soilNameList');
+            list.innerHTML = '';
+            
+            // Get all unique soil types from data
+            const usedSoils = new Set();
+            boreholeData.forEach(bh => {
+                bh.units.forEach(unit => {
+                    if (unit.name !== '-') usedSoils.add(unit.name);
+                });
+            });
+            
+            if (usedSoils.size === 0) {
+                list.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px;">No soil types found. Load data to manage soil names.</div>';
+                return;
+            }
+            
+            // Sort alphabetically
+            const sortedSoils = Array.from(usedSoils).sort();
+            
+            sortedSoils.forEach(soilCode => {
+                const item = document.createElement('div');
+                item.className = 'soil-name-item';
+                
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'soil-code';
+                codeSpan.textContent = soilCode;
+                
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.value = soilDisplayNames[soilCode] || soilCode;
+                nameInput.placeholder = `Display name for ${soilCode}`;
+                nameInput.onchange = (e) => updateSoilDisplayName(soilCode, e.target.value);
+                
+                // Count usage
+                let usageCount = 0;
+                boreholeData.forEach(bh => {
+                    bh.units.forEach(unit => {
+                        if (unit.name === soilCode) usageCount++;
+                    });
+                });
+                
+                const usageSpan = document.createElement('span');
+                usageSpan.className = 'soil-usage';
+                usageSpan.textContent = `Used ${usageCount}x`;
+                
+                const resetBtn = document.createElement('button');
+                resetBtn.className = 'btn-reset';
+                resetBtn.textContent = 'Reset';
+                resetBtn.style.padding = '4px 8px';
+                resetBtn.style.fontSize = '11px';
+                resetBtn.onclick = () => resetSoilName(soilCode);
+                
+                item.appendChild(codeSpan);
+                item.appendChild(nameInput);
+                item.appendChild(usageSpan);
+                item.appendChild(resetBtn);
+                
+                list.appendChild(item);
+            });
+        }
+        
+        function updateSoilDisplayName(soilCode, displayName) {
+            const trimmed = displayName.trim();
+            if (trimmed) {
+                soilDisplayNames[soilCode] = trimmed;
+            } else {
+                soilDisplayNames[soilCode] = soilCode;
+            }
+            generateCrossSection();
+            updateLegend();
+        }
+        
+        function resetSoilName(soilCode) {
+            delete soilDisplayNames[soilCode];
+            updateSoilNameList();
+            generateCrossSection();
+            updateLegend();
+        }
+        
+        function resetAllSoilNames() {
+            if (confirm('Reset all soil names to their original codes?')) {
+                soilDisplayNames = {};
+                updateSoilNameList();
+                generateCrossSection();
+                updateLegend();
+            }
+        }
+        
+        function getSoilDisplayName(soilCode) {
+            return soilDisplayNames[soilCode] || soilCode;
+        }
+
+
+
+        
+        function loadSampleData() {
+            document.getElementById('dataInput').value = `BH01 401887.3 6467794 9.05 10 10 GC 0.6 - - - -
+BH02 401963.1 6467679 10.38 10 10 GC 0.7 SC 1.9 - -
+BH03 402034.7 6467571 11.12 10 10 GC 0.8 SC 2.1 MH 3.5
+BH04 402106.3 6467463 11.85 10 10 SC 0.9 MH 2.8 CH 4.2
+BH05 402177.9 6467355 12.58 10 10 SC 1.0 MH 3.2 CH 4.8`;
+            parseData();
+        }
+        
+        function clearData() {
+            document.getElementById('dataInput').value = '';
+            boreholeData = [];
+            soilProperties = {};
+			soilDisplayNames = {};
+			horizons = [];
+			horizonCounter = 0;
+			crossSectionLines = [];
+			activeCrossSectionLineId = null;
+			lineCounter = 0;
+			linePolylines = {};
+			updateHorizonList();
+			updateLineList();
+			updateBoreholeList();
+			updateSoilNameList();
+			updateSoilNameList();
+            if (map) {
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                if (bestFitLine) { map.removeLayer(bestFitLine); bestFitLine = null; }
+            }
+            const canvas = document.getElementById('crossSection');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('legend').innerHTML = '';
+            document.getElementById('dataInfo').innerHTML = 'No data loaded';
+            document.getElementById('threeContainer').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">No data to display</div>';
+        }
+        
+        function parseData() {
+            const input = document.getElementById('dataInput').value.trim();
+            if (!input) { alert('Please enter some data first'); return; }
+            boreholeData = [];
+            const lines = input.split('\n');
+            for (let line of lines) {
+                if (line.trim()) {
+                    const parts = line.trim().split(/\s+/);
+                    if (parts.length >= 6) {
+                        const borehole = {
+                            name: parts[0], easting: parseFloat(parts[1]), northing: parseFloat(parts[2]),
+                            groundLevel: parseFloat(parts[3]), depth: parseFloat(parts[4]), depthToGW: parseFloat(parts[5]), units: [],
+                            visible: true, customLabel: parts[0]
+                        };
+                        for (let i = 6; i < parts.length; i += 2) {
+                            if (i + 1 < parts.length) {
+                                const unitName = parts[i], unitDepth = parseFloat(parts[i + 1]);
+                                if (unitName !== '-' && !isNaN(unitDepth)) {
+                                    borehole.units.push({ name: unitName, depth: unitDepth });
+                                }
+                            }
+                        }
+                        const latLng = utmToLatLng(borehole.easting, borehole.northing, 50, 'S');
+                        borehole.lat = latLng.lat; borehole.lng = latLng.lng;
+                        boreholeData.push(borehole);
+                    }
+                }
+            }
+            const allSoilTypes = new Set();
+            boreholeData.forEach(bh => { bh.units.forEach(unit => allSoilTypes.add(unit.name)); });
+            allSoilTypes.forEach(soilType => {
+                if (!soilProperties[soilType]) soilProperties[soilType] = getDefaultSoilProperties(soilType);
+            });
+            document.getElementById('dataInfo').innerHTML = `Loaded ${boreholeData.length} boreholes`;
+            if (crossSectionLines.length === 0) createBestFitLine();
+            updateBoreholeList();
+            updateSoilNameList();
+            plotOnMap();
+            render3D();
+            if (boreholeData.length >= 2) setTimeout(() => generateCrossSection(), 500);
+        }
+        
+        function initMap() {
+		map = L.map('map').setView([-31.95, 115.85], 16);
+		
+		const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '© OpenStreetMap contributors'
+		});
+		
+		const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+			attribution: 'Tiles © Esri'
+		});
+		
+		osmLayer.addTo(map);
+		
+		const baseLayers = {
+			"OpenStreetMap": osmLayer,
+			"Satellite": satelliteLayer
+		};
+		
+		L.control.layers(baseLayers).addTo(map);
+			map.on('click', handleMapClick);
+		}
+        
+        function plotOnMap() {
+            if (!map) return;
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            if (bestFitLine) { map.removeLayer(bestFitLine); bestFitLine = null; }
+            if (boreholeData.length === 0) return;
+            const group = new L.featureGroup();
+            boreholeData.forEach(bh => {
+                if (!bh.visible) return;
+                const marker = L.circleMarker([bh.lat, bh.lng], {
+                    radius: 8, fillColor: '#ff0000', color: '#ffffff', weight: 2, opacity: 1, fillOpacity: 0.8
+                }).addTo(map);
+                const label = L.divIcon({ className: 'borehole-label', html: bh.customLabel, iconSize: [50, 20], iconAnchor: [25, 30] });
+                const labelMarker = L.marker([bh.lat, bh.lng], { icon: label, interactive: false }).addTo(map);
+                let content = `<div><strong>${bh.name}</strong><br>Label: ${bh.customLabel}<br>Ground: ${bh.groundLevel}m<br>Depth: ${bh.depth}m<br>GW: ${bh.depthToGW}m</div>`;
+                marker.bindPopup(content);
+                markers.push(marker, labelMarker);
+                group.addLayer(marker);
+            });
+            if (document.getElementById('showBestFitLine').checked) addBestFitLine();
+			plotCrossSectionLines();
+            if (group.getLayers().length > 0) map.fitBounds(group.getBounds());
+        }
+        
+        function addBestFitLine() {
+            if (boreholeData.length < 2) return;
+            const n = boreholeData.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            boreholeData.forEach(bh => { sumX += bh.easting; sumY += bh.northing; sumXY += bh.easting * bh.northing; sumX2 += bh.easting * bh.easting; });
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX), intercept = (sumY - slope * sumX) / n;
+            const eastings = boreholeData.map(bh => bh.easting), northings = boreholeData.map(bh => bh.northing);
+            const padding = Math.max(Math.max(...eastings) - Math.min(...eastings), Math.max(...northings) - Math.min(...northings)) * 0.2;
+            const startEasting = Math.min(...eastings) - padding, endEasting = Math.max(...eastings) + padding;
+            const startNorthing = slope * startEasting + intercept, endNorthing = slope * endEasting + intercept;
+            const startLatLng = utmToLatLng(startEasting, startNorthing, 50, 'S'), endLatLng = utmToLatLng(endEasting, endNorthing, 50, 'S');
+            if (bestFitLine) map.removeLayer(bestFitLine);
+            bestFitLine = L.polyline([[startLatLng.lat, startLatLng.lng], [endLatLng.lat, endLatLng.lng]], {
+                color: '#ff6600', weight: 3, opacity: 0.8, dashArray: '10, 5'
+            }).addTo(map);
+        }
+        
+        function toggleBestFitLine() {
+            if (bestFitLine) { map.removeLayer(bestFitLine); bestFitLine = null; }
+            if (document.getElementById('showBestFitLine').checked) addBestFitLine();
+        }
+        
+        function generateCrossSection() {
+            if (boreholeData.length < 2) { alert('Need at least 2 boreholes'); return; }
+            if (!activeCrossSectionLineId) { alert('No active cross-section line'); return; }
+            const activeLine = crossSectionLines.find(l => l.id === activeCrossSectionLineId);
+            if (!activeLine) return;
+            const canvas = document.getElementById('crossSection');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const sortedBoreholes = sortBoreholesByLine(activeLine);
+            drawCrossSection(ctx, sortedBoreholes, activeLine);
+            updateLegend();
+            render3D();
+        }
+        
+        // Replaced by sortBoreholesByLine
+        /*function sortBoreholesByBestFit() {
+            if (boreholeData.length < 2) return boreholeData;
+            const n = boreholeData.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            boreholeData.forEach(bh => { sumX += bh.easting; sumY += bh.northing; sumXY += bh.easting * bh.northing; sumX2 += bh.easting * bh.easting; });
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX), intercept = (sumY - slope * sumX) / n;
+            const lineLength = Math.sqrt(1 + slope * slope);
+            const unitDirection = { x: 1 / lineLength, y: slope / lineLength };
+            const centroidX = sumX / n, centroidY = sumY / n;
+            boreholeData.forEach(bh => {
+                const toBorehole = { x: bh.easting - centroidX, y: bh.northing - centroidY };
+                bh.distanceAlongLine = toBorehole.x * unitDirection.x + toBorehole.y * unitDirection.y;
+            });
+            return [...boreholeData].sort((a, b) => a.distanceAlongLine - b.distanceAlongLine);
+        }*/
+        
+        
+        function drawCrossSection(ctx, boreholes, line) {
+            const padding = 50, leftMargin = 30;
+            const width = ctx.canvas.width - 2 * padding - leftMargin, height = ctx.canvas.height - 2 * padding;
+            const distances = boreholes.map(bh => bh.distanceAlongLine);
+            const minDistance = Math.min(...distances), maxDistance = Math.max(...distances);
+            const effectiveDistance = Math.max(maxDistance - minDistance, 100);
+            const minElevation = Math.min(...boreholes.map(bh => bh.groundLevel - bh.depth));
+            const maxElevation = Math.max(...boreholes.map(bh => bh.groundLevel));
+            const xScale = width / effectiveDistance, yScale = height / (maxElevation - minElevation);
+            
+            ctx.strokeStyle = 'rgba(150, 150, 150, 0.3)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            for (let elevation = Math.floor(minElevation); elevation <= Math.ceil(maxElevation); elevation += 1.0) {
+                const y = padding + height - (elevation - minElevation) * yScale;
+                if (y >= padding && y <= padding + height) {
+                    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(padding + leftMargin + width, y); ctx.stroke();
+                    ctx.setLineDash([]); ctx.fillStyle = 'rgba(100, 100, 100, 0.8)'; ctx.font = '10px Arial'; ctx.textAlign = 'right';
+                    ctx.fillText(elevation.toFixed(0) + 'm', padding - 5, y + 3); ctx.setLineDash([5, 5]);
+                }
+            }
+            ctx.setLineDash([]);
+            
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, padding + height);
+            ctx.lineTo(padding + leftMargin + width, padding + height); ctx.stroke();
+            
+            const showUnitLabels = document.getElementById('showUnitLabels').checked;
+            boreholes.forEach(bh => {
+                if (!bh.visible) return;
+                const x = padding + leftMargin + (bh.distanceAlongLine - minDistance) * xScale;
+                const groundY = padding + height - (bh.groundLevel - minElevation) * yScale;
+                const bottomY = padding + height - (bh.groundLevel - bh.depth - minElevation) * yScale;
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(x, groundY); ctx.lineTo(x, bottomY); ctx.stroke();
+                
+                if (bh.depthToGW > 0) {
+                    const gwY = padding + height - (bh.groundLevel - bh.depthToGW - minElevation) * yScale;
+                    ctx.strokeStyle = '#0066cc'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(x - 10, gwY); ctx.lineTo(x + 10, gwY); ctx.stroke();
+                }
+                
+                let currentDepth = 0;
+                bh.units.forEach(unit => {
+                    const unitTopY = padding + height - (bh.groundLevel - currentDepth - minElevation) * yScale;
+                    const unitBottomY = padding + height - (bh.groundLevel - unit.depth - minElevation) * yScale;
+                    ctx.fillStyle = soilColors[unit.name] || '#cccccc';
+                    ctx.fillRect(x - 5, unitTopY, 10, unitBottomY - unitTopY);
+                    if (showUnitLabels) {
+                        ctx.fillStyle = '#000'; ctx.font = '10px Arial';
+                        ctx.fillText(getSoilDisplayName(unit.name), x + 8, (unitTopY + unitBottomY) / 2);
+                    }
+                    currentDepth = unit.depth;
+                });
+                
+                ctx.fillStyle = '#000'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(bh.customLabel, x, groundY - 5);
+                if (bh.distanceFromLine > 1) {
+                    ctx.fillStyle = '#999'; ctx.font = '9px Arial';
+                    ctx.fillText(`(${bh.distanceFromLine.toFixed(0)}m off)`, x, groundY - 18);
+                }
+            });
+            // Draw horizons
+			horizons.forEach(horizon => {
+				if (!horizon.visible) return;
+				
+				// Convert X positions from distance to canvas coordinates
+				const xStart = padding + leftMargin + (horizon.xStart - minDistance) * xScale;
+				const xEnd = padding + leftMargin + (horizon.xEnd - minDistance) * xScale;
+				
+				// Convert Y positions from elevation to canvas coordinates
+				const yStart = padding + height - (horizon.elevationStart - minElevation) * yScale;
+				const yEnd = padding + height - (horizon.elevationEnd - minElevation) * yScale;
+				
+				// Check if any part of the line is visible
+				const minY = Math.min(yStart, yEnd);
+				const maxY = Math.max(yStart, yEnd);
+				const minX = Math.min(xStart, xEnd);
+				const maxX = Math.max(xStart, xEnd);
+				
+				// Only draw if the line is at least partially within visible area
+				if (maxY >= padding && minY <= padding + height && 
+					maxX >= padding + leftMargin && minX <= padding + leftMargin + width) {
+					
+					// Set line color and thickness
+					ctx.strokeStyle = horizon.color;
+					ctx.lineWidth = 2;
+					
+					// Set line style based on user selection
+					switch(horizon.lineStyle) {
+						case 'solid':
+							ctx.setLineDash([]);
+							break;
+						case 'dashed':
+							ctx.setLineDash([10, 5]);
+							break;
+						case 'dotted':
+							ctx.setLineDash([2, 3]);
+							break;
+						case 'dashdot':
+							ctx.setLineDash([10, 5, 2, 5]);
+							break;
+					}
+					
+					// Draw the line
+					ctx.beginPath();
+					ctx.moveTo(xStart, yStart);
+					ctx.lineTo(xEnd, yEnd);
+					ctx.stroke();
+					
+					// Reset line dash
+					ctx.setLineDash([]);
+					
+					// Draw label if one exists - position at midpoint
+					if (horizon.label) {
+						const labelX = (xStart + xEnd) / 2;
+						const labelY = (yStart + yEnd) / 2;
+						
+						// Set up text properties
+						ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+						ctx.font = '11px Arial';
+						const textWidth = ctx.measureText(horizon.label).width;
+						
+						// Draw white background box for label
+						ctx.fillRect(labelX - textWidth/2 - 4, labelY - 14, textWidth + 8, 16);
+						
+						// Draw border around label box using horizon color
+						ctx.strokeStyle = horizon.color;
+						ctx.lineWidth = 1;
+						ctx.strokeRect(labelX - textWidth/2 - 4, labelY - 14, textWidth + 8, 16);
+						
+						// Draw the label text in horizon color
+						ctx.fillStyle = horizon.color;
+						ctx.textAlign = 'center';
+						ctx.fillText(horizon.label, labelX, labelY - 3);
+					}
+				}
+			});
+            ctx.fillStyle = '#000'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(`Distance along line (m) - Total: ${effectiveDistance.toFixed(0)}m`, padding + leftMargin + width / 2, padding + height + 30);
+            // Line name removed from cross-section for cleaner export
+            ctx.save(); ctx.translate(15, padding + height / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center';
+            ctx.fillText('Elevation (m AHD)', 0, 0); ctx.restore();
+        }
+        
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '';
+            const usedSoils = new Set();
+            boreholeData.forEach(bh => { bh.units.forEach(unit => { usedSoils.add(unit.name); }); });
+            usedSoils.forEach(soil => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.style.display = 'flex'; item.style.alignItems = 'center'; item.style.gap = '8px';
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color'; colorInput.className = 'color-picker';
+                colorInput.value = soilColors[soil] || '#cccccc';
+                colorInput.addEventListener('change', (e) => { soilColors[soil] = e.target.value; generateCrossSection(); });
+                const labelContainer = document.createElement('div');
+                labelContainer.style.flex = '1'; labelContainer.style.fontSize = '13px';
+                const soilName = document.createElement('div');
+                soilName.textContent = getSoilDisplayName(soil); soilName.style.fontWeight = 'bold';
+                if (soilDisplayNames[soil]) {
+                    soilName.title = `Original code: ${soil}`;
+                }
+                const props = soilProperties[soil] || getDefaultSoilProperties(soil);
+                const soilSummary = document.createElement('div');
+                soilSummary.style.fontSize = '11px'; soilSummary.style.color = '#666';
+                soilSummary.textContent = `SPT N: ${props.sptN} | φ: ${props.frictionAngle}° | E: ${props.elasticModulus}MPa`;
+                labelContainer.appendChild(soilName); labelContainer.appendChild(soilSummary);
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Edit Soil'; editButton.style.background = '#007bff';
+                editButton.style.color = 'white'; editButton.style.padding = '4px 8px';
+                editButton.style.fontSize = '11px'; editButton.style.cursor = 'pointer';
+                editButton.addEventListener('click', () => editSoilProperties(soil));
+                item.appendChild(colorInput); item.appendChild(labelContainer); item.appendChild(editButton);
+                legend.appendChild(item);
+            });
+        }
+        
+        function editSoilProperties(soilType) {
+            editingSoilType = soilType;
+            const props = soilProperties[soilType] || getDefaultSoilProperties(soilType);
+            document.getElementById('soilPropertiesTitle').textContent = `Edit Soil Properties - ${soilType}`;
+            document.getElementById('soilSptN').value = props.sptN;
+            document.getElementById('soilDensity').value = props.density;
+            document.getElementById('soilFrictionAngle').value = props.frictionAngle;
+            document.getElementById('soilCohesion').value = props.cohesion;
+            document.getElementById('soilElasticModulus').value = props.elasticModulus;
+            document.getElementById('soilPoissonRatio').value = props.poissonRatio;
+            document.getElementById('soilDescription').value = props.description;
+            updateCalculatedSoilProperties();
+            document.getElementById('soilPropertiesPanel').style.display = 'block';
+        }
+        
+        function updateCalculatedSoilProperties() {
+            const frictionAngle = parseFloat(document.getElementById('soilFrictionAngle').value) || 30;
+            const elasticModulus = parseFloat(document.getElementById('soilElasticModulus').value) || 30;
+            const poissonRatio = parseFloat(document.getElementById('soilPoissonRatio').value) || 0.25;
+            const shearModulus = elasticModulus / (2 * (1 + poissonRatio));
+            const dynamicModulus = elasticModulus * 3.5;
+            const frictionRad = frictionAngle * Math.PI / 180;
+            const k0 = 1 - Math.sin(frictionRad), ka = Math.tan(Math.PI / 4 - frictionRad / 2) ** 2;
+            document.getElementById('calcShearModulus').textContent = shearModulus.toFixed(1);
+            document.getElementById('calcDynamicModulus').textContent = dynamicModulus.toFixed(0);
+            document.getElementById('calcK0').textContent = k0.toFixed(2);
+            document.getElementById('calcKa').textContent = ka.toFixed(2);
+        }
+        
+        function saveSoilProperties() {
+            if (!editingSoilType) return;
+            soilProperties[editingSoilType] = {
+                sptN: parseInt(document.getElementById('soilSptN').value) || 10,
+                density: parseInt(document.getElementById('soilDensity').value) || 1700,
+                frictionAngle: parseFloat(document.getElementById('soilFrictionAngle').value) || 30,
+                cohesion: parseFloat(document.getElementById('soilCohesion').value) || 0,
+                elasticModulus: parseFloat(document.getElementById('soilElasticModulus').value) || 30,
+                poissonRatio: parseFloat(document.getElementById('soilPoissonRatio').value) || 0.25,
+                description: document.getElementById('soilDescription').value || 'Unknown Soil'
+            };
+            cancelSoilEdit(); updateLegend(); generateCrossSection();
+        }
+        
+        function cancelSoilEdit() {
+            editingSoilType = null;
+            document.getElementById('soilPropertiesPanel').style.display = 'none';
+        }
+        
+        function resetToDefaults() {
+            if (!editingSoilType) return;
+            const defaultProps = getDefaultSoilProperties(editingSoilType);
+            document.getElementById('soilSptN').value = defaultProps.sptN;
+            document.getElementById('soilDensity').value = defaultProps.density;
+            document.getElementById('soilFrictionAngle').value = defaultProps.frictionAngle;
+            document.getElementById('soilCohesion').value = defaultProps.cohesion;
+            document.getElementById('soilElasticModulus').value = defaultProps.elasticModulus;
+            document.getElementById('soilPoissonRatio').value = defaultProps.poissonRatio;
+            document.getElementById('soilDescription').value = defaultProps.description;
+            updateCalculatedSoilProperties();
+        }
+        
+        function render3D() {
+            const container = document.getElementById('threeContainer');
+            container.innerHTML = '';
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (boreholeData.length === 0) {
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">Load data first</div>';
+                return;
+            }
+            try {
+                scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB);
+                const width = container.offsetWidth || 800, height = container.offsetHeight || 600;
+                camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 10000);
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
+                container.appendChild(renderer.domElement);
+                scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+                const light = new THREE.DirectionalLight(0xffffff, 0.4);
+                light.position.set(100, 100, 50); scene.add(light);
+                
+                const eastings = boreholeData.map(bh => bh.easting), northings = boreholeData.map(bh => bh.northing);
+                const groundLevels = boreholeData.map(bh => bh.groundLevel), depths = boreholeData.map(bh => bh.depth);
+                const bounds = {
+                    centerEasting: (Math.min(...eastings) + Math.max(...eastings)) / 2,
+                    centerNorthing: (Math.min(...northings) + Math.max(...northings)) / 2,
+                    minElevation: Math.min(...groundLevels.map((gl, i) => gl - depths[i])),
+                    maxElevation: Math.max(...groundLevels)
+                };
+                const horizontalExtent = Math.max(Math.max(...eastings) - Math.min(...eastings), Math.max(...northings) - Math.min(...northings));
+                const scale = horizontalExtent > 0 ? 100 / horizontalExtent : 1;
+                const verticalExag = parseFloat(document.getElementById('verticalExaggeration').value) || 5;
+                document.getElementById('verticalExagValue').textContent = verticalExag + 'x';
+                
+                const avgElevation = groundLevels.reduce((a, b) => a + b, 0) / groundLevels.length;
+                const groundY = (avgElevation - bounds.minElevation) * scale * verticalExag;
+                const ground = new THREE.Mesh(
+                    new THREE.PlaneGeometry(horizontalExtent * scale * 1.2, horizontalExtent * scale * 1.2),
+                    new THREE.MeshLambertMaterial({ color: 0x90EE90, transparent: true, opacity: 0.3 })
+                );
+                ground.rotation.x = -Math.PI / 2; ground.position.y = groundY; scene.add(ground);
+                
+                boreholeData.forEach(bh => {
+                    const x = -(bh.easting - bounds.centerEasting) * scale;
+                    const z = (bh.northing - bounds.centerNorthing) * scale;
+                    const groundYPos = (bh.groundLevel - bounds.minElevation) * scale * verticalExag;
+                    let currentDepth = 0;
+                    bh.units.forEach(unit => {
+                        const unitEndDepth = Math.min(unit.depth, bh.depth);
+                        const unitHeight = (unitEndDepth - currentDepth) * scale * verticalExag;
+                        if (unitHeight > 0) {
+                            const color = new THREE.Color(soilColors[unit.name] || '#cccccc');
+                            const cylinder = new THREE.Mesh(
+                                new THREE.CylinderGeometry(scale * 2, scale * 2, unitHeight, 8),
+                                new THREE.MeshLambertMaterial({ color: color })
+                            );
+                            cylinder.position.set(x, groundYPos - (currentDepth * scale * verticalExag) - (unitHeight / 2), z);
+                            scene.add(cylinder);
+                            currentDepth = unitEndDepth;
+                        }
+                    });
+                    if (currentDepth < bh.depth) {
+                        const remainingHeight = (bh.depth - currentDepth) * scale * verticalExag;
+                        const grayCylinder = new THREE.Mesh(
+                            new THREE.CylinderGeometry(scale * 2, scale * 2, remainingHeight, 8),
+                            new THREE.MeshLambertMaterial({ color: 0x808080 })
+                        );
+                        grayCylinder.position.set(x, groundYPos - (currentDepth * scale * verticalExag) - (remainingHeight / 2), z);
+                        scene.add(grayCylinder);
+                    }
+                    const marker = new THREE.Mesh(
+                        new THREE.SphereGeometry(scale * 1.5, 12, 12),
+                        new THREE.MeshLambertMaterial({ color: 0xff0000 })
+                    );
+                    marker.position.set(x, groundYPos + scale * 2, z); scene.add(marker);
+                });
+                // Add horizon planes
+				horizons.forEach(horizon => {
+					if (!horizon.visible) return;
+					
+					// Check if this is a sloped horizon
+					const isSloped = Math.abs(horizon.elevationStart - horizon.elevationEnd) > 0.01;
+					
+					if (isSloped) {
+						// Create a sloped plane using geometry
+						const yStart = (horizon.elevationStart - bounds.minElevation) * scale * verticalExag;
+						const yEnd = (horizon.elevationEnd - bounds.minElevation) * scale * verticalExag;
+						
+						// Convert X distances to 3D coordinates (along the best-fit line direction)
+						const sorted = sortBoreholesByBestFit();
+						const distances = sorted.map(bh => bh.distanceAlongLine);
+						const minDist = Math.min(...distances);
+						const maxDist = Math.max(...distances);
+						const totalDist = maxDist - minDist;
+						
+						// Calculate start and end positions along the line
+						const startFraction = (horizon.xStart - minDist) / totalDist;
+						const endFraction = (horizon.xEnd - minDist) / totalDist;
+						
+						// Get the line direction from best fit
+						const n = boreholeData.length;
+						let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+						boreholeData.forEach(bh => { 
+							sumX += bh.easting; 
+							sumY += bh.northing; 
+							sumXY += bh.easting * bh.northing; 
+							sumX2 += bh.easting * bh.easting; 
+						});
+						const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+						const lineLength = Math.sqrt(1 + slope * slope);
+						const unitDirection = { x: 1 / lineLength, y: slope / lineLength };
+						
+						// Calculate 3D positions
+						const lineExtent = totalDist * scale;
+						const xStart3D = -(startFraction - 0.5) * lineExtent * unitDirection.x;
+						const zStart3D = (startFraction - 0.5) * lineExtent * unitDirection.y;
+						const xEnd3D = -(endFraction - 0.5) * lineExtent * unitDirection.x;
+						const zEnd3D = (endFraction - 0.5) * lineExtent * unitDirection.y;
+						
+						// Perpendicular direction for width
+						const perpX = -unitDirection.y;
+						const perpZ = unitDirection.x;
+						const planeWidth = horizontalExtent * scale * 0.6;
+						
+						// Create vertices for the sloped plane
+						const geometry = new THREE.BufferGeometry();
+						const vertices = new Float32Array([
+							// First triangle
+							xStart3D + perpX * planeWidth, yStart, zStart3D + perpZ * planeWidth,
+							xStart3D - perpX * planeWidth, yStart, zStart3D - perpZ * planeWidth,
+							xEnd3D + perpX * planeWidth, yEnd, zEnd3D + perpZ * planeWidth,
+							// Second triangle
+							xStart3D - perpX * planeWidth, yStart, zStart3D - perpZ * planeWidth,
+							xEnd3D - perpX * planeWidth, yEnd, zEnd3D - perpZ * planeWidth,
+							xEnd3D + perpX * planeWidth, yEnd, zEnd3D + perpZ * planeWidth
+						]);
+						geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+						geometry.computeVertexNormals();
+						
+						const planeMaterial = new THREE.MeshLambertMaterial({
+							color: new THREE.Color(horizon.color),
+							transparent: true,
+							opacity: 0.4,
+							side: THREE.DoubleSide
+						});
+						
+						const plane = new THREE.Mesh(geometry, planeMaterial);
+						scene.add(plane);
+						
+						// Add edge line for better visibility
+						const lineGeometry = new THREE.BufferGeometry();
+						const lineVertices = new Float32Array([
+							xStart3D, yStart, zStart3D,
+							xEnd3D, yEnd, zEnd3D
+						]);
+						lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
+						
+						const lineMaterial = new THREE.LineBasicMaterial({ 
+							color: new THREE.Color(horizon.color),
+							linewidth: 3
+						});
+						const line = new THREE.Line(lineGeometry, lineMaterial);
+						scene.add(line);
+						
+					} else {
+						// Horizontal plane (original code)
+						const horizonY = (horizon.elevationStart - bounds.minElevation) * scale * verticalExag;
+						const planeSize = horizontalExtent * scale * 1.5;
+						
+						const planeMaterial = new THREE.MeshLambertMaterial({
+							color: new THREE.Color(horizon.color),
+							transparent: true,
+							opacity: 0.4,
+							side: THREE.DoubleSide
+						});
+						
+						const plane = new THREE.Mesh(
+							new THREE.PlaneGeometry(planeSize, planeSize),
+							planeMaterial
+						);
+						plane.rotation.x = -Math.PI / 2;
+						plane.position.y = horizonY;
+						scene.add(plane);
+						
+						// Add grid lines for better visibility
+						const gridHelper = new THREE.GridHelper(planeSize, 10, 
+							new THREE.Color(horizon.color), 
+							new THREE.Color(horizon.color));
+						gridHelper.position.y = horizonY;
+						gridHelper.material.opacity = 0.3;
+						gridHelper.material.transparent = true;
+						scene.add(gridHelper);
+					}
+				});
+                const cameraDistance = Math.max(100, horizontalExtent * scale * 1.5);
+                const avgScaledElevation = (avgElevation - bounds.minElevation) * scale * verticalExag;
+                camera.position.set(cameraDistance * 0.7, avgScaledElevation + cameraDistance * 0.5, cameraDistance * 0.7);
+                camera.lookAt(0, avgScaledElevation, 0);
+                
+                setupTouchControls();
+                renderer.render(scene, camera);
+                
+                function animate() {
+                    animationId = requestAnimationFrame(animate);
+                    if (isAutoRotating) scene.rotation.y += 0.005;
+                    renderer.render(scene, camera);
+                }
+                animate();
+            } catch (error) {
+                console.error('3D failed:', error);
+                container.innerHTML = '<div style="color: red;">3D Error: ' + error.message + '</div>';
+            }
+        }
+        
+        function setupTouchControls() {
+            const canvas = renderer.domElement;
+            let isRotating = false, lastX = 0, lastY = 0;
+            canvas.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { isRotating = true; lastX = e.clientX; lastY = e.clientY; }
+            });
+            canvas.addEventListener('mouseup', () => { isRotating = false; });
+            canvas.addEventListener('mousemove', (e) => {
+                if (isRotating) {
+                    const deltaX = e.clientX - lastX, deltaY = e.clientY - lastY;
+                    scene.rotation.y += deltaX * 0.01; scene.rotation.x += deltaY * 0.01;
+                    lastX = e.clientX; lastY = e.clientY;
+                }
+            });
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentDistance = camera.position.length();
+                const newDistance = currentDistance + (e.deltaY > 0 ? currentDistance * 0.1 : -currentDistance * 0.1);
+                const scale = Math.max(10, Math.min(500, newDistance)) / currentDistance;
+                camera.position.multiplyScalar(scale);
+            });
+        }
+        
+        function snapToView(direction) {
+            if (!camera || !scene || boreholeData.length === 0) return;
+            const cameraDistance = 100;
+            const positions = {
+                'north': [0, 30, cameraDistance], 'south': [0, 30, -cameraDistance],
+                'east': [cameraDistance, 30, 0], 'west': [-cameraDistance, 30, 0],
+                'northeast': [cameraDistance * 0.7, 30, cameraDistance * 0.7],
+                'northwest': [-cameraDistance * 0.7, 30, cameraDistance * 0.7],
+                'southeast': [cameraDistance * 0.7, 30, -cameraDistance * 0.7],
+                'southwest': [-cameraDistance * 0.7, 30, -cameraDistance * 0.7]
+            };
+            const position = positions[direction];
+            if (position) { camera.position.set(position[0], position[1], position[2]); camera.lookAt(0, 0, 0); }
+            isAutoRotating = false;
+        }
+        
+        function reset3DView() {
+            if (camera && scene && boreholeData.length > 0) {
+                camera.position.set(70, 80, 70); camera.lookAt(0, 0, 0); scene.rotation.set(0, 0, 0);
+            }
+            isAutoRotating = false;
+        }
+        
+        function animate3DView() { isAutoRotating = !isAutoRotating; }
+        function update3DView() { if (boreholeData.length > 0) render3D(); }
+        function toggleMapOverlay() { console.log('Map overlay feature available in full version'); }
+        function refreshMapOverlay() { console.log('Map overlay feature available in full version'); }
+        function updateOverlayOpacity() {
+            const opacity = parseFloat(document.getElementById('overlayOpacity').value) / 100;
+            document.getElementById('opacityValue').textContent = Math.round(opacity * 100) + '%';
+        }
+        async function exportToPNG() {
+			if (!boreholeData.length) { alert('Load data first'); return; }
+			try {
+				const mapCanvas = await captureActualMap();
+				const crossEl = document.getElementById('crossSection');
+				const exportCanvas = document.getElementById('exportCanvas');
+				const ctx = exportCanvas.getContext('2d');
+				
+				const padding = 20;
+				const crossW = crossEl.offsetWidth, crossH = crossEl.offsetHeight;
+				const mapW = mapCanvas.width, mapH = mapCanvas.height;
+				
+				// Calculate legend dimensions
+				const usedSoils = new Set();
+				boreholeData.forEach(bh => { bh.units.forEach(unit => { usedSoils.add(unit.name); }); });
+				const itemWidth = 120, itemHeight = 20;
+				const itemsPerRow = Math.floor(mapW / itemWidth);
+				const legendRows = Math.ceil(usedSoils.size / itemsPerRow);
+				const legendHeight = Math.max(legendRows * (itemHeight + 5) + 40, 60);
+				
+				// Layout: Cross-section on left, Map+Legend on right
+				const canvasW = padding + crossW + padding + mapW + padding;
+				const canvasH = padding + Math.max(crossH, mapH + padding + legendHeight) + padding;
+				
+				exportCanvas.width = canvasW; 
+				exportCanvas.height = canvasH;
+				ctx.fillStyle = "#FFFFFF"; 
+				ctx.fillRect(0, 0, canvasW, canvasH);
+				
+				const crossImg = new Image();
+				crossImg.onload = function() {
+					// Draw cross-section on left
+					ctx.drawImage(crossImg, padding, padding, crossW, crossH);
+					
+					// Draw map on top right
+					ctx.drawImage(mapCanvas, padding + crossW + padding, padding, mapW, mapH);
+					
+					// Draw legend below map
+					const legendY = padding + mapH + padding;
+					drawLegendOnExport(ctx, padding + crossW + padding, legendY, mapW);
+					
+					const link = document.createElement("a");
+					link.download = "borehole_analysis.png";
+					link.href = exportCanvas.toDataURL("image/png");
+					link.click();
+				};
+				crossImg.src = crossEl.toDataURL("image/png");
+			} catch (error) {
+				console.error('Export failed:', error);
+				alert('Export failed: ' + error.message);
+			}
+		}
+        
+        async function captureMap() {
+            return new Promise(async (resolve) => {
+                try {
+                    const mapElement = document.getElementById('map');
+                    const canvas = await html2canvas(mapElement, {
+                        useCORS: true, allowTaint: true, scale: 1, logging: false,
+                        width: mapElement.offsetWidth, height: mapElement.offsetHeight,
+                        backgroundColor: '#ffffff'
+                    });
+                    const ctx = canvas.getContext('2d');
+                    const bounds = map.getBounds();
+                    const southWest = bounds.getSouthWest(), northEast = bounds.getNorthEast();
+                    boreholeData.forEach(bh => {
+                        const x = ((bh.lng - southWest.lng) / (northEast.lng - southWest.lng)) * canvas.width;
+                        const y = canvas.height - ((bh.lat - southWest.lat) / (northEast.lat - southWest.lat)) * canvas.height;
+                        ctx.fillStyle = '#ff0000'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = '#000000'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+                        const labelText = bh.name, textWidth = ctx.measureText(labelText).width;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.fillRect(x - textWidth / 2 - 3, y + 10, textWidth + 6, 16);
+                        ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 1;
+                        ctx.strokeRect(x - textWidth / 2 - 3, y + 10, textWidth + 6, 16);
+                        ctx.fillStyle = '#000000'; ctx.fillText(labelText, x, y + 22);
+                    });
+                    const exportSize = 400;
+                    const resizedCanvas = document.createElement('canvas');
+                    resizedCanvas.width = exportSize; resizedCanvas.height = exportSize;
+                    const resizeCtx = resizedCanvas.getContext('2d');
+                    resizeCtx.drawImage(canvas, 0, 0, exportSize, exportSize);
+                    resolve(resizedCanvas);
+                } catch (error) {
+                    const fallbackCanvas = createMapSnapshot();
+                    resolve(fallbackCanvas);
+                }
+            });
+        }
+        
+        function createMapSnapshot() {
+            const canvas = document.createElement('canvas'), size = 400;
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#e8f5e8'); gradient.addColorStop(0.5, '#d4f1d4');
+            gradient.addColorStop(1, '#c1ecc1'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, size, size);
+            if (boreholeData.length > 0) {
+                const bounds = map.getBounds(), southWest = bounds.getSouthWest(), northEast = bounds.getNorthEast();
+                boreholeData.forEach(bh => {
+                    const x = ((bh.lng - southWest.lng) / (northEast.lng - southWest.lng)) * size;
+                    const y = size - ((bh.lat - southWest.lat) / (northEast.lat - southWest.lat)) * size;
+                    ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.fill();
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#000000'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+                    ctx.fillText(bh.name, x, y + 18);
+                });
+            }
+            return canvas;
+        }
+        
+        function drawLegendOnExport(ctx, x, y, availableWidth) {
+            const usedSoils = new Set();
+            boreholeData.forEach(bh => { bh.units.forEach(unit => { usedSoils.add(unit.name); }); });
+            if (usedSoils.size === 0) return;
+            
+            // Legend title
+            ctx.fillStyle = '#000'; 
+            ctx.font = 'bold 14px Arial'; 
+            ctx.textAlign = 'left';
+            ctx.fillText('Legend:', x, y);
+            
+            let currentX = x, currentY = y + 20;
+            const itemWidth = 120, itemHeight = 20;
+            const itemsPerRow = Math.floor(availableWidth / itemWidth);
+            let itemCount = 0;
+            
+            usedSoils.forEach(soil => {
+                if (itemCount > 0 && itemCount % itemsPerRow === 0) {
+                    currentY += itemHeight + 5; 
+                    currentX = x;
+                }
+                
+                // Draw color box
+                ctx.fillStyle = soilColors[soil] || '#cccccc';
+                ctx.fillRect(currentX, currentY, 18, 15);
+                ctx.strokeStyle = '#000'; 
+                ctx.lineWidth = 1;
+                ctx.strokeRect(currentX, currentY, 18, 15);
+                
+                // Draw soil name
+                ctx.fillStyle = '#000'; 
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(getSoilDisplayName(soil), currentX + 23, currentY + 12);
+                
+                currentX += itemWidth; 
+                itemCount++;
+            });
+        }
+        function addHorizon() {
+			horizonCounter++;
+			const avgElevation = boreholeData.length > 0 
+				? boreholeData.reduce((sum, bh) => sum + bh.groundLevel, 0) / boreholeData.length 
+				: 10;
+			
+			// Calculate default X range (full width)
+			let minDist = 0, maxDist = 100;
+			if (boreholeData.length >= 2) {
+				const sorted = sortBoreholesByBestFit();
+				const distances = sorted.map(bh => bh.distanceAlongLine);
+				minDist = Math.min(...distances);
+				maxDist = Math.max(...distances);
+			}
+			
+			horizons.push({
+				id: horizonCounter,
+				label: `Horizon ${horizonCounter}`,
+				elevationStart: avgElevation,
+				elevationEnd: avgElevation,
+				xStart: minDist,
+				xEnd: maxDist,
+				color: '#' + Math.floor(Math.random()*16777215).toString(16),
+				lineStyle: 'dashed',
+				visible: true
+			});
+			updateHorizonList();
+			generateCrossSection();
+		}
+
+		function removeHorizon(id) {
+			horizons = horizons.filter(h => h.id !== id);
+			updateHorizonList();
+			generateCrossSection();
+		}
+
+		function clearAllHorizons() {
+			if (horizons.length > 0 && confirm('Remove all horizon lines?')) {
+				horizons = [];
+				horizonCounter = 0;
+				updateHorizonList();
+				generateCrossSection();
+			}
+		}
+
+		function updateHorizon(id, field, value) {
+			const horizon = horizons.find(h => h.id === id);
+			if (horizon) {
+				if (field === 'elevationStart' || field === 'elevationEnd' || field === 'xStart' || field === 'xEnd') {
+					horizon[field] = parseFloat(value);
+				} else if (field === 'visible') {
+					horizon[field] = value;
+				} else {
+					horizon[field] = value;
+				}
+				generateCrossSection();
+			}
+		}
+
+		function updateHorizonList() {
+			const list = document.getElementById('horizonList');
+			list.innerHTML = '';
+			
+			if (horizons.length === 0) {
+				list.innerHTML = '<div style="color: #666; font-style: italic;">No horizons defined. Click "Add New Horizon" to create one.</div>';
+				return;
+			}
+			
+			horizons.forEach(horizon => {
+				const item = document.createElement('div');
+				item.className = 'horizon-item';
+				
+				// Visibility checkbox
+				const checkbox = document.createElement('input');
+				checkbox.type = 'checkbox';
+				checkbox.checked = horizon.visible;
+				checkbox.onchange = (e) => updateHorizon(horizon.id, 'visible', e.target.checked);
+				
+				// Label input
+				const labelInput = document.createElement('input');
+				labelInput.type = 'text';
+				labelInput.value = horizon.label;
+				labelInput.placeholder = 'Label';
+				labelInput.onchange = (e) => updateHorizon(horizon.id, 'label', e.target.value);
+				
+				// Y Start (elevation start)
+				const yStartInput = document.createElement('input');
+				yStartInput.type = 'number';
+				yStartInput.value = horizon.elevationStart;
+				yStartInput.step = '0.1';
+				yStartInput.placeholder = 'Y Start';
+				yStartInput.title = 'Elevation at start (m)';
+				yStartInput.onchange = (e) => updateHorizon(horizon.id, 'elevationStart', e.target.value);
+				
+				// Y End (elevation end)
+				const yEndInput = document.createElement('input');
+				yEndInput.type = 'number';
+				yEndInput.value = horizon.elevationEnd;
+				yEndInput.step = '0.1';
+				yEndInput.placeholder = 'Y End';
+				yEndInput.title = 'Elevation at end (m)';
+				yEndInput.onchange = (e) => updateHorizon(horizon.id, 'elevationEnd', e.target.value);
+				
+				// X Start (distance start)
+				const xStartInput = document.createElement('input');
+				xStartInput.type = 'number';
+				xStartInput.value = horizon.xStart.toFixed(1);
+				xStartInput.step = '1';
+				xStartInput.placeholder = 'X Start';
+				xStartInput.title = 'Distance from start (m)';
+				xStartInput.onchange = (e) => updateHorizon(horizon.id, 'xStart', e.target.value);
+				
+				// X End (distance end)
+				const xEndInput = document.createElement('input');
+				xEndInput.type = 'number';
+				xEndInput.value = horizon.xEnd.toFixed(1);
+				xEndInput.step = '1';
+				xEndInput.placeholder = 'X End';
+				xEndInput.title = 'Distance to end (m)';
+				xEndInput.onchange = (e) => updateHorizon(horizon.id, 'xEnd', e.target.value);
+				
+				// Line style select
+				const styleSelect = document.createElement('select');
+				['solid', 'dashed', 'dotted', 'dashdot'].forEach(style => {
+					const option = document.createElement('option');
+					option.value = style;
+					option.textContent = style.charAt(0).toUpperCase() + style.slice(1);
+					if (style === horizon.lineStyle) option.selected = true;
+					styleSelect.appendChild(option);
+				});
+				styleSelect.onchange = (e) => updateHorizon(horizon.id, 'lineStyle', e.target.value);
+				
+				// Color input
+				const colorInput = document.createElement('input');
+				colorInput.type = 'color';
+				colorInput.value = horizon.color;
+				colorInput.onchange = (e) => updateHorizon(horizon.id, 'color', e.target.value);
+				
+				// Info text - show slope
+				const slope = ((horizon.elevationEnd - horizon.elevationStart) / (horizon.xEnd - horizon.xStart) * 100).toFixed(1);
+				const infoText = document.createElement('span');
+				infoText.style.fontSize = '11px';
+				infoText.style.color = '#666';
+				infoText.textContent = `Slope: ${slope}%`;
+				infoText.title = `ID: ${horizon.id}`;
+				
+				// Remove button
+				const removeBtn = document.createElement('button');
+				removeBtn.className = 'btn-remove';
+				removeBtn.textContent = '×';
+				removeBtn.title = 'Remove horizon';
+				removeBtn.onclick = () => removeHorizon(horizon.id);
+				
+				item.appendChild(checkbox);
+				item.appendChild(labelInput);
+				item.appendChild(yStartInput);
+				item.appendChild(yEndInput);
+				item.appendChild(xStartInput);
+				item.appendChild(xEndInput);
+				item.appendChild(styleSelect);
+				item.appendChild(colorInput);
+				item.appendChild(infoText);
+				item.appendChild(removeBtn);
+				
+				list.appendChild(item);
+			});
+		}
+		async function captureActualMap() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Hide UI controls AND markers/labels before screenshot
+            const elementsToHide = [
+                '.leaflet-control-zoom', 
+                '.leaflet-control-layers', 
+                '.leaflet-control-attribution',
+                '.leaflet-marker-pane',      // ADD THIS - hides all markers
+                '.leaflet-shadow-pane',      // ADD THIS - hides marker shadows
+                '.leaflet-overlay-pane',     // ADD THIS - hides overlays
+                '.leaflet-popup-pane',       // ADD THIS - hides popups
+                '.leaflet-tooltip-pane'      // ADD THIS - hides tooltips
+            ];
+            
+            const hiddenElements = [];
+            elementsToHide.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(el => {
+                    hiddenElements.push({ element: el, originalDisplay: el.style.display });
+                    el.style.display = 'none';
+                });
+            });
+            
+            const mapElement = document.getElementById('map');
+            const canvas = await html2canvas(mapElement, {
+                useCORS: true, allowTaint: true, scale: 1, logging: false,
+                width: mapElement.offsetWidth, height: mapElement.offsetHeight,
+                backgroundColor: '#ffffff'
+            });
+            
+            // Restore all hidden elements
+            hiddenElements.forEach(({ element, originalDisplay }) => {
+                element.style.display = originalDisplay;
+            });
+            
+            const enhancedCanvas = document.createElement('canvas');
+            enhancedCanvas.width = canvas.width;
+            enhancedCanvas.height = canvas.height;
+            const ctx = enhancedCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, 0);
+            
+            // NOW add the markers cleanly on top
+            await addMarkersToCanvas(ctx, enhancedCanvas.width, enhancedCanvas.height);
+            
+            const exportSize = 400;
+            const resizedCanvas = document.createElement('canvas');
+            resizedCanvas.width = exportSize;
+            resizedCanvas.height = exportSize;
+            const resizeCtx = resizedCanvas.getContext('2d');
+            resizeCtx.drawImage(enhancedCanvas, 0, 0, exportSize, exportSize);
+            resolve(resizedCanvas);
+        } catch (error) {
+            console.warn('html2canvas failed, using fallback method:', error);
+            const fallbackCanvas = await createMapSnapshot();
+            resolve(fallbackCanvas);
+        }
+    });
+}
+
+async function addMarkersToCanvas(ctx, canvasWidth, canvasHeight) {
+    if (!map || boreholeData.length === 0) return;
+    const bounds = map.getBounds();
+    const southWest = bounds.getSouthWest();
+    const northEast = bounds.getNorthEast();
+    function latLngToCanvas(lat, lng) {
+        const x = ((lng - southWest.lng) / (northEast.lng - southWest.lng)) * canvasWidth;
+        const y = canvasHeight - ((lat - southWest.lat) / (northEast.lat - southWest.lat)) * canvasHeight;
+        return { x, y };
+    }
+    if (bestFitLine && document.getElementById('showBestFitLine').checked) {
+        const linePoints = bestFitLine.getLatLngs();
+        if (linePoints.length >= 2) {
+            ctx.strokeStyle = '#ff6600';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 5]);
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            linePoints.forEach((point, index) => {
+                const canvasPos = latLngToCanvas(point.lat, point.lng);
+                if (index === 0) {
+                    ctx.moveTo(canvasPos.x, canvasPos.y);
+                } else {
+                    ctx.lineTo(canvasPos.x, canvasPos.y);
+                }
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    
+    // Draw the active cross-section line
+    if (activeCrossSectionLineId) {
+        const activeLine = crossSectionLines.find(l => l.id === activeCrossSectionLineId);
+        if (activeLine && activeLine.visible) {
+            const startPos = latLngToCanvas(activeLine.startLat, activeLine.startLng);
+            const endPos = latLngToCanvas(activeLine.endLat, activeLine.endLng);
+            
+            ctx.strokeStyle = activeLine.color;
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 1.0;
+            ctx.setLineDash([]);
+            
+            ctx.beginPath();
+            ctx.moveTo(startPos.x, startPos.y);
+            ctx.lineTo(endPos.x, endPos.y);
+            ctx.stroke();
+        }
+    }
+    
+    // Draw boreholes (only visible ones)
+    boreholeData.forEach(bh => {
+        if (!bh.visible) return; // Skip hidden boreholes
+        const canvasPos = latLngToCanvas(bh.lat, bh.lng);
+        ctx.fillStyle = '#ff0000';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(canvasPos.x, canvasPos.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        const labelText = bh.name;
+        const textMetrics = ctx.measureText(labelText);
+        const textWidth = textMetrics.width;
+        const textHeight = 12;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(canvasPos.x - textWidth / 2 - 3, canvasPos.y + 10, textWidth + 6, textHeight + 4);
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(canvasPos.x - textWidth / 2 - 3, canvasPos.y + 10, textWidth + 6, textHeight + 4);
+        ctx.fillStyle = '#000000';
+        ctx.fillText(labelText, canvasPos.x, canvasPos.y + 22);
+    });
+}
+
+async function createMapSnapshot() {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#e8f5e8');
+        gradient.addColorStop(0.5, '#d4f1d4');
+        gradient.addColorStop(1, '#c1ecc1');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        if (boreholeData.length > 0) {
+            const bounds = map.getBounds();
+            const southWest = bounds.getSouthWest();
+            const northEast = bounds.getNorthEast();
+            
+            // Draw the active cross-section line
+            if (activeCrossSectionLineId) {
+                const activeLine = crossSectionLines.find(l => l.id === activeCrossSectionLineId);
+                if (activeLine && activeLine.visible) {
+                    const xStart = ((activeLine.startLng - southWest.lng) / (northEast.lng - southWest.lng)) * size;
+                    const yStart = size - ((activeLine.startLat - southWest.lat) / (northEast.lat - southWest.lat)) * size;
+                    const xEnd = ((activeLine.endLng - southWest.lng) / (northEast.lng - southWest.lng)) * size;
+                    const yEnd = size - ((activeLine.endLat - southWest.lat) / (northEast.lat - southWest.lat)) * size;
+                    
+                    ctx.strokeStyle = activeLine.color;
+                    ctx.lineWidth = 4;
+                    ctx.globalAlpha = 1.0;
+                    ctx.setLineDash([]);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(xStart, yStart);
+                    ctx.lineTo(xEnd, yEnd);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw boreholes (only visible ones)
+            boreholeData.forEach(bh => {
+                if (!bh.visible) return; // Skip hidden boreholes
+                const x = ((bh.lng - southWest.lng) / (northEast.lng - southWest.lng)) * size;
+                const y = size - ((bh.lat - southWest.lat) / (northEast.lat - southWest.lat)) * size;
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(bh.customLabel, x, y + 18);
+            });
+        }
+        resolve(canvas);
+    });
+}
+        window.onload = function() {
+            initMap();
+			updateHorizonList();
+			updateLineList();
+			updateBoreholeList();
+			updateSoilNameList();
+			updateSoilNameList();
+			updateBoreholeList();
+            Object.keys(soilColors).forEach(soilType => {
+                if (!soilProperties[soilType]) soilProperties[soilType] = getDefaultSoilProperties(soilType);
+            });
+        };
+    </script>
+</body>
+</html>

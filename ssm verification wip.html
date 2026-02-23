@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSM Survey Comparison Tool</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            font-size: 13px;
+            opacity: 0.95;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-box {
+            background: white;
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .upload-box:hover {
+            border-color: #667eea;
+            background: #f7faff;
+            transform: translateY(-2px);
+        }
+        
+        .upload-box.dragover {
+            border-color: #667eea;
+            background: #e0e7ff;
+            border-style: solid;
+        }
+        
+        .upload-box.has-file {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .upload-box input[type="file"] {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .upload-subtitle {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        
+        .file-list {
+            font-size: 12px;
+            color: #059669;
+            margin-top: 10px;
+            text-align: left;
+            padding: 0 20px;
+        }
+        
+        .stats-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card.emlid {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .stat-card.ardu {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            opacity: 0.9;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .collapsible-section {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .section-header {
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .section-header:hover {
+            opacity: 0.95;
+        }
+        
+        .toggle-icon {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .section-content.collapsed {
+            max-height: 0;
+            padding: 0 20px;
+            overflow: hidden;
+        }
+        
+        .results-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .column-toggle {
+            font-size: 12px;
+            font-weight: normal;
+        }
+        
+        .column-toggle button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        
+        .column-toggle button:hover {
+            background: #5568d3;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 5px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+        }
+        
+        th:hover {
+            opacity: 0.9;
+        }
+        
+        th.hidden-col {
+            display: none;
+        }
+        
+        td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        td.hidden-col {
+            display: none;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+        
+        .positive {
+            color: #e74c3c;
+        }
+        
+        .negative {
+            color: #3498db;
+        }
+        
+        .rtk-fixed {
+            background-color: #d4edda !important;
+        }
+        
+        .rtk-float {
+            background-color: #fff3cd !important;
+        }
+        
+        .rtk-other {
+            background-color: #f8d7da !important;
+        }
+        
+        .highlight-row {
+            background-color: #e0e7ff !important;
+            font-weight: bold;
+            outline: 2px solid #667eea;
+        }
+        
+        .legend {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            line-height: 1.6;
+            font-size: 11px;
+        }
+        
+        .legend-item {
+            margin: 3px 0;
+        }
+        
+        .legend-color {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            border-radius: 50%;
+            vertical-align: middle;
+            border: 2px solid #333;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .btn-clear {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .btn-clear:hover {
+            background: #c0392b;
+        }
+        
+        .device-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .badge-emlid {
+            background: #f093fb;
+            color: white;
+        }
+        
+        .badge-ardu {
+            background: #4facfe;
+            color: white;
+        }
+        
+        .detail-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .detail-content {
+            background: white;
+            margin: 3% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+        
+        .close-modal:hover {
+            color: #000;
+        }
+        
+        .detail-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .detail-header h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .plot-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .plot-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        #distancePlot {
+            width: 100%;
+            height: 500px;
+            max-width: 100%;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            display: block;
+        }
+        
+        .plot-legend {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        
+        .stats-table {
+            width: 100%;
+            font-size: 12px;
+        }
+        
+        .stats-table th {
+            background: #f8f9fa;
+            color: #2c3e50;
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .stats-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .scale-info {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .ssm-group-badge {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        
+        .ssm-group-badge:hover {
+            background: #c7d2fe;
+        }
+        
+        .threshold-controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .threshold-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .threshold-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .threshold-item label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .threshold-item input {
+            padding: 5px 8px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .threshold-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .color-legend {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        
+        .color-sample {
+            display: inline-block;
+            width: 30px;
+            height: 15px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+        
+        #plotTooltip {
+            position: absolute;
+            background: rgba(44, 62, 80, 0.95);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 300px;
+            line-height: 1.6;
+        }
+        
+        #plotTooltip strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 6px;
+        }
+        
+        .visibility-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .row-hidden {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+        
+        .row-hidden:hover {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="detailModal" class="detail-modal">
+        <div class="detail-content">
+            <span class="close-modal" onclick="closeDetailModal()">&times;</span>
+            <div class="detail-header">
+                <h2 id="modalTitle">SSM Detail View</h2>
+                <p id="modalSubtitle" style="color: #7f8c8d;"></p>
+            </div>
+            
+            <div class="threshold-controls">
+                <strong style="color: #2c3e50;">Height (ΔH) Color Thresholds (mm)</strong>
+                <div class="threshold-grid">
+                    <div class="threshold-item">
+                        <label>Good (Green) ≤</label>
+                        <input type="number" id="thresholdGood" value="20" step="5" onchange="updateDetailView()">
+                    </div>
+                    <div class="threshold-item">
+                        <label>Warning (Orange) ≤</label>
+                        <input type="number" id="thresholdWarning" value="50" step="5" onchange="updateDetailView()">
+                    </div>
+                    <div class="threshold-item">
+                        <label>Error (Red) ></label>
+                        <input type="number" id="thresholdError" value="50" step="5" onchange="updateThresholdError()">
+                    </div>
+                </div>
+                <div class="color-legend">
+                    <span><span class="color-sample" style="background: #d4edda;"></span>Good</span>
+                    <span><span class="color-sample" style="background: #fff3cd;"></span>Warning</span>
+                    <span><span class="color-sample" style="background: #f8d7da;"></span>Error</span>
+                </div>
+            </div>
+            
+            <div class="detail-grid">
+                <div>
+                    <div class="plot-container" style="position: relative;">
+                        <div class="plot-title">Exaggerated Position Plot (Hover over points)</div>
+                        <canvas id="distancePlot" width="500" height="500"></canvas>
+                        <div id="plotTooltip"></div>
+                        <div class="scale-info" id="scaleInfo">Scale: 1mm = 10px</div>
+                        <div class="plot-legend">
+                            <strong>Legend:</strong><br>
+                            <span style="color: #e74c3c;">⬤</span> SSM Reference Point (center, origin)<br>
+                            <span style="color: #f093fb;">⬤</span> Emlid Survey Measurements<br>
+                            <span style="color: #4facfe;">⬤</span> ARDU Survey Measurements<br>
+                            <span style="color: #e0e0e0;">◯</span> Concentric circles show mm error magnitude<br>
+                            <em style="color: #7f8c8d;">Hover over points to see details</em>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="plot-title">Measurement Details</div>
+                    <div style="margin-bottom: 10px; padding: 10px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #f39c12;">
+                        <strong>📍 Reference SSM coordinates shown at center of plot</strong><br>
+                        <small style="color: #7f8c8d;">Survey points positioned relative to SSM with exaggerated scale. Rows colored by ΔH.<br>
+                        ✓ Click checkbox or click point on map to hide/show</small>
+                    </div>
+                    <div style="max-height: 450px; overflow-y: auto;">
+                        <table class="stats-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px;">Show</th>
+                                    <th>Device</th>
+                                    <th>Point</th>
+                                    <th>Description</th>
+                                    <th>ΔE (mm)</th>
+                                    <th>ΔN (mm)</th>
+                                    <th>ΔH (mm)</th>
+                                    <th>Horiz (mm)</th>
+                                    <th>Solution</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalStatsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="header">
+        <h1>🎯 SSM Survey Comparison Tool</h1>
+        <p class="subtitle">Drag & drop Emlid and ARDU CSV files to compare RTK GPS accuracy against known Survey Station Marks</p>
+    </div>
+    
+    <div class="container">
+        <div id="map"></div>
+        
+        <div class="control-grid">
+            <div class="upload-box" id="uploadBox">
+                <input type="file" id="fileInput" accept=".csv" multiple>
+                <div class="upload-icon">📁</div>
+                <div class="upload-title">Upload Survey Data</div>
+                <div class="upload-subtitle">Drag & drop multiple CSV files (auto-detects Emlid/ARDU)</div>
+                <div class="file-list" id="fileList"></div>
+                <button class="btn-clear hidden" id="clearAll">Clear All</button>
+            </div>
+            
+            <div class="stats-panel">
+                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">📊 Quick Stats</h3>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Points</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">RTK Fixed</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card emlid">
+                        <div class="stat-label">Emlid Avg</div>
+                        <div class="stat-value">- mm</div>
+                    </div>
+                    <div class="stat-card ardu">
+                        <div class="stat-label">ARDU Avg</div>
+                        <div class="stat-value">- mm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="collapsible-section">
+            <div class="section-header" onclick="toggleSection('ssmRef')">
+                <span>📍 Reference SSM Coordinates (MGA2020 Zone 50 + AHD71)</span>
+                <span class="toggle-icon collapsed" id="ssmRefIcon">▼</span>
+            </div>
+            <div class="section-content collapsed" id="ssmRefContent">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SSM Name</th>
+                            <th>Easting (m)</th>
+                            <th>Northing (m)</th>
+                            <th>Elevation AHD71 (m)</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ssmTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="comparisonResults" class="hidden">
+            <div class="results-panel">
+                <div class="panel-title">
+                    <span>📋 Combined Survey Results</span>
+                    <div class="column-toggle">
+                        <button onclick="toggleAllColumns(true)">Show All</button>
+                        <button onclick="toggleAllColumns(false)">Hide Extra</button>
+                        <button onclick="showColumnSelector()">Select Columns</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="resultsTable">
+                        <thead id="resultsHeader"></thead>
+                        <tbody id="resultsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // SSM reference coordinates
+        const ssmData = [
+            { name: "KWINANA 25", easting: 384829.481, northing: 6432478.744, elevation: 4.565, location: "Kwinana" },
+            { name: "Kwinana 18", easting: 382930.289, northing: 6431176.786, elevation: 3.507, location: "Kwinana" },
+            { name: "Kwinana 3", easting: 385302.645, northing: 6431281.757, elevation: 5.98, location: "Kwinana" },
+            { name: "LC12", easting: 375382.104, northing: 6501814.048, elevation: 47.118, location: "Alkimos" },
+            { name: "LC22", easting: 374532.916, northing: 6500657.353, elevation: 22.257, location: "Alkimos" },
+            { name: "M 34-102", easting: 361055.724, northing: 6535694.678, elevation: 24.822, location: "Guilderton" },
+            { name: "Perth127", easting: 340519.85, northing: 6567710.831, elevation: 1.885, location: "Lancelin" },
+            { name: "Perth 85", easting: 392188.653, northing: 6533009.672, elevation: 70.228, location: "Gingin" },
+            { name: "Perth158", easting: 397233.78, northing: 6531894.292, elevation: 110.435, location: "Gingin" },
+            { name: "Perth 81", easting: 394069.556, northing: 6529811.113, elevation: 78.643, location: "Gingin" },
+            { name: "Perth176", easting: 401057.294, northing: 6508003.131, elevation: 57.964, location: "Muchea" },
+            { name: "Muchea south 2T", easting: 403725.77, northing: 6502937.415, elevation: 46.557, location: "Muchea" },
+            { name: "C 460", easting: 374536.748, northing: 6503563.883, elevation: 58.354, location: "Alkimos" }
+        ];
+
+        let map;
+        let allMarkers = [];
+        let allLines = [];
+        let allResults = [];
+        let hiddenColumns = new Set();
+        let currentDetailSSM = null;
+        let currentDetailResults = [];
+
+        // Convert MGA2020 Zone 50 (UTM) to WGS84 Lat/Lon
+        function UTMtoLatLon(easting, northing, zone = 50, southern = true) {
+            const k0 = 0.9996;
+            const a = 6378137; // WGS84 major axis
+            const e = 0.081819191; // WGS84 eccentricity
+            const e1sq = 0.006739497;
+            
+            const arc = northing / k0;
+            const mu = arc / (a * (1 - Math.pow(e, 2) / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
+            
+            const ei = (1 - Math.pow((1 - e * e), (1 / 2))) / (1 + Math.pow((1 - e * e), (1 / 2)));
+            
+            const ca = 3 * ei / 2 - 27 * Math.pow(ei, 3) / 32;
+            const cb = 21 * Math.pow(ei, 2) / 16 - 55 * Math.pow(ei, 4) / 32;
+            const cc = 151 * Math.pow(ei, 3) / 96;
+            const cd = 1097 * Math.pow(ei, 4) / 512;
+            
+            const phi1 = mu + ca * Math.sin(2 * mu) + cb * Math.sin(4 * mu) + cc * Math.sin(6 * mu) + cd * Math.sin(8 * mu);
+            
+            const n0 = a / Math.pow((1 - Math.pow((e * Math.sin(phi1)), 2)), (1 / 2));
+            const r0 = a * (1 - e * e) / Math.pow((1 - Math.pow((e * Math.sin(phi1)), 2)), (3 / 2));
+            const fact1 = n0 * Math.tan(phi1) / r0;
+            
+            const _a1 = 500000 - easting;
+            const dd0 = _a1 / (n0 * k0);
+            const fact2 = dd0 * dd0 / 2;
+            
+            const t0 = Math.pow(Math.tan(phi1), 2);
+            const Q0 = e1sq * Math.pow(Math.cos(phi1), 2);
+            const fact3 = (5 + 3 * t0 + 10 * Q0 - 4 * Q0 * Q0 - 9 * e1sq) * Math.pow(dd0, 4) / 24;
+            const fact4 = (61 + 90 * t0 + 298 * Q0 + 45 * t0 * t0 - 252 * e1sq - 3 * Q0 * Q0) * Math.pow(dd0, 6) / 720;
+            
+            const lof1 = _a1 / (n0 * k0);
+            const lof2 = (1 + 2 * t0 + Q0) * Math.pow(dd0, 3) / 6;
+            const lof3 = (5 - 2 * Q0 + 28 * t0 - 3 * Math.pow(Q0, 2) + 8 * e1sq + 24 * Math.pow(t0, 2)) * Math.pow(dd0, 5) / 120;
+            const _a2 = (lof1 - lof2 + lof3) / Math.cos(phi1);
+            const _a3 = _a2 * 180 / Math.PI;
+            
+            let latitude = (phi1 - fact1 * (fact2 + fact3 + fact4)) * 180 / Math.PI;
+            const longitude = ((zone > 0 ? (6 * zone - 183) : 3) - _a3);
+            
+            if (southern) {
+                latitude = -latitude;
+            }
+            
+            return [latitude, longitude];
+        }
+
+        function calculateDistance(e1, n1, e2, n2) {
+            return Math.sqrt(Math.pow(e2 - e1, 2) + Math.pow(n2 - n1, 2));
+        }
+
+        function findClosestSSM(surveyPoint) {
+            let closestSSM = null;
+            let minDistance = Infinity;
+            
+            ssmData.forEach(ssm => {
+                const distance = calculateDistance(
+                    surveyPoint.easting, surveyPoint.northing,
+                    ssm.easting, ssm.northing
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSSM = ssm;
+                }
+            });
+            
+            return { ssm: closestSSM, distance: minDistance };
+        }
+
+        function initMap() {
+            // Calculate center from SSM points
+            let sumLat = 0, sumLon = 0;
+            ssmData.forEach(ssm => {
+                const [lat, lon] = UTMtoLatLon(ssm.easting, ssm.northing);
+                sumLat += lat;
+                sumLon += lon;
+            });
+            const avgLat = sumLat / ssmData.length;
+            const avgLon = sumLon / ssmData.length;
+
+            map = L.map('map').setView([avgLat, avgLon], 9);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            const legend = L.control({position: 'topright'});
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = `
+                    <strong>Map Legend</strong><br>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #e74c3c;"></span>
+                        SSM Reference
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #f093fb;"></span>
+                        Emlid Survey
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #4facfe;"></span>
+                        ARDU Survey
+                    </div>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid #ccc;">
+                        <strong>Solution Quality</strong><br>
+                        <span style="color:#27ae60;">●</span> RTK Fixed<br>
+                        <span style="color:#f39c12;">●</span> RTK Float<br>
+                        <span style="color:#e74c3c;">●</span> Other
+                    </div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+
+            plotSSMPoints();
+        }
+
+        function plotSSMPoints() {
+            // Remove old SSM markers
+            allMarkers.slice(0, ssmData.length).forEach(marker => map.removeLayer(marker));
+            allMarkers = allMarkers.slice(ssmData.length);
+            
+            ssmData.forEach(ssm => {
+                const [lat, lon] = UTMtoLatLon(ssm.easting, ssm.northing);
+                
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 8,
+                    fillColor: '#e74c3c',
+                    color: '#c0392b',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                // Count points at this SSM
+                const pointsAtSSM = allResults.filter(r => r.ssmName === ssm.name);
+                const countBadge = pointsAtSSM.length > 1 ? ` <span style="background:#667eea;color:white;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:bold;">${pointsAtSSM.length}</span>` : '';
+                
+                const content = `
+                    <strong>${ssm.name}${countBadge}</strong><br>
+                    ${ssm.location}<br>
+                    E: ${ssm.easting.toFixed(3)} m<br>
+                    N: ${ssm.northing.toFixed(3)} m<br>
+                    H: ${ssm.elevation.toFixed(3)} m AHD71
+                    ${pointsAtSSM.length > 1 ? '<br><br><button onclick="showDetailModal(\'' + ssm.name.replace(/'/g, "\\'") + '\'); return false;" style="padding:5px 10px; background:#667eea; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">📊 View ' + pointsAtSSM.length + ' Points Detail</button>' : ''}
+                `;
+                
+                marker.bindPopup(content);
+                marker.bindTooltip(`<strong>${ssm.name}</strong>${countBadge}<br>${ssm.location}`, {permanent: false, direction: 'top'});
+                
+                // Add click handler to show detail view if multiple points exist
+                marker.on('click', function() {
+                    if (pointsAtSSM.length > 1) {
+                        setTimeout(() => showDetailModal(ssm.name), 100);
+                    }
+                });
+                
+                allMarkers.unshift(marker); // Add to beginning
+            });
+        }
+
+        function plotSurveyData() {
+            // Re-plot SSM markers first to update badges
+            plotSSMPoints();
+            
+            // Clear existing survey markers and lines
+            allMarkers.filter((m, i) => i >= ssmData.length).forEach(marker => map.removeLayer(marker));
+            allLines.forEach(line => map.removeLayer(line));
+            allMarkers = allMarkers.slice(0, ssmData.length);
+            allLines = [];
+
+            allResults.forEach(result => {
+                const [surveyLat, surveyLon] = UTMtoLatLon(result.survey.easting, result.survey.northing);
+                const [ssmLat, ssmLon] = UTMtoLatLon(result.ssm.easting, result.ssm.northing);
+                
+                const color = result.device === 'Emlid' ? '#f093fb' : '#4facfe';
+                
+                const surveyMarker = L.circleMarker([surveyLat, surveyLon], {
+                    radius: 6,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                const pointsAtSSM = allResults.filter(r => r.ssmName === result.ssmName);
+                const detailBtn = pointsAtSSM.length > 1 ? `<br><button onclick="showDetailModal('${result.ssmName.replace(/'/g, "\\'")}'); return false;" style="margin-top:5px; padding:4px 8px; background:#667eea; color:white; border:none; border-radius:4px; cursor:pointer; font-size:10px;">📊 View ${pointsAtSSM.length} Points Detail</button>` : '';
+                
+                const content = `
+                    <strong>${result.device}: ${result.survey.name}</strong><br>
+                    SSM: ${result.ssmName}<br>
+                    Solution: ${result.survey.solution}<br>
+                    Horiz: ${result.horizontal.toFixed(1)} mm<br>
+                    ΔE: ${result.deltaE.toFixed(1)} mm<br>
+                    ΔN: ${result.deltaN.toFixed(1)} mm<br>
+                    ΔH: ${result.deltaH.toFixed(1)} mm${detailBtn}
+                `;
+                
+                surveyMarker.bindPopup(content);
+                surveyMarker.bindTooltip(content.replace(detailBtn, ''), {permanent: false, direction: 'top'});
+                
+                allMarkers.push(surveyMarker);
+                
+                const line = L.polyline([[surveyLat, surveyLon], [ssmLat, ssmLon]], {
+                    color: color,
+                    weight: 2,
+                    opacity: 0.4,
+                    dashArray: '5, 5'
+                }).addTo(map);
+                
+                allLines.push(line);
+            });
+
+            // Fit map to all points
+            const allLatLngs = allResults.map(r => {
+                const [lat, lon] = UTMtoLatLon(r.survey.easting, r.survey.northing);
+                return [lat, lon];
+            });
+            
+            if (allLatLngs.length > 0) {
+                map.fitBounds(allLatLngs, { padding: [50, 50] });
+            }
+        }
+
+        function displaySSMTable() {
+            const tbody = document.getElementById('ssmTableBody');
+            tbody.innerHTML = '';
+            
+            ssmData.forEach(ssm => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${ssm.name}</strong></td>
+                    <td>${ssm.easting.toFixed(3)}</td>
+                    <td>${ssm.northing.toFixed(3)}</td>
+                    <td>${ssm.elevation.toFixed(3)}</td>
+                    <td>${ssm.location}</td>
+                `;
+            });
+        }
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + 'Content');
+            const icon = document.getElementById(sectionId + 'Icon');
+            
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+        }
+
+        // File handling
+        function setupUpload() {
+            const box = document.getElementById('uploadBox');
+            const input = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const clearBtn = document.getElementById('clearAll');
+            
+            box.addEventListener('click', () => input.click());
+            
+            box.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                box.classList.add('dragover');
+            });
+            
+            box.addEventListener('dragleave', () => {
+                box.classList.remove('dragover');
+            });
+            
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            input.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+            
+            clearBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                allResults = [];
+                input.value = '';
+                fileList.innerHTML = '';
+                clearBtn.classList.add('hidden');
+                box.classList.remove('has-file');
+                
+                // Clear map
+                allMarkers.filter((m, i) => i >= ssmData.length).forEach(m => map.removeLayer(m));
+                allLines.forEach(l => map.removeLayer(l));
+                allMarkers = allMarkers.slice(0, ssmData.length);
+                allLines = [];
+                
+                updateDisplay();
+            });
+        }
+
+        function detectFileType(text) {
+            if (text.includes('Correction type') || text.includes('Averaging start')) {
+                return 'emlid';
+            }
+            if (text.includes('MGAE') || text.includes('Test_Name')) {
+                return 'ardu';
+            }
+            return null;
+        }
+
+        function handleFiles(files) {
+            const fileList = document.getElementById('fileList');
+            const clearBtn = document.getElementById('clearAll');
+            const box = document.getElementById('uploadBox');
+            
+            let filesProcessed = 0;
+            
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    const type = detectFileType(text);
+                    
+                    if (type === 'emlid') {
+                        parseEmlidData(text);
+                        const div = document.createElement('div');
+                        div.textContent = `✓ ${file.name} (Emlid)`;
+                        div.style.color = '#f093fb';
+                        fileList.appendChild(div);
+                    } else if (type === 'ardu') {
+                        parseArduData(text);
+                        const div = document.createElement('div');
+                        div.textContent = `✓ ${file.name} (ARDU)`;
+                        div.style.color = '#4facfe';
+                        fileList.appendChild(div);
+                    } else {
+                        const div = document.createElement('div');
+                        div.textContent = `✗ ${file.name} (Unknown format)`;
+                        div.style.color = '#e74c3c';
+                        fileList.appendChild(div);
+                    }
+                    
+                    filesProcessed++;
+                    if (filesProcessed === files.length) {
+                        clearBtn.classList.remove('hidden');
+                        box.classList.add('has-file');
+                        updateDisplay();
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function parseEmlidData(text) {
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) return;
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const indices = {
+                name: headers.findIndex(h => h.toLowerCase() === 'name'),
+                easting: headers.findIndex(h => h.toLowerCase() === 'easting'),
+                northing: headers.findIndex(h => h.toLowerCase() === 'northing'),
+                elevation: headers.findIndex(h => h.toLowerCase() === 'elevation'),
+                description: headers.findIndex(h => h.toLowerCase() === 'description' && !h.toLowerCase().includes('code')),
+                solution: headers.findIndex(h => h.toLowerCase().includes('solution')),
+                samples: headers.findIndex(h => h.toLowerCase().includes('samples')),
+                correction: headers.findIndex(h => h.toLowerCase().includes('correction')),
+                pdop: headers.findIndex(h => h.toLowerCase() === 'pdop'),
+                gdop: headers.findIndex(h => h.toLowerCase() === 'gdop'),
+                rmsE: headers.findIndex(h => h.toLowerCase() === 'easting rms'),
+                rmsN: headers.findIndex(h => h.toLowerCase() === 'northing rms'),
+                rmsH: headers.findIndex(h => h.toLowerCase() === 'elevation rms'),
+                gps: headers.findIndex(h => h.toLowerCase().includes('gps satellites')),
+                glonass: headers.findIndex(h => h.toLowerCase().includes('glonass')),
+                galileo: headers.findIndex(h => h.toLowerCase().includes('galileo')),
+                beidou: headers.findIndex(h => h.toLowerCase().includes('beidou'))
+            };
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',').map(v => v.trim());
+                
+                const point = {
+                    device: 'Emlid',
+                    name: values[indices.name] || `Point ${i}`,
+                    easting: parseFloat(values[indices.easting]),
+                    northing: parseFloat(values[indices.northing]),
+                    elevation: parseFloat(values[indices.elevation]),
+                    description: indices.description !== -1 ? values[indices.description] : '',
+                    solution: indices.solution !== -1 ? values[indices.solution] : 'N/A',
+                    samples: indices.samples !== -1 ? values[indices.samples] : 'N/A',
+                    correction: indices.correction !== -1 ? values[indices.correction] : 'N/A',
+                    pdop: indices.pdop !== -1 ? values[indices.pdop] : 'N/A',
+                    gdop: indices.gdop !== -1 ? values[indices.gdop] : 'N/A',
+                    rmsE: indices.rmsE !== -1 ? values[indices.rmsE] : 'N/A',
+                    rmsN: indices.rmsN !== -1 ? values[indices.rmsN] : 'N/A',
+                    rmsH: indices.rmsH !== -1 ? values[indices.rmsH] : 'N/A',
+                    gps: indices.gps !== -1 ? values[indices.gps] : '',
+                    glonass: indices.glonass !== -1 ? values[indices.glonass] : '',
+                    galileo: indices.galileo !== -1 ? values[indices.galileo] : '',
+                    beidou: indices.beidou !== -1 ? values[indices.beidou] : ''
+                };
+
+                if (!isNaN(point.easting) && !isNaN(point.northing) && !isNaN(point.elevation)) {
+                    analyzePoint(point);
+                }
+            }
+        }
+
+        function parseArduData(text) {
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) return;
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const indices = {
+                name: headers.findIndex(h => h.toLowerCase() === 'test_name'),
+                easting: headers.findIndex(h => h.toLowerCase() === 'mgae'),
+                northing: headers.findIndex(h => h.toLowerCase() === 'mgan'),
+                elevation: headers.findIndex(h => h.toLowerCase() === 'rl'),
+                solution: headers.findIndex(h => h.toLowerCase() === 's'),
+                pdop: headers.findIndex(h => h.toLowerCase() === 'pdop'),
+                hdop: headers.findIndex(h => h.toLowerCase() === 'hdop'),
+                vdop: headers.findIndex(h => h.toLowerCase() === 'vdop'),
+                sats: headers.findIndex(h => h.toLowerCase() === 'sats'),
+                horAcc: headers.findIndex(h => h.toLowerCase() === 'hor_acc'),
+                verAcc: headers.findIndex(h => h.toLowerCase() === 'ver_acc'),
+                notes: headers.findIndex(h => h.toLowerCase() === 'notes')
+            };
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                
+                const point = {
+                    device: 'ARDU',
+                    name: values[indices.name] || `Point ${i}`,
+                    easting: parseFloat(values[indices.easting]),
+                    northing: parseFloat(values[indices.northing]),
+                    elevation: parseFloat(values[indices.elevation]),
+                    solution: indices.solution !== -1 ? values[indices.solution] : 'N/A',
+                    pdop: indices.pdop !== -1 ? values[indices.pdop] : 'N/A',
+                    hdop: indices.hdop !== -1 ? values[indices.hdop] : 'N/A',
+                    vdop: indices.vdop !== -1 ? values[indices.vdop] : 'N/A',
+                    satellites: indices.sats !== -1 ? values[indices.sats] : 'N/A',
+                    horAcc: indices.horAcc !== -1 ? values[indices.horAcc] : 'N/A',
+                    verAcc: indices.verAcc !== -1 ? values[indices.verAcc] : 'N/A',
+                    notes: indices.notes !== -1 ? values[indices.notes] : ''
+                };
+
+                if (!isNaN(point.easting) && !isNaN(point.northing) && !isNaN(point.elevation)) {
+                    analyzePoint(point);
+                }
+            }
+        }
+
+        function analyzePoint(point) {
+            const { ssm } = findClosestSSM(point);
+            
+            if (ssm) {
+                const deltaE = (point.easting - ssm.easting) * 1000;
+                const deltaN = (point.northing - ssm.northing) * 1000;
+                const deltaH = (point.elevation - ssm.elevation) * 1000;
+                const horizontal = Math.sqrt(deltaE * deltaE + deltaN * deltaN);
+                const total3D = Math.sqrt(deltaE * deltaE + deltaN * deltaN + deltaH * deltaH);
+
+                allResults.push({
+                    device: point.device,
+                    ssmName: ssm.name,
+                    ssm: ssm,
+                    survey: point,
+                    deltaE: deltaE,
+                    deltaN: deltaN,
+                    deltaH: deltaH,
+                    horizontal: horizontal,
+                    total3D: total3D
+                });
+            }
+        }
+
+        function updateDisplay() {
+            if (allResults.length === 0) {
+                document.getElementById('comparisonResults').classList.add('hidden');
+                updateQuickStats();
+                return;
+            }
+
+            document.getElementById('comparisonResults').classList.remove('hidden');
+            
+            updateQuickStats();
+            displayCombinedResults();
+            plotSurveyData();
+        }
+
+        function updateQuickStats() {
+            const emlidResults = allResults.filter(r => r.device === 'Emlid');
+            const arduResults = allResults.filter(r => r.device === 'ARDU');
+            
+            const totalPoints = allResults.length;
+            const fixedCount = allResults.filter(r => 
+                r.survey.solution && r.survey.solution.toLowerCase().includes('fix')
+            ).length;
+            
+            const emlidAvg = emlidResults.length > 0 
+                ? emlidResults.reduce((sum, r) => sum + r.horizontal, 0) / emlidResults.length 
+                : 0;
+            const arduAvg = arduResults.length > 0 
+                ? arduResults.reduce((sum, r) => sum + r.horizontal, 0) / arduResults.length 
+                : 0;
+            
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Points</div>
+                    <div class="stat-value">${totalPoints}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">RTK Fixed</div>
+                    <div class="stat-value">${fixedCount}</div>
+                </div>
+                <div class="stat-card emlid">
+                    <div class="stat-label">Emlid Avg (${emlidResults.length})</div>
+                    <div class="stat-value">${emlidResults.length > 0 ? emlidAvg.toFixed(1) + ' mm' : '- mm'}</div>
+                </div>
+                <div class="stat-card ardu">
+                    <div class="stat-label">ARDU Avg (${arduResults.length})</div>
+                    <div class="stat-value">${arduResults.length > 0 ? arduAvg.toFixed(1) + ' mm' : '- mm'}</div>
+                </div>
+            `;
+        }
+
+        function getSolutionClass(solution) {
+            const sol = solution.toLowerCase();
+            if (sol.includes('fix') && !sol.includes('float')) return 'rtk-fixed';
+            if (sol.includes('float')) return 'rtk-float';
+            return 'rtk-other';
+        }
+
+        function displayCombinedResults() {
+            const table = document.getElementById('resultsTable');
+            const header = document.getElementById('resultsHeader');
+            const tbody = document.getElementById('resultsTableBody');
+            
+            // Sort results by SSM name, then by device
+            const sortedResults = [...allResults].sort((a, b) => {
+                if (a.ssmName !== b.ssmName) {
+                    return a.ssmName.localeCompare(b.ssmName);
+                }
+                return a.device.localeCompare(b.device);
+            });
+            
+            // Define all possible columns
+            const columns = [
+                { id: 'device', name: 'Device', always: true },
+                { id: 'point', name: 'Point Name', always: true },
+                { id: 'ssm', name: 'SSM', always: true },
+                { id: 'solution', name: 'Solution', always: true },
+                { id: 'deltaE', name: 'ΔE (mm)', always: true },
+                { id: 'deltaN', name: 'ΔN (mm)', always: true },
+                { id: 'deltaH', name: 'ΔH (mm)', always: true },
+                { id: 'horiz', name: 'Horiz (mm)', always: true },
+                { id: '3d', name: '3D (mm)', always: true },
+                { id: 'easting', name: 'Easting', always: false },
+                { id: 'northing', name: 'Northing', always: false },
+                { id: 'elevation', name: 'Elevation', always: false },
+                { id: 'correction', name: 'Correction', always: false },
+                { id: 'samples', name: 'Samples', always: false },
+                { id: 'pdop', name: 'PDOP', always: false },
+                { id: 'hdop', name: 'HDOP', always: false },
+                { id: 'satellites', name: 'Sats', always: false },
+                { id: 'rmsE', name: 'RMS E', always: false },
+                { id: 'rmsN', name: 'RMS N', always: false },
+                { id: 'rmsH', name: 'RMS H', always: false },
+                { id: 'horAcc', name: 'Hor Acc', always: false },
+                { id: 'verAcc', name: 'Ver Acc', always: false },
+                { id: 'description', name: 'Description', always: false },
+                { id: 'notes', name: 'Notes', always: false }
+            ];
+            
+            // Build header
+            header.innerHTML = '<tr>' + columns.map(col => 
+                `<th class="${hiddenColumns.has(col.id) ? 'hidden-col' : ''}" data-col="${col.id}" onclick="toggleColumn('${col.id}')">${col.name}</th>`
+            ).join('') + '</tr>';
+            
+            // Group results by SSM
+            const groupedBySSM = {};
+            sortedResults.forEach(result => {
+                if (!groupedBySSM[result.ssmName]) {
+                    groupedBySSM[result.ssmName] = [];
+                }
+                groupedBySSM[result.ssmName].push(result);
+            });
+            
+            // Build rows
+            tbody.innerHTML = '';
+            let currentSSM = null;
+            
+            sortedResults.forEach((result, index) => {
+                const row = tbody.insertRow();
+                row.className = getSolutionClass(result.survey.solution);
+                
+                const formatDelta = (value) => {
+                    const sign = value >= 0 ? '+' : '';
+                    const className = value >= 0 ? 'positive' : 'negative';
+                    return `<span class="${className}">${sign}${value.toFixed(1)}</span>`;
+                };
+                
+                // Add detail view button if multiple points at this SSM
+                let ssmDisplay = `<strong>${result.ssmName}</strong>`;
+                if (currentSSM !== result.ssmName) {
+                    currentSSM = result.ssmName;
+                    if (groupedBySSM[result.ssmName].length > 1) {
+                        ssmDisplay += ` <span class="ssm-group-badge" onclick="showDetailModal('${result.ssmName.replace(/'/g, "\\'")}')">📊 ${groupedBySSM[result.ssmName].length} pts</span>`;
+                    }
+                }
+                
+                const cells = {
+                    device: `<span class="device-badge badge-${result.device.toLowerCase()}">${result.device}</span>`,
+                    point: result.survey.name,
+                    ssm: ssmDisplay,
+                    solution: result.survey.solution,
+                    deltaE: formatDelta(result.deltaE),
+                    deltaN: formatDelta(result.deltaN),
+                    deltaH: formatDelta(result.deltaH),
+                    horiz: `<strong>${result.horizontal.toFixed(1)}</strong>`,
+                    '3d': `<strong>${result.total3D.toFixed(1)}</strong>`,
+                    easting: result.survey.easting.toFixed(3),
+                    northing: result.survey.northing.toFixed(3),
+                    elevation: result.survey.elevation.toFixed(3),
+                    correction: result.survey.correction || '',
+                    samples: result.survey.samples || '',
+                    pdop: result.survey.pdop || '',
+                    hdop: result.survey.hdop || '',
+                    satellites: result.survey.satellites || '',
+                    rmsE: result.survey.rmsE || '',
+                    rmsN: result.survey.rmsN || '',
+                    rmsH: result.survey.rmsH || '',
+                    horAcc: result.survey.horAcc || '',
+                    verAcc: result.survey.verAcc || '',
+                    description: result.survey.description || '',
+                    notes: result.survey.notes || ''
+                };
+                
+                columns.forEach(col => {
+                    const cell = row.insertCell();
+                    cell.innerHTML = cells[col.id] || '';
+                    if (hiddenColumns.has(col.id)) {
+                        cell.className = 'hidden-col';
+                    }
+                });
+                
+                row.addEventListener('click', (e) => {
+                    // Don't trigger if clicking the badge
+                    if (e.target.classList.contains('ssm-group-badge')) return;
+                    
+                    // Highlight row and open marker on map
+                    document.querySelectorAll('tr').forEach(r => r.classList.remove('highlight-row'));
+                    row.classList.add('highlight-row');
+                    
+                    const markerIndex = ssmData.length + sortedResults.indexOf(result);
+                    if (allMarkers[markerIndex]) {
+                        allMarkers[markerIndex].openPopup();
+                        const [lat, lon] = UTMtoLatLon(result.survey.easting, result.survey.northing);
+                        map.setView([lat, lon], 16);
+                    }
+                });
+            });
+        }
+
+        function toggleColumn(colId) {
+            if (hiddenColumns.has(colId)) {
+                hiddenColumns.delete(colId);
+            } else {
+                hiddenColumns.add(colId);
+            }
+            displayCombinedResults();
+        }
+
+        function toggleAllColumns(show) {
+            if (show) {
+                hiddenColumns.clear();
+            } else {
+                // Hide non-essential columns
+                const nonEssential = ['easting', 'northing', 'elevation', 'correction', 'samples', 
+                    'pdop', 'hdop', 'satellites', 'rmsE', 'rmsN', 'rmsH', 'horAcc', 'verAcc', 
+                    'description', 'notes'];
+                nonEssential.forEach(col => hiddenColumns.add(col));
+            }
+            displayCombinedResults();
+        }
+
+        function showColumnSelector() {
+            alert('Click on any column header to hide/show it!');
+        }
+
+        function getColorByDeltaH(deltaH) {
+            const absDeltaH = Math.abs(deltaH);
+            const good = parseFloat(document.getElementById('thresholdGood')?.value || 20);
+            const warning = parseFloat(document.getElementById('thresholdWarning')?.value || 50);
+            
+            if (absDeltaH <= good) return '#d4edda';
+            if (absDeltaH <= warning) return '#fff3cd';
+            return '#f8d7da';
+        }
+
+        function updateThresholdError() {
+            updateDetailView();
+        }
+
+        function showDetailModal(ssmName) {
+            const modal = document.getElementById('detailModal');
+            const title = document.getElementById('modalTitle');
+            const subtitle = document.getElementById('modalSubtitle');
+            
+            // Get all results for this SSM
+            const ssmResults = allResults.filter(r => r.ssmName === ssmName);
+            
+            if (ssmResults.length === 0) return;
+            
+            const ssm = ssmResults[0].ssm;
+            
+            // Store current state and add visibility property if not present
+            currentDetailSSM = ssm;
+            currentDetailResults = ssmResults.map((r, idx) => ({
+                ...r,
+                visible: r.visible !== undefined ? r.visible : true,
+                detailIndex: idx
+            }));
+            
+            title.textContent = `${ssmName} - Detail View`;
+            subtitle.textContent = `${ssm.location} | E: ${ssm.easting.toFixed(3)} N: ${ssm.northing.toFixed(3)} H: ${ssm.elevation.toFixed(3)} m AHD71`;
+            
+            // Populate the table
+            updateDetailTable();
+            
+            // Show modal first
+            modal.style.display = 'block';
+            
+            // Draw the plot after modal is visible so canvas has dimensions
+            setTimeout(() => {
+                drawDistancePlot(currentDetailResults, ssm);
+            }, 50);
+        }
+
+        function togglePointVisibility(index) {
+            currentDetailResults[index].visible = !currentDetailResults[index].visible;
+            updateDetailTable();
+            redrawPlot(null);
+        }
+
+        function updateDetailView() {
+            if (currentDetailResults.length > 0) {
+                updateDetailTable();
+            }
+        }
+
+        function updateDetailTable() {
+            const statsBody = document.getElementById('modalStatsBody');
+            statsBody.innerHTML = '';
+            
+            // Add SSM reference row
+            const ssmRow = statsBody.insertRow();
+            ssmRow.style.background = '#e3f2fd';
+            ssmRow.style.fontWeight = 'bold';
+            ssmRow.style.borderBottom = '2px solid #667eea';
+            ssmRow.innerHTML = `
+                <td></td>
+                <td colspan="3"><strong>📍 SSM Reference</strong></td>
+                <td>E: ${currentDetailSSM.easting.toFixed(3)}</td>
+                <td>N: ${currentDetailSSM.northing.toFixed(3)}</td>
+                <td>H: ${currentDetailSSM.elevation.toFixed(3)}</td>
+                <td colspan="2">${currentDetailSSM.location}</td>
+            `;
+            
+            // Add separator row
+            const sepRow = statsBody.insertRow();
+            sepRow.style.background = '#f8f9fa';
+            sepRow.innerHTML = `<td colspan="9" style="padding:3px;"></td>`;
+            
+            // Add measurement rows with deltaH-based coloring and checkboxes
+            currentDetailResults.forEach((result, index) => {
+                const row = statsBody.insertRow();
+                row.style.background = getColorByDeltaH(result.deltaH);
+                
+                if (!result.visible) {
+                    row.classList.add('row-hidden');
+                }
+                
+                const formatDelta = (value) => {
+                    const sign = value >= 0 ? '+' : '';
+                    return `${sign}${value.toFixed(1)}`;
+                };
+                
+                row.innerHTML = `
+                    <td style="text-align:center;">
+                        <input type="checkbox" class="visibility-checkbox" 
+                               ${result.visible ? 'checked' : ''} 
+                               onchange="togglePointVisibility(${index})">
+                    </td>
+                    <td><span class="device-badge badge-${result.device.toLowerCase()}">${result.device}</span></td>
+                    <td>${result.survey.name}</td>
+                    <td style="font-size:10px;">${result.survey.description || '-'}</td>
+                    <td>${formatDelta(result.deltaE)}</td>
+                    <td>${formatDelta(result.deltaN)}</td>
+                    <td><strong>${formatDelta(result.deltaH)}</strong></td>
+                    <td><strong>${result.horizontal.toFixed(1)}</strong></td>
+                    <td style="font-size:10px;">${result.survey.solution}</td>
+                `;
+            });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        let plotPoints = []; // Store point positions for hover detection
+        
+        function drawDistancePlot(ssmResults, ssm) {
+            const canvas = document.getElementById('distancePlot');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Get container dimensions
+            const container = canvas.parentElement;
+            const containerWidth = container.clientWidth;
+            
+            // Set canvas size explicitly
+            canvas.width = containerWidth - 40;
+            canvas.height = 500;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Calculate scale - only consider visible points
+            let maxDist = 0;
+            ssmResults.filter(r => r.visible).forEach(r => {
+                const dist = Math.sqrt(r.deltaE * r.deltaE + r.deltaN * r.deltaN);
+                if (dist > maxDist) maxDist = dist;
+            });
+            
+            const availableRadius = Math.min(width, height) * 0.35;
+            const scale = maxDist > 0 ? availableRadius / maxDist : 10;
+            
+            document.getElementById('scaleInfo').textContent = `Scale: 1mm ≈ ${scale.toFixed(1)}px | Max error: ${maxDist.toFixed(1)}mm`;
+            
+            // Draw concentric circles
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            const gridSteps = [10, 20, 30, 50, 75, 100, 150, 200, 300];
+            gridSteps.forEach(stepMm => {
+                if (stepMm <= maxDist * 1.3) {
+                    const radius = stepMm * scale;
+                    if (radius < availableRadius * 1.2) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        
+                        // Label
+                        ctx.fillStyle = '#bdc3c7';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(`${stepMm}mm`, centerX + radius + 5, centerY + 3);
+                    }
+                }
+            });
+            
+            // Draw axes
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, 30);
+            ctx.lineTo(centerX, height - 30);
+            ctx.moveTo(30, centerY);
+            ctx.lineTo(width - 30, centerY);
+            ctx.stroke();
+            
+            // Label axes
+            ctx.fillStyle = '#34495e';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('N', centerX - 10, 25);
+            ctx.fillText('S', centerX - 8, height - 15);
+            ctx.fillText('E', width - 25, centerY - 5);
+            ctx.fillText('W', 15, centerY - 5);
+            
+            // Draw SSM at center
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 10, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#c0392b';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // SSM Label
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 11px Arial';
+            ctx.fillText('SSM', centerX - 14, centerY - 15);
+            
+            // Store points for hover detection
+            plotPoints = [];
+            
+            // Draw survey points (just dots, no labels) - only visible ones
+            ssmResults.forEach((result) => {
+                if (!result.visible) return; // Skip hidden points
+                
+                const x = centerX + (result.deltaE * scale);
+                const y = centerY - (result.deltaN * scale);
+                
+                const color = result.device === 'Emlid' ? '#f093fb' : '#4facfe';
+                
+                // Draw point
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, 7, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Store point data for hover and click
+                plotPoints.push({
+                    x: x,
+                    y: y,
+                    result: result,
+                    color: color
+                });
+            });
+            
+            // Add hover and click interaction
+            setupPlotInteraction(canvas, scale, centerX, centerY);
+        }
+        
+        function setupPlotInteraction(canvas, scale, centerX, centerY) {
+            const tooltip = document.getElementById('plotTooltip');
+            
+            // Remove existing listeners
+            canvas.onmousemove = null;
+            canvas.onmouseleave = null;
+            canvas.onclick = null;
+            
+            let currentHoverPoint = null;
+            
+            canvas.onmousemove = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Find closest point within threshold
+                let closestPoint = null;
+                let minDist = 15; // pixels threshold for hover
+                
+                plotPoints.forEach(point => {
+                    const dist = Math.sqrt(Math.pow(mouseX - point.x, 2) + Math.pow(mouseY - point.y, 2));
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestPoint = point;
+                    }
+                });
+                
+                // Also check if hovering over SSM
+                const distToSSM = Math.sqrt(Math.pow(mouseX - centerX, 2) + Math.pow(mouseY - centerY, 2));
+                
+                if (distToSSM < 15) {
+                    // Hovering over SSM
+                    tooltip.innerHTML = `
+                        <strong>📍 ${currentDetailSSM.name} (SSM)</strong>
+                        Location: ${currentDetailSSM.location}<br>
+                        E: ${currentDetailSSM.easting.toFixed(3)} m<br>
+                        N: ${currentDetailSSM.northing.toFixed(3)} m<br>
+                        H: ${currentDetailSSM.elevation.toFixed(3)} m AHD71
+                    `;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY - 80) + 'px';
+                    canvas.style.cursor = 'pointer';
+                    currentHoverPoint = null;
+                    redrawPlot(null);
+                } else if (closestPoint) {
+                    const r = closestPoint.result;
+                    tooltip.innerHTML = `
+                        <strong>${r.device}: ${r.survey.name}</strong>
+                        <div style="margin-top:5px;">
+                        Description: ${r.survey.description || '-'}<br>
+                        Solution: ${r.survey.solution}<br>
+                        </div>
+                        <div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.3); padding-top:8px;">
+                        ΔE: ${r.deltaE >= 0 ? '+' : ''}${r.deltaE.toFixed(1)} mm<br>
+                        ΔN: ${r.deltaN >= 0 ? '+' : ''}${r.deltaN.toFixed(1)} mm<br>
+                        ΔH: ${r.deltaH >= 0 ? '+' : ''}${r.deltaH.toFixed(1)} mm<br>
+                        <strong>Horiz: ${r.horizontal.toFixed(1)} mm</strong><br>
+                        3D: ${r.total3D.toFixed(1)} mm
+                        </div>
+                        <div style="margin-top:8px; font-size:11px; opacity:0.8;">
+                        Click to hide this point
+                        </div>
+                    `;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY - 120) + 'px';
+                    canvas.style.cursor = 'pointer';
+                    currentHoverPoint = closestPoint;
+                    redrawPlot(closestPoint);
+                } else {
+                    tooltip.style.display = 'none';
+                    canvas.style.cursor = 'default';
+                    currentHoverPoint = null;
+                    redrawPlot(null);
+                }
+            };
+            
+            canvas.onclick = function(e) {
+                if (currentHoverPoint) {
+                    // Find the index in currentDetailResults
+                    const index = currentDetailResults.findIndex(r => 
+                        r.survey.name === currentHoverPoint.result.survey.name && 
+                        r.device === currentHoverPoint.result.device
+                    );
+                    if (index !== -1) {
+                        togglePointVisibility(index);
+                    }
+                }
+            };
+            
+            canvas.onmouseleave = function() {
+                tooltip.style.display = 'none';
+                canvas.style.cursor = 'default';
+                redrawPlot(null);
+            };
+        }
+        
+        function redrawPlot(highlightPoint) {
+            const canvas = document.getElementById('distancePlot');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Redraw everything
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Calculate scale - only consider visible points
+            let maxDist = 0;
+            currentDetailResults.filter(r => r.visible).forEach(r => {
+                const dist = Math.sqrt(r.deltaE * r.deltaE + r.deltaN * r.deltaN);
+                if (dist > maxDist) maxDist = dist;
+            });
+            
+            const availableRadius = Math.min(width, height) * 0.35;
+            const scale = maxDist > 0 ? availableRadius / maxDist : 10;
+            
+            // Draw concentric circles
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            const gridSteps = [10, 20, 30, 50, 75, 100, 150, 200, 300];
+            gridSteps.forEach(stepMm => {
+                if (stepMm <= maxDist * 1.3) {
+                    const radius = stepMm * scale;
+                    if (radius < availableRadius * 1.2) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        
+                        ctx.fillStyle = '#bdc3c7';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(`${stepMm}mm`, centerX + radius + 5, centerY + 3);
+                    }
+                }
+            });
+            
+            // Draw axes
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, 30);
+            ctx.lineTo(centerX, height - 30);
+            ctx.moveTo(30, centerY);
+            ctx.lineTo(width - 30, centerY);
+            ctx.stroke();
+            
+            // Label axes
+            ctx.fillStyle = '#34495e';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('N', centerX - 10, 25);
+            ctx.fillText('S', centerX - 8, height - 15);
+            ctx.fillText('E', width - 25, centerY - 5);
+            ctx.fillText('W', 15, centerY - 5);
+            
+            // Draw SSM
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 10, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#c0392b';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 11px Arial';
+            ctx.fillText('SSM', centerX - 14, centerY - 15);
+            
+            // Recalculate point positions for visible points only
+            const visiblePlotPoints = [];
+            currentDetailResults.forEach((result) => {
+                if (!result.visible) return;
+                
+                const x = centerX + (result.deltaE * scale);
+                const y = centerY - (result.deltaN * scale);
+                const color = result.device === 'Emlid' ? '#f093fb' : '#4facfe';
+                
+                visiblePlotPoints.push({
+                    x: x,
+                    y: y,
+                    result: result,
+                    color: color
+                });
+            });
+            
+            // Draw survey points - only visible ones
+            visiblePlotPoints.forEach(point => {
+                // Draw connection line if this is the highlighted point
+                if (highlightPoint && point.result === highlightPoint.result) {
+                    ctx.strokeStyle = 'rgba(149, 165, 166, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.lineTo(point.x, point.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // Draw point
+                const isHighlight = highlightPoint && point.result === highlightPoint.result;
+                ctx.fillStyle = point.color;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, isHighlight ? 9 : 7, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = isHighlight ? '#2c3e50' : '#2c3e50';
+                ctx.lineWidth = isHighlight ? 3 : 2;
+                ctx.stroke();
+                
+                // Draw glow if highlighted
+                if (isHighlight) {
+                    ctx.strokeStyle = point.color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 12, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            });
+            
+            // Update plotPoints for next interaction
+            plotPoints = visiblePlotPoints;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target === modal) {
+                closeDetailModal();
+            }
+        };
+
+        // Initialize
+        function init() {
+            if (typeof L === 'undefined') {
+                setTimeout(init, 100);
+                return;
+            }
+            displaySSMTable();
+            initMap();
+            setupUpload();
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced CPT Data Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .map-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .cross-section {
+            grid-column: 1 / -1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .cpt-section {
+            grid-column: 1 / -1;
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #667eea;
+        }
+
+        .surface-section {
+            grid-column: 1 / -1;
+            background: #f0fff0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #28a745;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px 0 0;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button.export-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        button.cpt-btn {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+        }
+
+        #crossSection {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+        }
+
+        .legend-color:hover {
+            transform: scale(1.1);
+            transition: transform 0.2s;
+        }
+
+        .info-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .cross-section-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .cpt-label {
+            background: rgba(173, 216, 230, 0.9);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000080;
+            border: 1px solid #4682b4;
+            pointer-events: none;
+        }
+
+        .color-picker {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        #exportCanvas {
+            display: none;
+        }
+
+        .cpt-upload {
+            margin: 15px 0;
+            padding: 15px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .cpt-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .cpt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cpt-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .cpt-stats {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-input-label input[type="file"] {
+            display: none;
+        }
+
+        .coordinate-input-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .coordinate-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .coordinate-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .paste-area {
+            grid-column: 1;
+        }
+
+        .coordinate-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
+        .simple-input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            margin-bottom: 20px;
+        }
+
+        .coordinate-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .coordinate-table th,
+        .coordinate-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .coordinate-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .coordinate-table input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .add-row-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            margin-top: 10px;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .three-container-wrapper {
+            position: relative;
+            height: 500px;
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background-color: #f5f5f5;
+        }
+
+        .view-cube {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 80px;
+            height: 80px;
+            perspective: 200px;
+            z-index: 1000;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-15deg) rotateY(30deg);
+            cursor: pointer;
+        }
+
+        .cube-face {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+
+        .cube-face:hover {
+            background: rgba(102, 126, 234, 0.8);
+            color: white;
+        }
+
+        .cube-face.front { transform: rotateY(0deg) translateZ(40px); }
+        .cube-face.back { transform: rotateY(180deg) translateZ(40px); }
+        .cube-face.right { transform: rotateY(90deg) translateZ(40px); }
+        .cube-face.left { transform: rotateY(-90deg) translateZ(40px); }
+        .cube-face.top { transform: rotateX(90deg) translateZ(40px); }
+        .cube-face.bottom { transform: rotateX(-90deg) translateZ(40px); }
+
+        .surface-input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+            align-items: start;
+        }
+
+        .surface-point {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .surface-point h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .surface-point input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        }
+
+        .surface-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .vertical-exaggeration-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .vertical-exaggeration-control input[type="range"] {
+            width: 150px;
+        }
+
+        .vertical-exaggeration-control span {
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .cpt-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 5px;
+            border: 1px solid #667eea;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Enhanced CPT Data Visualizer</h1>
+            <p>Upload CPT files, add coordinates, visualize on map, and generate enhanced cross-sections with 3D navigation and vertical exaggeration</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <div class="section-title">Simple Coordinate Input</div>
+                <div class="simple-input-section">
+                    <p><strong>Quick Method:</strong> Add CPT coordinates manually</p>
+                    <div class="help-text">
+                        Enter coordinates for CPT locations. You can add files later or use sample data.
+                    </div>
+
+                    <table class="coordinate-table" id="coordinateTable">
+                        <thead>
+                            <tr>
+                                <th>CPT Name</th>
+                                <th>Easting</th>
+                                <th>Northing</th>
+                                <th>Elevation</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coordinateTableBody">
+                            <tr>
+                                <td><input type="text" placeholder="CPT01" value="CPT01"></td>
+                                <td><input type="number" placeholder="401887.3" step="0.001" value="401887.3"></td>
+                                <td><input type="number" placeholder="6467794" step="0.001" value="6467794"></td>
+                                <td><input type="number" placeholder="9.05" step="0.001" value="9.05"></td>
+                                <td><button class="remove-btn" onclick="removeCoordinateRow(this)">Remove</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <button class="add-row-btn" onclick="addCoordinateRow()">Add CPT Location</button>
+                    <button onclick="loadCoordinatesToMap()">Load to Map</button>
+                    <button onclick="loadSampleData()">Load Sample Data</button>
+                    <button onclick="clearData()">Clear All</button>
+                </div>
+
+                <div class="info-panel">
+                    <div id="dataInfo">No data loaded</div>
+                </div>
+            </div>
+
+            <div class="map-section">
+                <div class="section-title">Map View</div>
+                <div id="map"></div>
+                <div class="controls">
+                    <button onclick="generateCrossSection()">Generate Cross Section</button>
+                    <button class="export-btn" onclick="exportToPNG()">Export to PNG</button>
+                </div>
+                <div class="info-panel">
+                    <div id="mapInfo">Click on CPTs to see details</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="surface-section">
+            <div class="section-title">Ground & Water Surfaces</div>
+            <div class="surface-input-grid">
+                <div class="surface-point">
+                    <h4>Ground Point 1</h4>
+                    <input type="number" id="groundX1" placeholder="Easting" step="0.001">
+                    <input type="number" id="groundY1" placeholder="Northing" step="0.001">
+                    <input type="number" id="groundZ1" placeholder="Elevation" step="0.001">
+                </div>
+                <div class="surface-point">
+                    <h4>Ground Point 2</h4>
+                    <input type="number" id="groundX2" placeholder="Easting" step="0.001">
+                    <input type="number" id="groundY2" placeholder="Northing" step="0.001">
+                    <input type="number" id="groundZ2" placeholder="Elevation" step="0.001">
+                </div>
+                <div class="surface-point">
+                    <h4>Water Point 1</h4>
+                    <input type="number" id="waterX1" placeholder="Easting" step="0.001">
+                    <input type="number" id="waterY1" placeholder="Northing" step="0.001">
+                    <input type="number" id="waterZ1" placeholder="Elevation" step="0.001">
+                </div>
+                <div class="surface-point">
+                    <h4>Water Point 2</h4>
+                    <input type="number" id="waterX2" placeholder="Easting" step="0.001">
+                    <input type="number" id="waterY2" placeholder="Northing" step="0.001">
+                    <input type="number" id="waterZ2" placeholder="Elevation" step="0.001">
+                </div>
+            </div>
+            <div class="surface-controls">
+                <button onclick="autoGenerateGroundSurface()">Auto-Generate Ground Surface</button>
+                <button onclick="clearSurfaces()">Clear Surfaces</button>
+                <label>
+                    <input type="checkbox" id="showGroundSurface" checked onchange="generateCrossSection()">
+                    Show Ground Surface
+                </label>
+                <label>
+                    <input type="checkbox" id="showWaterSurface" checked onchange="generateCrossSection()">
+                    Show Water Surface
+                </label>
+            </div>
+        </div>
+
+        <div class="cpt-section">
+            <div class="section-title">CPT Data Files (Optional)</div>
+            <div class="cpt-upload">
+                <p>Upload CPT files (.csv or .xlsx) - Optional step</p>
+                <p style="font-size: 12px; color: #666; margin-top: 5px;">Data should start at line 25 with format: Depth Qc Fs U2 Rf Temp Tilt Dist Speed Qt U2-U0 Time</p>
+                <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.8); border-radius: 5px;">
+                    <label style="font-weight: bold; margin-right: 10px;">Rf Threshold for Soil Classification:</label>
+                    <input type="number" id="rfThreshold" value="1.0" step="0.1" min="0.1" max="10" style="width: 80px; padding: 5px;" onchange="updateRfThreshold()">
+                    <span style="font-size: 12px; color: #666; margin-left: 10px;">Granular if Rf < threshold, Cohesive if Rf ≥ threshold</span>
+                </div>
+                
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin: 15px 0;">
+                    <label class="file-input-label">
+                        Choose Files
+                        <input type="file" id="cptFileInput" multiple accept=".csv,.xlsx,.xls" onchange="handleCPTFiles(event)">
+                    </label>
+                    
+                    <button class="cpt-btn" onclick="loadCSVFromDirectory()">Load CSV Files from Directory</button>
+                    
+                    <div style="font-size: 12px; color: #666; max-width: 300px;">
+                        Auto-load will scan for .csv files in the current directory
+                    </div>
+                </div>
+                
+                <div id="directoryStatus" style="margin: 10px 0; padding: 8px; border-radius: 5px; display: none;"></div>
+            </div>
+            <div class="cpt-controls">
+                <button class="cpt-btn" onclick="generateCrossSection()">Generate Cross Section with CPT Data</button>
+                <span style="font-size: 12px; color: #666;">Use this button after uploading CPT files for enhanced visualization</span>
+            </div>
+            <div id="cptContainer">
+                <!-- CPT items will be added here -->
+            </div>
+        </div>
+
+        <div class="cross-section">
+            <div class="section-title">2D Cross Section</div>
+            <div class="cross-section-controls">
+                <label>
+                    <input type="checkbox" id="showCPTColors" checked onchange="generateCrossSection()">
+                    CPT Colors
+                </label>
+                <label>
+                    <input type="checkbox" id="showQcLine" checked onchange="generateCrossSection()">
+                    Qc Line
+                </label>
+                <label>
+                    <input type="checkbox" id="showRfLine" onchange="generateCrossSection()">
+                    Rf Line
+                </label>
+                <label>
+                    <input type="checkbox" id="showU2Line" onchange="generateCrossSection()">
+                    U2 Line
+                </label>
+                <select id="lineScale" onchange="generateCrossSection()">
+                    <option value="normalized">Normalized Scale</option>
+                    <option value="actual">Actual Values</option>
+                </select>
+                <div class="vertical-exaggeration-control">
+                    <label>Vertical Exaggeration:</label>
+                    <input type="range" id="verticalExaggeration" min="1" max="10" value="2" step="0.5" onchange="updateVerticalExaggeration()">
+                    <span id="verticalExaggerationValue">2x</span>
+                </div>
+            </div>
+            <canvas id="crossSection"></canvas>
+            <div class="legend" id="legend"></div>
+        </div>
+
+        <div class="cross-section">
+            <div class="section-title">3D Visualization</div>
+            <div class="cross-section-controls">
+                <div class="vertical-exaggeration-control">
+                    <label>3D Vertical Exaggeration:</label>
+                    <input type="range" id="verticalExaggeration3D" min="1" max="10" value="2" step="0.5" onchange="updateVerticalExaggeration3D()">
+                    <span id="verticalExaggerationValue3D">2x</span>
+                </div>
+            </div>
+            <div class="three-container-wrapper">
+                <div class="view-cube" id="viewCube">
+                    <div class="cube">
+                        <div class="cube-face front" data-view="south">S</div>
+                        <div class="cube-face back" data-view="north">N</div>
+                        <div class="cube-face right" data-view="east">E</div>
+                        <div class="cube-face left" data-view="west">W</div>
+                        <div class="cube-face top" data-view="top">TOP</div>
+                        <div class="cube-face bottom" data-view="bottom">BOT</div>
+                    </div>
+                </div>
+                <div id="threeContainer" style="height: 100%; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="exportCanvas" style="display: none;"></canvas>
+
+    <script>
+        let cptLocations = [];
+        let cptData = [];
+        let map = null;
+        let cptMarkers = [];
+        let bestFitLine = null;
+        let scene, camera, renderer, cameraTarget;
+        let cameraRadius = 40;
+        let cameraTheta = 0;
+        let cameraPhi = Math.PI / 4;
+        let verticalExaggeration = 2;
+        let verticalExaggeration3D = 2;
+
+        // Ground and water surface points
+        let groundSurface = { p1: null, p2: null };
+        let waterSurface = { p1: null, p2: null };
+
+        // CPT soil classification colors
+        const cptSoilColors = {
+            'loose_granular': '#FFF8DC',
+            'med_dense_granular': '#F0E68C',
+            'dense_granular': '#DAA520',
+            'very_dense_granular': '#B8860B',
+            'very_soft_cohesive': '#F0F8FF',
+            'soft_cohesive': '#ADD8E6',
+            'firm_cohesive': '#87CEEB',
+            'stiff_cohesive': '#4682B4',
+            'very_stiff_cohesive': '#191970'
+        };
+
+        // CPT classification threshold
+        let rfThreshold = 1.0;
+
+        function updateVerticalExaggeration() {
+            const slider = document.getElementById('verticalExaggeration');
+            const value = document.getElementById('verticalExaggerationValue');
+            verticalExaggeration = parseFloat(slider.value);
+            value.textContent = verticalExaggeration + 'x';
+            if (cptLocations.length > 0) {
+                generateCrossSection();
+            }
+        }
+
+        function updateVerticalExaggeration3D() {
+            const slider = document.getElementById('verticalExaggeration3D');
+            const value = document.getElementById('verticalExaggerationValue3D');
+            verticalExaggeration3D = parseFloat(slider.value);
+            value.textContent = verticalExaggeration3D + 'x';
+            if (cptLocations.length > 0) {
+                render3D();
+            }
+        }
+
+        function updateRfThreshold() {
+            const input = document.getElementById('rfThreshold');
+            rfThreshold = parseFloat(input.value);
+            if (cptLocations.length > 0) {
+                generateCrossSection();
+            }
+        }
+
+        function classifyCPTSoil(qc, rf) {
+            if (rf < rfThreshold) {
+                if (qc >= 0 && qc < 5) return 'loose_granular';
+                else if (qc >= 5 && qc < 12) return 'med_dense_granular';
+                else if (qc >= 12 && qc < 20) return 'dense_granular';
+                else if (qc >= 20) return 'very_dense_granular';
+            } else {
+                if (qc >= 0 && qc < 0.3) return 'very_soft_cohesive';
+                else if (qc >= 0.3 && qc < 0.6) return 'soft_cohesive';
+                else if (qc >= 0.6 && qc < 1.2) return 'firm_cohesive';
+                else if (qc >= 1.2 && qc < 2.5) return 'stiff_cohesive';
+                else if (qc >= 2.5) return 'very_stiff_cohesive';
+            }
+            return 'loose_granular';
+        }
+
+        function initMap() {
+            map = L.map('map').setView([-31.95, 115.85], 16);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+
+            const baseLayers = {
+                "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }),
+                "Satellite": satelliteLayer
+            };
+
+            L.control.layers(baseLayers).addTo(map);
+        }
+
+        function addCoordinateRow() {
+            const tbody = document.getElementById('coordinateTableBody');
+            const rowCount = tbody.children.length + 1;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" placeholder="CPT${rowCount.toString().padStart(2, '0')}"></td>
+                <td><input type="number" placeholder="Easting" step="0.001"></td>
+                <td><input type="number" placeholder="Northing" step="0.001"></td>
+                <td><input type="number" placeholder="Elevation" step="0.001"></td>
+                <td><button class="remove-btn" onclick="removeCoordinateRow(this)">Remove</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        function removeCoordinateRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+        }
+
+        function loadCoordinatesToMap() {
+            const tbody = document.getElementById('coordinateTableBody');
+            const rows = tbody.children;
+
+            cptLocations = [];
+
+            for (let row of rows) {
+                const inputs = row.querySelectorAll('input');
+                const name = inputs[0].value.trim();
+                const easting = parseFloat(inputs[1].value);
+                const northing = parseFloat(inputs[2].value);
+                const elevation = parseFloat(inputs[3].value);
+
+                if (name && !isNaN(easting) && !isNaN(northing) && !isNaN(elevation)) {
+                    cptLocations.push({
+                        name: name,
+                        easting: easting,
+                        northing: northing,
+                        elevation: elevation
+                    });
+                }
+            }
+
+            updateDataInfo();
+            plotOnMap();
+        }
+
+        async function loadCSVFromDirectory() {
+            const statusDiv = document.getElementById('directoryStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#e3f2fd';
+            statusDiv.style.color = '#1565c0';
+            statusDiv.innerHTML = '🔍 Scanning directory for CSV files...';
+
+            try {
+                if ('showDirectoryPicker' in window) {
+                    await loadWithDirectoryPicker();
+                } else {
+                    await loadCommonCPTFiles();
+                }
+            } catch (error) {
+                console.error('Directory loading error:', error);
+                statusDiv.style.backgroundColor = '#fff3e0';
+                statusDiv.style.color = '#ef6c00';
+                statusDiv.innerHTML = `⚠️ Could not access directory. Error: ${error.message}. Please use "Choose Files" instead.`;
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        async function loadWithDirectoryPicker() {
+            const statusDiv = document.getElementById('directoryStatus');
+            
+            try {
+                const directoryHandle = await window.showDirectoryPicker();
+                let csvCount = 0;
+                let loadedCount = 0;
+
+                statusDiv.innerHTML = '📁 Directory selected. Scanning for CSV files...';
+
+                for await (const [name, handle] of directoryHandle.entries()) {
+                    if (handle.kind === 'file' && name.toLowerCase().endsWith('.csv')) {
+                        csvCount++;
+                        try {
+                            const file = await handle.getFile();
+                            const data = await readCSVFile(file);
+                            if (data && data.length > 0) {
+                                addCPTToContainer(name, data);
+                                loadedCount++;
+                                statusDiv.innerHTML = `📊 Loading CSV files... (${loadedCount}/${csvCount})`;
+                            }
+                        } catch (error) {
+                            console.error(`Error loading ${name}:`, error);
+                        }
+                    }
+                }
+
+                if (csvCount === 0) {
+                    statusDiv.style.backgroundColor = '#fff3e0';
+                    statusDiv.style.color = '#ef6c00';
+                    statusDiv.innerHTML = '📂 No CSV files found in the selected directory.';
+                } else {
+                    statusDiv.style.backgroundColor = '#e8f5e8';
+                    statusDiv.style.color = '#2e7d32';
+                    statusDiv.innerHTML = `✅ Successfully loaded ${loadedCount} of ${csvCount} CSV files from directory.`;
+                }
+
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 4000);
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    statusDiv.style.backgroundColor = '#fff3e0';
+                    statusDiv.style.color = '#ef6c00';
+                    statusDiv.innerHTML = '❌ Directory selection cancelled.';
+                } else {
+                    throw error;
+                }
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function loadCommonCPTFiles() {
+            const statusDiv = document.getElementById('directoryStatus');
+            statusDiv.innerHTML = '🔍 Trying to load common CPT file names...';
+
+            const commonNames = [
+                'CPT01.csv', 'CPT02.csv', 'CPT03.csv', 'CPT04.csv', 'CPT05.csv',
+                'CPT06.csv', 'CPT07.csv', 'CPT08.csv', 'CPT09.csv', 'CPT10.csv',
+                'cpt01.csv', 'cpt02.csv', 'cpt03.csv', 'cpt04.csv', 'cpt05.csv',
+                'BH01.csv', 'BH02.csv', 'BH03.csv', 'BH04.csv', 'BH05.csv',
+                'bh01.csv', 'bh02.csv', 'bh03.csv', 'bh04.csv', 'bh05.csv'
+            ];
+
+            let loadedCount = 0;
+            let attemptedCount = 0;
+
+            for (const filename of commonNames) {
+                try {
+                    attemptedCount++;
+                    statusDiv.innerHTML = `🔍 Checking for ${filename}... (${attemptedCount}/${commonNames.length})`;
+                    
+                    const response = await fetch(filename);
+                    if (response.ok) {
+                        const text = await response.text();
+                        const data = await parseCSVText(text);
+                        if (data && data.length > 0) {
+                            addCPTToContainer(filename, data);
+                            loadedCount++;
+                        }
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
+
+            if (loadedCount === 0) {
+                statusDiv.style.backgroundColor = '#fff3e0';
+                statusDiv.style.color = '#ef6c00';
+                statusDiv.innerHTML = '📂 No common CPT files found. Try using "Choose Files" or place CSV files in the same directory as this HTML file.';
+            } else {
+                statusDiv.style.backgroundColor = '#e8f5e8';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.innerHTML = `✅ Found and loaded ${loadedCount} CPT files from directory.`;
+            }
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        function parseCSVText(text) {
+            try {
+                const lines = text.split('\n');
+                const dataLines = lines.slice(24);
+                const cptData = [];
+
+                for (const line of dataLines) {
+                    if (line.trim()) {
+                        const values = line.split(',').map(v => parseFloat(v.trim()));
+                        if (values.length >= 12 && !isNaN(values[0])) {
+                            cptData.push({
+                                depth: values[0] / 100,
+                                qc: values[1],
+                                fs: values[2],
+                                u2: values[3],
+                                rf: values[4],
+                                temp: values[5],
+                                tilt: values[6],
+                                dist: values[7],
+                                speed: values[8],
+                                qt: values[9],
+                                u2u0: values[10],
+                                time: values[11]
+                            });
+                        }
+                    }
+                }
+                return cptData;
+            } catch (error) {
+                console.error('Error parsing CSV text:', error);
+                return null;
+            }
+        }
+
+        async function handleCPTFiles(event) {
+            const files = Array.from(event.target.files);
+
+            for (const file of files) {
+                try {
+                    let data;
+                    if (file.name.toLowerCase().endsWith('.csv')) {
+                        data = await readCSVFile(file);
+                    } else if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+                        data = await readExcelFile(file);
+                    }
+
+                    if (data) {
+                        addCPTToContainer(file.name, data);
+                    }
+                } catch (error) {
+                    console.error('Error reading file:', file.name, error);
+                    alert(`Error reading file ${file.name}: ${error.message}`);
+                }
+            }
+        }
+
+        function readCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split('\n');
+
+                        const dataLines = lines.slice(24);
+                        const cptData = [];
+
+                        for (const line of dataLines) {
+                            if (line.trim()) {
+                                const values = line.split(',').map(v => parseFloat(v.trim()));
+                                if (values.length >= 12 && !isNaN(values[0])) {
+                                    cptData.push({
+                                        depth: values[0] / 100,
+                                        qc: values[1],
+                                        fs: values[2],
+                                        u2: values[3],
+                                        rf: values[4],
+                                        temp: values[5],
+                                        tilt: values[6],
+                                        dist: values[7],
+                                        speed: values[8],
+                                        qt: values[9],
+                                        u2u0: values[10],
+                                        time: values[11]
+                                    });
+                                }
+                            }
+                        }
+                        resolve(cptData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = e.target.result;
+                        const workbook = XLSX.read(data, {
+                            type: 'binary'
+                        });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                            header: 1
+                        });
+
+                        const dataLines = jsonData.slice(24);
+                        const cptData = [];
+
+                        for (const row of dataLines) {
+                            if (row && row.length >= 12 && !isNaN(parseFloat(row[0]))) {
+                                cptData.push({
+                                    depth: parseFloat(row[0]),
+                                    qc: parseFloat(row[1]),
+                                    fs: parseFloat(row[2]),
+                                    u2: parseFloat(row[3]),
+                                    rf: parseFloat(row[4]),
+                                    temp: parseFloat(row[5]),
+                                    tilt: parseFloat(row[6]),
+                                    dist: parseFloat(row[7]),
+                                    speed: parseFloat(row[8]),
+                                    qt: parseFloat(row[9]),
+                                    u2u0: parseFloat(row[10]),
+                                    time: parseFloat(row[11])
+                                });
+                            }
+                        }
+                        resolve(cptData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        function addCPTToContainer(filename, data) {
+            const container = document.getElementById('cptContainer');
+            const cptId = `cpt_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+
+            const options = cptLocations.map(c =>
+                `<option value="${c.name}">${c.name}</option>`
+            ).join('');
+
+            const cptItem = document.createElement('div');
+            cptItem.className = 'cpt-item';
+            cptItem.id = cptId;
+            cptItem.innerHTML = `
+                <div class="cpt-header">
+                    <div class="cpt-name">${filename}</div>
+                    <button onclick="removeCPT('${cptId}')" style="background:#dc3545;padding:5px 10px">Remove</button>
+                </div>
+                <div class="cpt-stats">
+                    ${data.length} data points | Max depth: ${Math.max(...data.map(d=>d.depth)).toFixed(2)}m | Avg Qc: ${(data.reduce((s,d)=>s+d.qc,0)/data.length).toFixed(2)} MPa
+                </div>
+                <p style="margin:10px 0;font-size:14px;">
+                    Link this file to: 
+                    <select onchange="linkCPTToLocation('${cptId}', this.value)">
+                        <option value="">— select CPT —</option>
+                        ${options}
+                    </select>
+                </p>
+            `;
+            container.appendChild(cptItem);
+
+            cptData.push({
+                id: cptId,
+                filename,
+                data,
+                linkedName: null
+            });
+        }
+
+        function linkCPTToLocation(cptId, cptName) {
+            const entry = cptData.find(c => c.id === cptId);
+            if (entry) entry.linkedName = cptName || null;
+        }
+
+        function removeCPT(cptId) {
+            const element = document.getElementById(cptId);
+            if (element) {
+                element.remove();
+            }
+            cptData = cptData.filter(cpt => cpt.id !== cptId);
+        }
+
+        function utmToLatLng(easting, northing, zone, hemisphere) {
+            const a = 6378137.0;
+            const f = 1 / 298.257223563;
+            const k0 = 0.9996;
+
+            const e = Math.sqrt(f * (2 - f));
+            const e1sq = e * e / (1 - e * e);
+
+            const falseEasting = 500000;
+            const falseNorthing = 10000000;
+
+            const x = easting - falseEasting;
+            const y = northing - falseNorthing;
+
+            const lonOrigin = toRadians(117);
+
+            const M = y / k0;
+            const mu = M / (a * (1 - e * e / 4 - 3 * e * e * e * e / 64 - 5 * e * e * e * e * e * e / 256));
+
+            const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+            const J1 = (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32);
+            const J2 = (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32);
+            const J3 = (151 * e1 * e1 * e1 / 96);
+            const J4 = (1097 * e1 * e1 * e1 * e1 / 512);
+
+            const fp = mu + J1 * Math.sin(2 * mu) + J2 * Math.sin(4 * mu) + J3 * Math.sin(6 * mu) + J4 * Math.sin(8 * mu);
+
+            const C1 = e1sq * Math.cos(fp) * Math.cos(fp);
+            const T1 = Math.tan(fp) * Math.tan(fp);
+            const R1 = a * (1 - e * e) / Math.pow(1 - e * e * Math.sin(fp) * Math.sin(fp), 1.5);
+            const N1 = a / Math.sqrt(1 - e * e * Math.sin(fp) * Math.sin(fp));
+            const D = x / (N1 * k0);
+
+            const Q1 = N1 * Math.tan(fp) / R1;
+            const Q2 = D * D / 2;
+            const Q3 = (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * e1sq) * D * D * D * D / 24;
+            const Q4 = (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 1.6 * e1sq - 37 * e1sq * C1) * D * D * D * D * D * D / 720;
+            const lat = fp - Q1 * (Q2 - Q3 + Q4);
+
+            const Q5 = D;
+            const Q6 = (1 + 2 * T1 + C1) * D * D * D / 6;
+            const Q7 = (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * e1sq + 24 * T1 * T1) * D * D * D * D * D / 120;
+            const lon = lonOrigin + (Q5 - Q6 + Q7) / Math.cos(fp);
+
+            return {
+                lat: toDegrees(lat),
+                lng: toDegrees(lon)
+            };
+        }
+
+        function toDegrees(radians) {
+            return radians * (180 / Math.PI);
+        }
+
+        function toRadians(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        function updateDataInfo() {
+            const info = document.getElementById('dataInfo');
+            const cptFileCount = cptData.length;
+            info.innerHTML = `Loaded ${cptLocations.length} CPT locations, ${cptFileCount} CPT data files`;
+        }
+
+        function plotOnMap() {
+            if (!map) return;
+
+            cptMarkers.forEach(marker => map.removeLayer(marker));
+            cptMarkers = [];
+
+            if (bestFitLine) {
+                map.removeLayer(bestFitLine);
+                bestFitLine = null;
+            }
+
+            if (cptLocations.length === 0) return;
+
+            const group = new L.featureGroup();
+
+            cptLocations.forEach(cpt => {
+                const latLng = utmToLatLng(cpt.easting, cpt.northing, 50, 'S');
+
+                const marker = L.circleMarker([latLng.lat, latLng.lng], {
+                    radius: 8,
+                    fillColor: '#0066ff',
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                const label = L.divIcon({
+                    className: 'cpt-label',
+                    html: cpt.name,
+                    iconSize: [60, 20],
+                    iconAnchor: [30, -10]
+                });
+
+                const labelMarker = L.marker([latLng.lat, latLng.lng], {
+                    icon: label,
+                    interactive: false
+                }).addTo(map);
+
+                const popupContent = `
+                    <div><strong>${cpt.name}</strong><br>
+                    Type: CPT<br>
+                    Easting: ${cpt.easting}<br>
+                    Northing: ${cpt.northing}<br>
+                    Elevation: ${cpt.elevation}m</div>
+                `;
+
+                marker.bindPopup(popupContent);
+
+                cptMarkers.push(marker);
+                cptMarkers.push(labelMarker);
+                group.addLayer(marker);
+            });
+
+            if (cptLocations.length >= 2) {
+                addBestFitLine();
+            }
+
+            if (group.getLayers().length > 0) {
+                map.fitBounds(group.getBounds());
+            }
+        }
+
+        function addBestFitLine() {
+            if (cptLocations.length < 2) return;
+
+            const n = cptLocations.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+            cptLocations.forEach(cpt => {
+                sumX += cpt.easting;
+                sumY += cpt.northing;
+                sumXY += cpt.easting * cpt.northing;
+                sumX2 += cpt.easting * cpt.easting;
+            });
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            const minEasting = Math.min(...cptLocations.map(p => p.easting));
+            const maxEasting = Math.max(...cptLocations.map(p => p.easting));
+
+            const startNorthing = slope * minEasting + intercept;
+            const endNorthing = slope * maxEasting + intercept;
+
+            const startLatLng = utmToLatLng(minEasting, startNorthing, 50, 'S');
+            const endLatLng = utmToLatLng(maxEasting, endNorthing, 50, 'S');
+
+            bestFitLine = L.polyline([
+                [startLatLng.lat, startLatLng.lng],
+                [endLatLng.lat, endLatLng.lng]
+            ], {
+                color: '#ff6600',
+                weight: 3,
+                opacity: 0.8,
+                dashArray: '10, 5'
+            }).addTo(map);
+
+            bestFitLine.bindTooltip('Best Fit Line for Cross-Section', {
+                permanent: false,
+                direction: 'top'
+            });
+        }
+
+        function loadSampleData() {
+            const tbody = document.getElementById('coordinateTableBody');
+            tbody.innerHTML = '';
+
+            const sampleData = [
+                { name: 'CPT01', easting: 406026.52, northing: 6455352.23, elevation: 18.8 }, 
+                { name: 'CPT02', easting: 406050.01, northing: 6455331.49, elevation: 18.8 },
+                { name: 'CPT03', easting: 406025.03, northing: 6455306.51, elevation: 18.8 },
+                { name: 'CPT04', easting: 406003.66, northing: 6455283.86, elevation: 18.5 },
+                { name: 'CPT05', easting: 406037.63, northing: 6455268.62, elevation: 18.5 },
+                { name: 'CPT06', easting: 406059.96, northing: 6455291.38, elevation: 18.8 },
+                { name: 'CPT07', easting: 406084.41, northing: 6455316.03, elevation: 18.8 }
+            ];
+
+            sampleData.forEach(data => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${data.name}"></td>
+                    <td><input type="number" value="${data.easting}" step="0.001"></td>
+                    <td><input type="number" value="${data.northing}" step="0.001"></td>
+                    <td><input type="number" value="${data.elevation}" step="0.001"></td>
+                    <td><button class="remove-btn" onclick="removeCoordinateRow(this)">Remove</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            loadCoordinatesToMap();
+        }
+
+        // Add the remaining functions for surface handling, cross-section generation, 3D rendering, etc.
+        function autoGenerateGroundSurface() {
+            if (cptLocations.length < 2) {
+                alert('Need at least 2 CPT locations to generate ground surface');
+                return;
+            }
+
+            const sortedCPTs = [...cptLocations].sort((a, b) => a.easting - b.easting);
+            const firstCPT = sortedCPTs[0];
+            const lastCPT = sortedCPTs[sortedCPTs.length - 1];
+
+            document.getElementById('groundX1').value = firstCPT.easting;
+            document.getElementById('groundY1').value = firstCPT.northing;
+            document.getElementById('groundZ1').value = firstCPT.elevation;
+
+            document.getElementById('groundX2').value = lastCPT.easting;
+            document.getElementById('groundY2').value = lastCPT.northing;
+            document.getElementById('groundZ2').value = lastCPT.elevation;
+
+            document.getElementById('waterX1').value = firstCPT.easting;
+            document.getElementById('waterY1').value = firstCPT.northing;
+            document.getElementById('waterZ1').value = firstCPT.elevation - 2;
+
+            document.getElementById('waterX2').value = lastCPT.easting;
+            document.getElementById('waterY2').value = lastCPT.northing;
+            document.getElementById('waterZ2').value = lastCPT.elevation - 2;
+
+            updateSurfaceData();
+            generateCrossSection();
+        }
+
+        function clearSurfaces() {
+            ['groundX1', 'groundY1', 'groundZ1', 'groundX2', 'groundY2', 'groundZ2',
+             'waterX1', 'waterY1', 'waterZ1', 'waterX2', 'waterY2', 'waterZ2'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            updateSurfaceData();
+            generateCrossSection();
+        }
+
+        function updateSurfaceData() {
+            const gx1 = parseFloat(document.getElementById('groundX1').value);
+            const gy1 = parseFloat(document.getElementById('groundY1').value);
+            const gz1 = parseFloat(document.getElementById('groundZ1').value);
+            const gx2 = parseFloat(document.getElementById('groundX2').value);
+            const gy2 = parseFloat(document.getElementById('groundY2').value);
+            const gz2 = parseFloat(document.getElementById('groundZ2').value);
+
+            const wx1 = parseFloat(document.getElementById('waterX1').value);
+            const wy1 = parseFloat(document.getElementById('waterY1').value);
+            const wz1 = parseFloat(document.getElementById('waterZ1').value);
+            const wx2 = parseFloat(document.getElementById('waterX2').value);
+            const wy2 = parseFloat(document.getElementById('waterY2').value);
+            const wz2 = parseFloat(document.getElementById('waterZ2').value);
+
+            groundSurface.p1 = (!isNaN(gx1) && !isNaN(gy1) && !isNaN(gz1)) ? {x: gx1, y: gy1, z: gz1} : null;
+            groundSurface.p2 = (!isNaN(gx2) && !isNaN(gy2) && !isNaN(gz2)) ? {x: gx2, y: gy2, z: gz2} : null;
+
+            waterSurface.p1 = (!isNaN(wx1) && !isNaN(wy1) && !isNaN(wz1)) ? {x: wx1, y: wy1, z: wz1} : null;
+            waterSurface.p2 = (!isNaN(wx2) && !isNaN(wy2) && !isNaN(wz2)) ? {x: wx2, y: wy2, z: wz2} : null;
+        }
+
+        function generateCrossSection() {
+            if (cptLocations.length < 2) {
+                alert('Need at least 2 CPT locations for cross-section');
+                return;
+            }
+
+            updateSurfaceData();
+
+            const canvas = document.getElementById('crossSection');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const sortedCPTs = sortDataByBestFit([...cptLocations]);
+
+            drawCrossSection(ctx, sortedCPTs);
+
+            updateLegend();
+            render3D();
+        }
+
+        function sortDataByBestFit(locations) {
+            const n = locations.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+            locations.forEach(cpt => {
+                sumX += cpt.easting;
+                sumY += cpt.northing;
+                sumXY += cpt.easting * cpt.northing;
+                sumX2 += cpt.easting * cpt.easting;
+            });
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            const lineStart = {
+                x: Math.min(...locations.map(cpt => cpt.easting)),
+                y: 0
+            };
+            lineStart.y = slope * lineStart.x + intercept;
+
+            locations.forEach(cpt => {
+                const dx = cpt.easting - lineStart.x;
+                const dy = cpt.northing - lineStart.y;
+                cpt.distanceAlongLine = Math.sqrt(dx * dx + dy * dy);
+            });
+
+            return locations.sort((a, b) => a.distanceAlongLine - b.distanceAlongLine);
+        }
+
+        function drawCrossSection(ctx, sortedCPTs) {
+            const padding = 80;
+            const width = ctx.canvas.width - 2 * padding;
+            const height = ctx.canvas.height - 2 * padding;
+
+            const maxDistance = Math.max(...sortedCPTs.map(cpt => cpt.distanceAlongLine));
+            
+            let maxActualDepth = 15;
+            sortedCPTs.forEach(cpt => {
+                const cptDataFile = cptData.find(d => d.linkedName === cpt.name);
+                if (cptDataFile && cptDataFile.data.length > 0) {
+                    const cptMaxDepth = Math.max(...cptDataFile.data.map(d => d.depth));
+                    maxActualDepth = Math.max(maxActualDepth, cptMaxDepth);
+                }
+            });
+            
+            const maxElevation = Math.max(...sortedCPTs.map(cpt => cpt.elevation)) + 2;
+            const minElevation = Math.min(...sortedCPTs.map(cpt => cpt.elevation)) - maxActualDepth - 2;
+
+            const xScale = width / maxDistance;
+            const yScale = (height / (maxElevation - minElevation)) * verticalExaggeration;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 0.5;
+            
+            for (let dist = 0; dist <= maxDistance; dist += 10) {
+                const x = padding + dist * xScale;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, padding + height);
+                ctx.stroke();
+            }
+            
+            const elevationRange = maxElevation - minElevation;
+            let elevationStep;
+            if (verticalExaggeration >= 5) {
+                elevationStep = elevationRange > 20 ? 2 : 1;
+            } else if (verticalExaggeration >= 3) {
+                elevationStep = elevationRange > 30 ? 5 : 2;
+            } else {
+                elevationStep = elevationRange > 50 ? 10 : 5;
+            }
+            
+            for (let elev = Math.ceil(minElevation / elevationStep) * elevationStep; elev <= maxElevation; elev += elevationStep) {
+                const y = padding + height - (elev - minElevation) * yScale;
+                if (y >= padding && y <= padding + height) {
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(padding + width, y);
+                    ctx.stroke();
+                }
+            }
+
+            drawSurfaces(ctx, sortedCPTs, padding, width, height, maxDistance, minElevation, maxElevation, xScale, yScale);
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, padding + height);
+            ctx.lineTo(padding + width, padding + height);
+            ctx.stroke();
+
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            
+            for (let elev = Math.ceil(minElevation / elevationStep) * elevationStep; elev <= maxElevation; elev += elevationStep) {
+                const y = padding + height - (elev - minElevation) * yScale;
+                if (y >= padding && y <= padding + height) {
+                    ctx.fillText(elev.toFixed(0) + 'm', padding - 10, y);
+                    
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(padding - 5, y);
+                    ctx.lineTo(padding, y);
+                    ctx.stroke();
+                }
+            }
+
+            sortedCPTs.forEach(cpt => {
+                const x = padding + cpt.distanceAlongLine * xScale;
+                const groundY = padding + height - (cpt.elevation - minElevation) * yScale;
+
+                const cptDataFile = cptData.find(d => d.linkedName === cpt.name);
+
+                if (cptDataFile && cptDataFile.data.length > 0) {
+                    drawCPTColumn(ctx, x, groundY, cptDataFile.data, cpt.elevation, minElevation, yScale);
+                } else {
+                    drawPlaceholderCPT(ctx, x, groundY, cpt, minElevation, yScale);
+                }
+
+                ctx.fillStyle = '#0066ff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(cpt.name, x, groundY - 10);
+            });
+
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Distance (m)', padding + width / 2, padding + height + 50);
+
+            ctx.save();
+            ctx.translate(30, padding + height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`Elevation (m) - ${verticalExaggeration}x Vertical Exaggeration - Max Depth: ${maxActualDepth.toFixed(1)}m`, 0, 0);
+            ctx.restore();
+        }
+
+        function drawSurfaces(ctx, sortedCPTs, padding, width, height, maxDistance, minElevation, xScale, yScale) {
+            const showGround = document.getElementById('showGroundSurface').checked;
+            const showWater = document.getElementById('showWaterSurface').checked;
+
+            if (showGround && groundSurface.p1 && groundSurface.p2) {
+                drawSurfaceLine(ctx, groundSurface, sortedCPTs, padding, width, height, maxDistance, minElevation, xScale, yScale, '#8B4513', 'Ground Surface');
+            }
+
+            if (showWater && waterSurface.p1 && waterSurface.p2) {
+                drawSurfaceLine(ctx, waterSurface, sortedCPTs, padding, width, height, maxDistance, minElevation, xScale, yScale, '#0066CC', 'Water Surface');
+            }
+        }
+
+        function drawSurfaceLine(ctx, surface, sortedCPTs, padding, width, height, maxDistance, minElevation, xScale, yScale, color, label) {
+            const bestFitLine = calculateBestFitLine(sortedCPTs);
+            
+            const proj1 = projectPointOntoLine(surface.p1, bestFitLine);
+            const proj2 = projectPointOntoLine(surface.p2, bestFitLine);
+
+            const dist1 = calculateDistanceAlongLine(proj1, bestFitLine.start);
+            const dist2 = calculateDistanceAlongLine(proj2, bestFitLine.start);
+
+            const x1 = padding + (dist1 * xScale);
+            const y1 = padding + height - (surface.p1.z - minElevation) * yScale;
+            const x2 = padding + (dist2 * xScale);
+            const y2 = padding + height - (surface.p2.z - minElevation) * yScale;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            ctx.fillStyle = color;
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, midX, midY - 5);
+        }
+
+        function calculateBestFitLine(sortedCPTs) {
+            const n = sortedCPTs.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+            sortedCPTs.forEach(cpt => {
+                sumX += cpt.easting;
+                sumY += cpt.northing;
+                sumXY += cpt.easting * cpt.northing;
+                sumX2 += cpt.easting * cpt.easting;
+            });
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            const minEasting = Math.min(...sortedCPTs.map(cpt => cpt.easting));
+            const maxEasting = Math.max(...sortedCPTs.map(cpt => cpt.easting));
+
+            return {
+                start: { x: minEasting, y: slope * minEasting + intercept },
+                end: { x: maxEasting, y: slope * maxEasting + intercept },
+                slope: slope,
+                intercept: intercept
+            };
+        }
+
+        function projectPointOntoLine(point, line) {
+            const A = line.end.x - line.start.x;
+            const B = line.end.y - line.start.y;
+            const C = point.x - line.start.x;
+            const D = point.y - line.start.y;
+
+            const dot = A * C + B * D;
+            const lenSq = A * A + B * B;
+            const param = lenSq !== 0 ? dot / lenSq : -1;
+
+            return {
+                x: line.start.x + param * A,
+                y: line.start.y + param * B
+            };
+        }
+
+        function calculateDistanceAlongLine(point, lineStart) {
+            const dx = point.x - lineStart.x;
+            const dy = point.y - lineStart.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function drawCPTColumn(ctx, x, groundY, cptDataArray, elevation, minElevation, yScale) {
+            const totalDepth = Math.max(...cptDataArray.map(d => d.depth));
+            const showColors = document.getElementById('showCPTColors').checked;
+            const showQcLine = document.getElementById('showQcLine').checked;
+            const showRfLine = document.getElementById('showRfLine').checked;
+            const showU2Line = document.getElementById('showU2Line').checked;
+            const lineScale = document.getElementById('lineScale').value;
+
+            const columnWidth = 16;
+            const halfWidth = columnWidth / 2;
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            const bottomY = groundY + (totalDepth * yScale);
+            
+            ctx.beginPath();
+            ctx.rect(x - halfWidth, groundY, columnWidth, totalDepth * yScale);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 0.5;
+            
+            let tickInterval;
+            if (totalDepth <= 5) {
+                tickInterval = verticalExaggeration > 3 ? 0.5 : 1;
+            } else if (totalDepth <= 15) {
+                tickInterval = verticalExaggeration > 5 ? 0.5 : 1;
+            } else if (totalDepth <= 30) {
+                tickInterval = verticalExaggeration > 3 ? 1 : 2;
+            } else {
+                tickInterval = verticalExaggeration > 3 ? 2 : 5;
+            }
+            
+            for (let depth = tickInterval; depth <= totalDepth; depth += tickInterval) {
+                const tickY = groundY + (depth * yScale);
+                ctx.beginPath();
+                ctx.moveTo(x - halfWidth - 3, tickY);
+                ctx.lineTo(x - halfWidth, tickY);
+                ctx.moveTo(x + halfWidth, tickY);
+                ctx.lineTo(x + halfWidth + 3, tickY);
+                ctx.stroke();
+                
+                let labelInterval;
+                if (totalDepth <= 10) {
+                    labelInterval = verticalExaggeration > 5 ? 1 : 2;
+                } else if (totalDepth <= 20) {
+                    labelInterval = verticalExaggeration > 3 ? 2 : 5;
+                } else {
+                    labelInterval = verticalExaggeration > 3 ? 5 : 10;
+                }
+                
+                if (depth % labelInterval === 0) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(depth + 'm', x + halfWidth + 5, tickY + 3);
+                }
+            }
+
+            if (showColors) {
+                for (let i = 0; i < cptDataArray.length - 1; i++) {
+                    const currentData = cptDataArray[i];
+                    const nextData = cptDataArray[i + 1];
+
+                    const currentY = groundY + (currentData.depth * yScale);
+                    const nextY = groundY + (nextData.depth * yScale);
+
+                    const soilClass = classifyCPTSoil(currentData.qc, currentData.rf);
+                    const color = cptSoilColors[soilClass];
+
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x - halfWidth + 1, currentY, columnWidth - 2, nextY - currentY);
+
+                    ctx.strokeStyle = '#ccc';
+                    ctx.lineWidth = 0.3;
+                    ctx.strokeRect(x - halfWidth + 1, currentY, columnWidth - 2, nextY - currentY);
+                }
+            }
+
+            const maxQc = Math.max(...cptDataArray.map(d => d.qc));
+            const minQc = Math.min(...cptDataArray.map(d => d.qc));
+            const qcRange = maxQc - minQc || 1;
+
+            const maxRf = Math.max(...cptDataArray.map(d => d.rf));
+            const minRf = Math.min(...cptDataArray.map(d => d.rf));
+            const rfRange = maxRf - minRf || 1;
+
+            const maxU2 = Math.max(...cptDataArray.map(d => Math.abs(d.u2)));
+            const minU2 = Math.min(...cptDataArray.map(d => Math.abs(d.u2)));
+            const u2Range = maxU2 - minU2 || 1;
+
+            if (showQcLine) {
+                ctx.strokeStyle = '#FF0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let i = 0; i < cptDataArray.length; i++) {
+                    const data = cptDataArray[i];
+                    const y = groundY + (data.depth * yScale);
+                    
+                    let qcX;
+                    if (lineScale === 'normalized') {
+                        const qcNormalized = (data.qc - minQc) / qcRange;
+                        qcX = x - halfWidth + 1 + (qcNormalized * (columnWidth - 2));
+                    } else {
+                        const qcNormalized = Math.min(data.qc / 50, 1);
+                        qcX = x - halfWidth + 1 + (qcNormalized * (columnWidth - 2));
+                    }
+
+                    if (i === 0) {
+                        ctx.moveTo(qcX, y);
+                    } else {
+                        ctx.lineTo(qcX, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            if (showRfLine) {
+                ctx.strokeStyle = '#00AA00';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                for (let i = 0; i < cptDataArray.length; i++) {
+                    const data = cptDataArray[i];
+                    const y = groundY + (data.depth * yScale);
+                    
+                    let rfX;
+                    if (lineScale === 'normalized') {
+                        const rfNormalized = (data.rf - minRf) / rfRange;
+                        rfX = x - halfWidth + 1 + (rfNormalized * (columnWidth - 2));
+                    } else {
+                        const rfNormalized = Math.min(data.rf / 10, 1);
+                        rfX = x - halfWidth + 1 + (rfNormalized * (columnWidth - 2));
+                    }
+
+                    if (i === 0) {
+                        ctx.moveTo(rfX, y);
+                    } else {
+                        ctx.lineTo(rfX, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            if (showU2Line) {
+                ctx.strokeStyle = '#0000FF';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                for (let i = 0; i < cptDataArray.length; i++) {
+                    const data = cptDataArray[i];
+                    const y = groundY + (data.depth * yScale);
+                    
+                    let u2X;
+                    if (lineScale === 'normalized') {
+                        const u2Normalized = (Math.abs(data.u2) - minU2) / u2Range;
+                        u2X = x - halfWidth + 1 + (u2Normalized * (columnWidth - 2));
+                    } else {
+                        const u2Normalized = Math.min(Math.abs(data.u2) / 1000, 1);
+                        u2X = x - halfWidth + 1 + (u2Normalized * (columnWidth - 2));
+                    }
+
+                    if (i === 0) {
+                        ctx.moveTo(u2X, y);
+                    } else {
+                        ctx.lineTo(u2X, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            if (!showColors) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x - halfWidth + 1, groundY, columnWidth - 2, totalDepth * yScale);
+            }
+        }
+
+        function drawPlaceholderCPT(ctx, x, groundY, cpt, minElevation, yScale) {
+            const assumedDepth = 10;
+            const columnWidth = 16;
+            const halfWidth = columnWidth / 2;
+
+            ctx.fillStyle = '#e6e6e6';
+            ctx.fillRect(x - halfWidth, groundY, columnWidth, assumedDepth * yScale);
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - halfWidth, groundY, columnWidth, assumedDepth * yScale);
+
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 0.5;
+            const tickInterval = verticalExaggeration > 3 ? 0.5 : 1;
+            for (let depth = tickInterval; depth <= assumedDepth; depth += tickInterval) {
+                const tickY = groundY + (depth * yScale);
+                ctx.beginPath();
+                ctx.moveTo(x - halfWidth - 3, tickY);
+                ctx.lineTo(x - halfWidth, tickY);
+                ctx.moveTo(x + halfWidth, tickY);
+                ctx.lineTo(x + halfWidth + 3, tickY);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.save();
+            ctx.translate(x, groundY + (assumedDepth * yScale) / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText('No Data', 0, 3);
+            ctx.restore();
+        }
+
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '';
+
+            const cptSoilTypes = [
+                { key: 'loose_granular', label: 'Loose Granular (Rf<' + rfThreshold + ', Qc:0-5)' },
+                { key: 'med_dense_granular', label: 'Med Dense Granular (Rf<' + rfThreshold + ', Qc:5-12)' },
+                { key: 'dense_granular', label: 'Dense Granular (Rf<' + rfThreshold + ', Qc:12-20)' },
+                { key: 'very_dense_granular', label: 'Very Dense Granular (Rf<' + rfThreshold + ', Qc:20+)' },
+                { key: 'very_soft_cohesive', label: 'Very Soft Cohesive (Rf≥' + rfThreshold + ', Qc:0-0.3)' },
+                { key: 'soft_cohesive', label: 'Soft Cohesive (Rf≥' + rfThreshold + ', Qc:0.3-0.6)' },
+                { key: 'firm_cohesive', label: 'Firm Cohesive (Rf≥' + rfThreshold + ', Qc:0.6-1.2)' },
+                { key: 'stiff_cohesive', label: 'Stiff Cohesive (Rf≥' + rfThreshold + ', Qc:1.2-2.5)' },
+                { key: 'very_stiff_cohesive', label: 'Very Stiff Cohesive (Rf≥' + rfThreshold + ', Qc:2.5+)' }
+            ];
+
+            cptSoilTypes.forEach(soilType => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.className = 'color-picker';
+                colorInput.value = rgbToHex(cptSoilColors[soilType.key]);
+                colorInput.addEventListener('change', (e) => {
+                    cptSoilColors[soilType.key] = e.target.value;
+                    generateCrossSection();
+                });
+
+                const label = document.createElement('span');
+                label.textContent = soilType.label;
+                label.style.marginLeft = '8px';
+                label.style.fontSize = '11px';
+
+                item.appendChild(colorInput);
+                item.appendChild(label);
+                legend.appendChild(item);
+            });
+
+            const lineItems = [
+                { color: '#FF0000', label: 'Qc Line', id: 'showQcLine' },
+                { color: '#00AA00', label: 'Rf Line', id: 'showRfLine' },
+                { color: '#0000FF', label: 'U2 Line', id: 'showU2Line' }
+            ];
+
+            lineItems.forEach(lineItem => {
+                if (document.getElementById(lineItem.id).checked) {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+
+                    const colorDiv = document.createElement('div');
+                    colorDiv.style.width = '20px';
+                    colorDiv.style.height = '4px';
+                    colorDiv.style.backgroundColor = lineItem.color;
+                    colorDiv.style.border = '1px solid #ccc';
+
+                    const label = document.createElement('span');
+                    label.textContent = lineItem.label;
+                    label.style.marginLeft = '8px';
+                    label.style.fontSize = '11px';
+
+                    item.appendChild(colorDiv);
+                    item.appendChild(label);
+                    legend.appendChild(item);
+                }
+            });
+        }
+
+        function rgbToHex(rgb) {
+            if (!rgb || typeof rgb !== 'string') return '#cccccc';
+            if (rgb.startsWith('#')) return rgb;
+            const result = rgb.match(/\d+/g);
+            if (result) {
+                return '#' + result.map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+            }
+            return '#cccccc';
+        }
+
+        // Add 3D rendering functions
+        function render3D() {
+            const container = document.getElementById('threeContainer');
+            container.innerHTML = '';
+
+            if (cptLocations.length === 0) {
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">Load CPT locations to view 3D visualization</div>';
+                return;
+            }
+
+            try {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xf0f0f0);
+
+                camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.1, 1000);
+                
+                // Use basic WebGL renderer with minimal features to avoid shader issues
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: false,
+                    alpha: false,
+                    powerPreference: "high-performance"
+                });
+                renderer.setSize(container.offsetWidth, container.offsetHeight);
+                // Disable shadows to avoid shader complexity
+                renderer.shadowMap.enabled = false;
+                container.appendChild(renderer.domElement);
+
+                // Simple lighting setup
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+                directionalLight.position.set(10, 20, 10);
+                // No shadows to avoid shader issues
+                directionalLight.castShadow = false;
+                scene.add(directionalLight);
+
+                const minEasting = Math.min(...cptLocations.map(cpt => cpt.easting));
+                const maxEasting = Math.max(...cptLocations.map(cpt => cpt.easting));
+                const minNorthing = Math.min(...cptLocations.map(cpt => cpt.northing));
+                const maxNorthing = Math.max(...cptLocations.map(cpt => cpt.northing));
+                const minElevation = Math.min(...cptLocations.map(cpt => cpt.elevation - 15));
+                const maxElevation = Math.max(...cptLocations.map(cpt => cpt.elevation));
+
+                const scale = 0.05;
+
+                cameraTarget = new THREE.Vector3(
+                    (maxEasting - minEasting) * scale * 0.5,
+                    (maxElevation - minElevation) * scale * verticalExaggeration3D,
+                    (maxNorthing - minNorthing) * scale * 0.5
+                );
+
+                const groundWidth = (maxEasting - minEasting) * scale * 1.2;
+                const groundLength = (maxNorthing - minNorthing) * scale * 1.2;
+                const groundGeometry = new THREE.PlaneGeometry(groundWidth, groundLength);
+                // Use basic material instead of Phong to avoid shader issues
+                const groundMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xcccccc,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide
+                });
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2;
+                ground.position.copy(cameraTarget);
+                scene.add(ground);
+
+                // Simple grid using line geometry instead of GridHelper
+                const gridMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+                const gridSize = Math.max(groundWidth, groundLength);
+                const divisions = 20;
+                const step = gridSize / divisions;
+                const halfSize = gridSize / 2;
+
+                const gridGeometry = new THREE.BufferGeometry();
+                const vertices = [];
+
+                // Create grid lines
+                for (let i = 0; i <= divisions; i++) {
+                    const pos = -halfSize + i * step;
+                    // Horizontal lines
+                    vertices.push(-halfSize, 0, pos, halfSize, 0, pos);
+                    // Vertical lines  
+                    vertices.push(pos, 0, -halfSize, pos, 0, halfSize);
+                }
+
+                gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                const gridLines = new THREE.LineSegments(gridGeometry, gridMaterial);
+                gridLines.position.copy(cameraTarget);
+                scene.add(gridLines);
+
+                renderSurfaces(minEasting, minNorthing, minElevation, scale);
+
+                cptLocations.forEach(cpt => {
+                    const x = (cpt.easting - minEasting) * scale;
+                    const z = (cpt.northing - minNorthing) * scale;
+                    const groundY = (cpt.elevation - minElevation) * scale * verticalExaggeration3D;
+
+                    const cptDataFile = cptData.find(d => d.linkedName === cpt.name);
+
+                    if (cptDataFile && cptDataFile.data.length > 0) {
+                        for (let i = 0; i < cptDataFile.data.length - 1; i++) {
+                            const currentData = cptDataFile.data[i];
+                            const nextData = cptDataFile.data[i + 1];
+
+                            const segmentDepth = (nextData.depth - currentData.depth) * scale * verticalExaggeration3D;
+                            const segmentY = groundY - (currentData.depth * scale * verticalExaggeration3D) - (segmentDepth / 2);
+
+                            const soilClass = classifyCPTSoil(currentData.qc, currentData.rf);
+                            const color = new THREE.Color(cptSoilColors[soilClass]);
+
+                            const geometry = new THREE.CylinderGeometry(0.3, 0.3, segmentDepth, 6);
+                            // Use basic material instead of Phong
+                            const material = new THREE.MeshBasicMaterial({ color });
+                            const cylinder = new THREE.Mesh(geometry, material);
+                            cylinder.position.set(x, segmentY, z);
+                            scene.add(cylinder);
+                        }
+                    } else {
+                        const geometry = new THREE.CylinderGeometry(0.3, 0.3, 10 * scale * verticalExaggeration3D, 6);
+                        const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
+                        const cylinder = new THREE.Mesh(geometry, material);
+                        cylinder.position.set(x, groundY - (5 * scale * verticalExaggeration3D), z);
+                        scene.add(cylinder);
+                    }
+
+                    // Add simple text labels using HTML elements instead of sprites
+                    addHTMLLabel(cpt.name, x, groundY + 2, z, container);
+                });
+
+                updateCameraPosition();
+                setupMouseControls();
+                setupViewCube();
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    try {
+                        renderer.render(scene, camera);
+                        updateHTMLLabels();
+                    } catch (error) {
+                        console.error('Render error:', error);
+                    }
+                }
+                animate();
+
+                function onWindowResize() {
+                    camera.aspect = container.offsetWidth / container.offsetHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.offsetWidth, container.offsetHeight);
+                }
+                window.addEventListener('resize', onWindowResize, false);
+
+            } catch (error) {
+                console.error('3D rendering error:', error);
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #ff0000;">3D rendering failed. WebGL may not be supported or enabled.</div>';
+            }
+        }
+
+        // Store HTML labels for updating
+        let htmlLabels = [];
+
+        function addHTMLLabel(text, x, y, z, container) {
+            const labelDiv = document.createElement('div');
+            labelDiv.textContent = text;
+            labelDiv.style.position = 'absolute';
+            labelDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            labelDiv.style.padding = '2px 6px';
+            labelDiv.style.borderRadius = '3px';
+            labelDiv.style.fontSize = '12px';
+            labelDiv.style.fontWeight = 'bold';
+            labelDiv.style.color = '#000080';
+            labelDiv.style.border = '1px solid #4682b4';
+            labelDiv.style.pointerEvents = 'none';
+            labelDiv.style.zIndex = '1000';
+            
+            container.appendChild(labelDiv);
+            
+            htmlLabels.push({
+                element: labelDiv,
+                position: new THREE.Vector3(x, y, z)
+            });
+        }
+
+        function updateHTMLLabels() {
+            if (!camera || !renderer) return;
+            
+            const canvas = renderer.domElement;
+            const rect = canvas.getBoundingClientRect();
+            
+            htmlLabels.forEach(label => {
+                const vector = label.position.clone();
+                vector.project(camera);
+                
+                const x = (vector.x * 0.5 + 0.5) * rect.width;
+                const y = (vector.y * -0.5 + 0.5) * rect.height;
+                
+                label.element.style.left = x + 'px';
+                label.element.style.top = y + 'px';
+                
+                // Hide labels that are behind the camera
+                label.element.style.display = vector.z > 1 ? 'none' : 'block';
+            });
+        }
+
+        function renderSurfaces(minEasting, minNorthing, minElevation, scale) {
+            const showGround = document.getElementById('showGroundSurface').checked;
+            const showWater = document.getElementById('showWaterSurface').checked;
+
+            if (showGround && groundSurface.p1 && groundSurface.p2) {
+                render3DSurface(groundSurface, minEasting, minNorthing, minElevation, scale, 0x8B4513, 0.7);
+            }
+
+            if (showWater && waterSurface.p1 && waterSurface.p2) {
+                render3DSurface(waterSurface, minEasting, minNorthing, minElevation, scale, 0x0066CC, 0.5);
+            }
+        }
+
+        function render3DSurface(surface, minEasting, minNorthing, minElevation, scale, color, opacity) {
+            const geometry = new THREE.PlaneGeometry(
+                Math.abs(surface.p2.x - surface.p1.x) * scale,
+                Math.abs(surface.p2.y - surface.p1.y) * scale
+            );
+            
+            // Use basic material instead of Phong to avoid shader issues
+            const material = new THREE.MeshBasicMaterial({ 
+                color: color,
+                transparent: true,
+                opacity: opacity,
+                side: THREE.DoubleSide
+            });
+            
+            const plane = new THREE.Mesh(geometry, material);
+            
+            const centerX = ((surface.p1.x + surface.p2.x) / 2 - minEasting) * scale;
+            const centerZ = ((surface.p1.y + surface.p2.y) / 2 - minNorthing) * scale;
+            const centerY = ((surface.p1.z + surface.p2.z) / 2 - minElevation) * scale * verticalExaggeration3D;
+            
+            plane.position.set(centerX, centerY, centerZ);
+            plane.rotation.x = -Math.PI / 2;
+            
+            scene.add(plane);
+        }
+
+        function clearData() {
+            const tbody = document.getElementById('coordinateTableBody');
+            tbody.innerHTML = '';
+
+            addCoordinateRow();
+
+            cptData = [];
+            document.getElementById('cptContainer').innerHTML = '';
+
+            cptLocations = [];
+
+            updateDataInfo();
+
+            if (map) {
+                cptMarkers.forEach(marker => map.removeLayer(marker));
+                cptMarkers = [];
+                if (bestFitLine) {
+                    map.removeLayer(bestFitLine);
+                    bestFitLine = null;
+                }
+            }
+
+            const canvas = document.getElementById('crossSection');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            document.getElementById('legend').innerHTML = '';
+
+            // Clear 3D scene and HTML labels
+            const threeContainer = document.getElementById('threeContainer');
+            threeContainer.innerHTML = '';
+            htmlLabels = [];
+
+            clearSurfaces();
+        }
+
+        function updateCameraPosition() {
+            camera.position.x = cameraTarget.x + cameraRadius * Math.sin(cameraPhi) * Math.cos(cameraTheta);
+            camera.position.y = cameraTarget.y + cameraRadius * Math.cos(cameraPhi);
+            camera.position.z = cameraTarget.z + cameraRadius * Math.sin(cameraPhi) * Math.sin(cameraTheta);
+            camera.lookAt(cameraTarget);
+        }
+
+        function setupMouseControls() {
+            let mouseX = 0, mouseY = 0;
+            let isMouseDown = false;
+
+            function onMouseDown(event) {
+                event.preventDefault();
+                isMouseDown = true;
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            }
+
+            function onMouseUp(event) {
+                isMouseDown = false;
+            }
+
+            function onMouseMove(event) {
+                if (!isMouseDown) return;
+
+                const deltaX = event.clientX - mouseX;
+                const deltaY = event.clientY - mouseY;
+
+                const rotateSpeed = 0.005;
+                cameraTheta -= deltaX * rotateSpeed;
+                cameraPhi += deltaY * rotateSpeed;
+                cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi));
+
+                updateCameraPosition();
+
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            }
+
+            function onMouseWheel(event) {
+                event.preventDefault();
+                cameraRadius += event.deltaY * 0.05;
+                cameraRadius = Math.max(5, Math.min(100, cameraRadius));
+                updateCameraPosition();
+            }
+
+            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('wheel', onMouseWheel, false);
+            renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault(), false);
+        }
+
+        function setupViewCube() {
+            const viewCube = document.getElementById('viewCube');
+            const cubeFaces = viewCube.querySelectorAll('.cube-face');
+
+            cubeFaces.forEach(face => {
+                face.addEventListener('click', (e) => {
+                    const view = e.target.getAttribute('data-view');
+                    animateToView(view);
+                });
+            });
+        }
+
+        function animateToView(view) {
+            let targetTheta, targetPhi;
+
+            switch (view) {
+                case 'north':
+                    targetTheta = Math.PI;
+                    targetPhi = Math.PI / 2;
+                    break;
+                case 'south':
+                    targetTheta = 0;
+                    targetPhi = Math.PI / 2;
+                    break;
+                case 'east':
+                    targetTheta = Math.PI / 2;
+                    targetPhi = Math.PI / 2;
+                    break;
+                case 'west':
+                    targetTheta = -Math.PI / 2;
+                    targetPhi = Math.PI / 2;
+                    break;
+                case 'top':
+                    targetTheta = cameraTheta;
+                    targetPhi = 0.1;
+                    break;
+                case 'bottom':
+                    targetTheta = cameraTheta;
+                    targetPhi = Math.PI - 0.1;
+                    break;
+                default:
+                    return;
+            }
+
+            const startTheta = cameraTheta;
+            const startPhi = cameraPhi;
+            const startTime = Date.now();
+            const duration = 1000;
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+                cameraTheta = startTheta + (targetTheta - startTheta) * easeProgress;
+                cameraPhi = startPhi + (targetPhi - startPhi) * easeProgress;
+
+                updateCameraPosition();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            animate();
+        }
+
+        async function exportToPNG() {
+            if (!cptLocations.length) {
+                alert('Load CPT locations first');
+                return;
+            }
+
+            try {
+                const mapCanvas = await captureMap(400, 400);
+                const crossEl = document.getElementById('crossSection');
+                const exportCanvas = document.getElementById('exportCanvas');
+                const ctx = exportCanvas.getContext('2d');
+
+                const padding = 20;
+                const titleHeight = 40;
+                const crossW = crossEl.offsetWidth;
+                const crossH = crossEl.offsetHeight;
+                const mapW = mapCanvas.width;
+                const mapH = mapCanvas.height;
+                const canvasW = padding + crossW + padding + mapW + padding;
+                const canvasH = titleHeight + padding + Math.max(crossH, mapH) + padding;
+
+                exportCanvas.width = canvasW;
+                exportCanvas.height = canvasH;
+
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, canvasW, canvasH);
+                ctx.fillStyle = "#000000";
+                ctx.font = "bold 24px sans-serif";
+                ctx.fillText("CPT Data Export", padding, titleHeight - 10);
+
+                const crossImg = new Image();
+                crossImg.onload = function() {
+                    ctx.drawImage(crossImg, padding, titleHeight + padding, crossW, crossH);
+                    ctx.drawImage(mapCanvas, padding + crossW + padding, titleHeight + padding, mapW, mapH);
+
+                    const link = document.createElement("a");
+                    link.download = "cpt_export.png";
+                    link.href = exportCanvas.toDataURL("image/png");
+                    link.click();
+                };
+                crossImg.src = crossEl.toDataURL("image/png");
+
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed. Please try again.');
+            }
+        }
+
+        async function captureMap(width, height) {
+            return new Promise((resolve) => {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                tempCtx.fillStyle = '#8FBC8F';
+                tempCtx.fillRect(0, 0, width, height);
+
+                for (let i = 0; i < 100; i++) {
+                    tempCtx.fillStyle = `rgba(${100 + Math.random() * 50}, ${120 + Math.random() * 50}, ${80 + Math.random() * 40}, 0.3)`;
+                    tempCtx.fillRect(Math.random() * width, Math.random() * height, 20 + Math.random() * 30, 20 + Math.random() * 30);
+                }
+
+                tempCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                tempCtx.lineWidth = 1;
+                for (let i = 0; i <= width; i += 50) {
+                    tempCtx.beginPath();
+                    tempCtx.moveTo(i, 0);
+                    tempCtx.lineTo(i, height);
+                    tempCtx.stroke();
+                }
+                for (let i = 0; i <= height; i += 50) {
+                    tempCtx.beginPath();
+                    tempCtx.moveTo(0, i);
+                    tempCtx.lineTo(width, i);
+                    tempCtx.stroke();
+                }
+
+                if (cptLocations.length > 0) {
+                    const minEasting = Math.min(...cptLocations.map(p => p.easting));
+                    const maxEasting = Math.max(...cptLocations.map(p => p.easting));
+                    const minNorthing = Math.min(...cptLocations.map(p => p.northing));
+                    const maxNorthing = Math.max(...cptLocations.map(p => p.northing));
+
+                    const xScale = (width - 40) / (maxEasting - minEasting);
+                    const yScale = (height - 40) / (maxNorthing - minNorthing);
+
+                    cptLocations.forEach(cpt => {
+                        const x = 20 + (cpt.easting - minEasting) * xScale;
+                        const y = height - 20 - (cpt.northing - minNorthing) * yScale;
+
+                        tempCtx.fillStyle = '#0066ff';
+                        tempCtx.beginPath();
+                        tempCtx.arc(x, y, 5, 0, 2 * Math.PI);
+                        tempCtx.fill();
+
+                        tempCtx.fillStyle = '#000';
+                        tempCtx.font = '10px Arial';
+                        tempCtx.fillText(cpt.name, x + 8, y - 8);
+                    });
+
+                    if (cptLocations.length >= 2) {
+                        const n = cptLocations.length;
+                        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+                        cptLocations.forEach(p => {
+                            sumX += p.easting;
+                            sumY += p.northing;
+                            sumXY += p.easting * p.northing;
+                            sumX2 += p.easting * p.easting;
+                        });
+
+                        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+                        const intercept = (sumY - slope * sumX) / n;
+
+                        const startEasting = minEasting;
+                        const endEasting = maxEasting;
+                        const startNorthing = slope * startEasting + intercept;
+                        const endNorthing = slope * endEasting + intercept;
+
+                        const startX = 20 + (startEasting - minEasting) * xScale;
+                        const startY = height - 20 - (startNorthing - minNorthing) * yScale;
+                        const endX = 20 + (endEasting - minEasting) * xScale;
+                        const endY = height - 20 - (endNorthing - minNorthing) * yScale;
+
+                        tempCtx.strokeStyle = '#ff6600';
+                        tempCtx.lineWidth = 3;
+                        tempCtx.setLineDash([10, 5]);
+                        tempCtx.beginPath();
+                        tempCtx.moveTo(startX, startY);
+                        tempCtx.lineTo(endX, endY);
+                        tempCtx.stroke();
+                        tempCtx.setLineDash([]);
+                    }
+                }
+
+                resolve(tempCanvas);
+            });
+        }
+
+        function clearData() {
+            const tbody = document.getElementById('coordinateTableBody');
+            tbody.innerHTML = '';
+
+            addCoordinateRow();
+
+            cptData = [];
+            document.getElementById('cptContainer').innerHTML = '';
+
+            cptLocations = [];
+
+            updateDataInfo();
+
+            if (map) {
+                cptMarkers.forEach(marker => map.removeLayer(marker));
+                cptMarkers = [];
+                if (bestFitLine) {
+                    map.removeLayer(bestFitLine);
+                    bestFitLine = null;
+                }
+            }
+
+            const canvas = document.getElementById('crossSection');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            document.getElementById('legend').innerHTML = '';
+
+            document.getElementById('threeContainer').innerHTML = '';
+
+            clearSurfaces();
+        }
+
+        // Initialize the application
+        window.onload = function() {
+            initMap();
+            updateDataInfo();
+            addCoordinateRow();
+            
+            ['groundX1', 'groundY1', 'groundZ1', 'groundX2', 'groundY2', 'groundZ2',
+             'waterX1', 'waterY1', 'waterZ1', 'waterX2', 'waterY2', 'waterZ2'].forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    updateSurfaceData();
+                    if (cptLocations.length > 0) {
+                        generateCrossSection();
+                    }
+                });
+            });
+        };
+    </script>
+</body>
+
+</html>

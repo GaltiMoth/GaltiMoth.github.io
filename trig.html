@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geotechnical Trigonometry, Slope Stability & Earth Pressures</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            grid-column: span 2;
+        }
+        
+        .visualization-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .control-panel {
+            width: 350px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 10px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .control-panel h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            font-size: 1.3em;
+        }
+        
+        .canvas-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .canvas-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            display: block;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #dee2e6;
+            outline: none;
+            transition: background 0.3s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #764ba2;
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        
+        .canvas-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        canvas {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .result-card {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-bottom: 3px;
+        }
+        
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .safety-indicator {
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        
+        .safe {
+            background: linear-gradient(135deg, #84fab0, #8fd3f4);
+            color: #0a5f3e;
+        }
+        
+        .marginal {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: #6c5a0d;
+        }
+        
+        .unsafe {
+            background: linear-gradient(135deg, #ff7675, #fd79a8);
+            color: #721c24;
+        }
+        
+        .info-box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+            font-size: 0.9em;
+        }
+        
+        .info-box h4 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        
+        .control-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        .control-section-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+
+        <!-- Left side: Visualizations -->
+        <div class="visualization-area">
+            
+            <!-- Trigonometry Section -->
+            <div class="canvas-section">
+                <h3>📐 Trigonometric Functions</h3>
+                <div class="canvas-container">
+                    <canvas id="unitCircle" width="350" height="350"></canvas>
+                    <canvas id="trigGraph" width="500" height="350"></canvas>
+                </div>
+                <div class="results">
+                    <div class="result-card">
+                        <div class="result-label">Sin(θ)</div>
+                        <div class="result-value" id="sinValue">0.707</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Cos(θ)</div>
+                        <div class="result-value" id="cosValue">0.707</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Tan(θ)</div>
+                        <div class="result-value" id="tanValue">1.000</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slope Stability Section -->
+            <div class="canvas-section">
+                <h3>⛰️ Slope Stability Analysis</h3>
+                <div class="canvas-container">
+                    <canvas id="slopeVisual" width="450" height="350"></canvas>
+                    <canvas id="forceDiagram" width="400" height="350"></canvas>
+                </div>
+                <div class="results">
+                    <div class="result-card">
+                        <div class="result-label">Factor of Safety</div>
+                        <div class="result-value" id="fosValue">1.50</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Driving Force</div>
+                        <div class="result-value" id="drivingForce">0 kPa</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Resisting Force</div>
+                        <div class="result-value" id="resistingForce">0 kPa</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Normal Stress</div>
+                        <div class="result-value" id="normalStress">0 kPa</div>
+                    </div>
+                </div>
+                <div class="safety-indicator" id="slopeSafetyIndicator">
+                    <div id="slopeSafetyText">SAFE (FS > 1.5)</div>
+                </div>
+            </div>
+            
+            <!-- Retaining Wall Section -->
+            <div class="canvas-section">
+                <h3>🏗️ Retaining Wall Earth Pressures</h3>
+                <div class="canvas-container">
+                    <canvas id="wallVisual" width="450" height="350"></canvas>
+                    <canvas id="pressureDiagram" width="400" height="350"></canvas>
+                </div>
+                <div class="results">
+                    <div class="result-card">
+                        <div class="result-label">Ka (Active)</div>
+                        <div class="result-value" id="kaValue">0.333</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Kp (Passive)</div>
+                        <div class="result-value" id="kpValue">3.000</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Pa (Active)</div>
+                        <div class="result-value" id="paValue">0 kN/m</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Pp (Passive)</div>
+                        <div class="result-value" id="ppValue">0 kN/m</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">FS (Overturn)</div>
+                        <div class="result-value" id="fosOverturning">0.00</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">FS (Sliding)</div>
+                        <div class="result-value" id="fosSliding">0.00</div>
+                    </div>
+                </div>
+                <div class="safety-indicator" id="wallSafetyIndicator">
+                    <div id="wallSafetyText">SAFE</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right side: Controls -->
+        <div class="control-panel">
+            <h2>⚙️ Controls</h2>
+            
+            <!-- Basic Angle Control -->
+            <div class="control-section">
+                <div class="control-section-title">📐 Basic Angle</div>
+                <div class="control-group">
+                    <label>Angle θ (degrees): <span class="value-display" id="angleValue">45°</span></label>
+                    <input type="range" id="angleSlider" min="0" max="360" value="45" step="1">
+                </div>
+            </div>
+            
+            <!-- Geometry Controls -->
+            <div class="control-section">
+                <div class="control-section-title">📏 Geometry</div>
+                <div class="control-group">
+                    <label>Slope/Wall Height (m): <span class="value-display" id="heightValue">10m</span></label>
+                    <input type="range" id="height" min="2" max="50" value="10" step="0.5">
+                </div>
+                <div class="control-group">
+                    <label>Slope/Backfill Angle (°): <span class="value-display" id="slopeAngleValue">30°</span></label>
+                    <input type="range" id="slopeAngle" min="0" max="80" value="30" step="1">
+                </div>
+                <div class="control-group">
+                    <label>Wall Width B (m): <span class="value-display" id="wallWidthValue">2.5m</span></label>
+                    <input type="range" id="wallWidth" min="0.5" max="10" value="2.5" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Embedment Depth D (m): <span class="value-display" id="embedmentValue">2m</span></label>
+                    <input type="range" id="embedment" min="0" max="10" value="2" step="0.1">
+                </div>
+            </div>
+            
+            <!-- Soil Properties -->
+            <div class="control-section">
+                <div class="control-section-title">⛰️ Soil Properties</div>
+                <div class="control-group">
+                    <label>Friction Angle φ (°): <span class="value-display" id="frictionAngleValue">35°</span></label>
+                    <input type="range" id="frictionAngle" min="15" max="60" value="35" step="1">
+                </div>
+                <div class="control-group">
+                    <label>Cohesion c (kPa): <span class="value-display" id="cohesionValue">10 kPa</span></label>
+                    <input type="range" id="cohesion" min="0" max="100" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label>Soil Density γ (kN/m³): <span class="value-display" id="densityValue">18 kN/m³</span></label>
+                    <input type="range" id="density" min="14" max="25" value="18" step="0.5">
+                </div>
+                <div class="control-group">
+                    <label>Wall Interface Friction δ (°): <span class="value-display" id="wallInterfaceValue">20°</span></label>
+                    <input type="range" id="wallInterface" min="0" max="45" value="20" step="1">
+                </div>
+            </div>
+            
+            <!-- Loading Conditions -->
+            <div class="control-section">
+                <div class="control-section-title">📊 Loading Conditions</div>
+                <div class="control-group">
+                    <label>Design Load P (kPa): <span class="value-display" id="designLoadValue">20 kPa</span></label>
+                    <input type="range" id="designLoad" min="0" max="200" value="20" step="5">
+                </div>
+                <div class="control-group">
+                    <label>Surcharge q (kPa): <span class="value-display" id="surchargeValue">10 kPa</span></label>
+                    <input type="range" id="surcharge" min="0" max="100" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label>Water Table Depth (m): <span class="value-display" id="waterTableValue">5m</span></label>
+                    <input type="range" id="waterTable" min="0" max="50" value="5" step="0.5">
+                </div>
+                <div class="control-group">
+                    <label>Wall Unit Weight (kN/m³): <span class="value-display" id="wallWeightValue">24 kN/m³</span></label>
+                    <input type="range" id="wallWeight" min="20" max="30" value="24" step="0.5">
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <h4>How Trigonometry Applies:</h4>
+                <p>
+                    <strong>Sin(θ):</strong> Driving force component<br>
+                    <strong>Cos(θ):</strong> Normal force component<br>
+                    <strong>Tan(φ):</strong> Friction coefficient<br>
+                    <strong>Ka = tan²(45° - φ/2)</strong><br>
+                    <strong>Kp = tan²(45° + φ/2)</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Get canvas contexts
+        const unitCircleCtx = document.getElementById('unitCircle').getContext('2d');
+        const trigGraphCtx = document.getElementById('trigGraph').getContext('2d');
+        const slopeVisualCtx = document.getElementById('slopeVisual').getContext('2d');
+        const forceDiagramCtx = document.getElementById('forceDiagram').getContext('2d');
+        const wallVisualCtx = document.getElementById('wallVisual').getContext('2d');
+        const pressureDiagramCtx = document.getElementById('pressureDiagram').getContext('2d');
+        
+        // Helper function to draw gridlines with labels
+        function drawGrid(ctx, width, height, spacing = 50, showLabels = true) {
+            ctx.save();
+            ctx.strokeStyle = '#e9ecef';
+            ctx.lineWidth = 0.5;
+            ctx.font = '10px Arial';
+            ctx.fillStyle = '#adb5bd';
+            
+            // Vertical lines
+            for (let x = 0; x <= width; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+                
+                if (showLabels && x > 0) {
+                    ctx.fillText(x + '', x - 10, height - 5);
+                }
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y <= height; y += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+                
+                if (showLabels && y > 0) {
+                    ctx.fillText((height - y) + '', 5, y + 3);
+                }
+            }
+            ctx.restore();
+        }
+        
+        // Add scroll wheel support to sliders
+        function addScrollSupport(sliderId) {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                slider.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    const step = parseFloat(this.step);
+                    const min = parseFloat(this.min);
+                    const max = parseFloat(this.max);
+                    const delta = e.deltaY < 0 ? step : -step;
+                    const newValue = Math.min(max, Math.max(min, parseFloat(this.value) + delta));
+                    this.value = newValue;
+                    this.dispatchEvent(new Event('input'));
+                });
+            }
+        }
+        
+        // Apply scroll support to all sliders
+        const sliderIds = [
+            'angleSlider', 'height', 'slopeAngle', 'frictionAngle', 
+            'cohesion', 'density', 'waterTable', 'wallWidth', 'embedment',
+            'wallInterface', 'surcharge', 'wallWeight'
+        ];
+        sliderIds.forEach(id => addScrollSupport(id));
+        
+        // Trigonometry visualization
+        function drawUnitCircle(angleDeg) {
+            const canvas = unitCircleCtx.canvas;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 120;
+            
+            unitCircleCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid with scale
+            unitCircleCtx.strokeStyle = '#e9ecef';
+            unitCircleCtx.lineWidth = 0.5;
+            unitCircleCtx.font = '10px Arial';
+            unitCircleCtx.fillStyle = '#adb5bd';
+            
+            // Grid lines
+            for (let i = 25; i <= canvas.width; i += 25) {
+                unitCircleCtx.beginPath();
+                unitCircleCtx.moveTo(i, 0);
+                unitCircleCtx.lineTo(i, canvas.height);
+                unitCircleCtx.stroke();
+                unitCircleCtx.beginPath();
+                unitCircleCtx.moveTo(0, i);
+                unitCircleCtx.lineTo(canvas.width, i);
+                unitCircleCtx.stroke();
+            }
+            
+            // Draw axes with labels
+            unitCircleCtx.strokeStyle = '#495057';
+            unitCircleCtx.lineWidth = 2;
+            unitCircleCtx.beginPath();
+            unitCircleCtx.moveTo(0, centerY);
+            unitCircleCtx.lineTo(canvas.width, centerY);
+            unitCircleCtx.moveTo(centerX, 0);
+            unitCircleCtx.lineTo(centerX, canvas.height);
+            unitCircleCtx.stroke();
+            
+            // Axis labels
+            unitCircleCtx.fillStyle = '#495057';
+            unitCircleCtx.font = 'bold 12px Arial';
+            unitCircleCtx.fillText('1', centerX + radius + 5, centerY - 5);
+            unitCircleCtx.fillText('-1', centerX - radius - 15, centerY - 5);
+            unitCircleCtx.fillText('1', centerX + 5, centerY - radius + 5);
+            unitCircleCtx.fillText('-1', centerX + 5, centerY + radius + 15);
+            unitCircleCtx.fillText('0', centerX + 5, centerY + 15);
+            
+            // Draw unit circle
+            unitCircleCtx.strokeStyle = '#667eea';
+            unitCircleCtx.lineWidth = 3;
+            unitCircleCtx.beginPath();
+            unitCircleCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            unitCircleCtx.stroke();
+            
+            // Mark key angles
+            unitCircleCtx.fillStyle = '#adb5bd';
+            unitCircleCtx.font = '10px Arial';
+            const keyAngles = [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330];
+            keyAngles.forEach(angle => {
+                const rad = (angle * Math.PI) / 180;
+                const x = centerX + (radius + 15) * Math.cos(rad);
+                const y = centerY - (radius + 15) * Math.sin(rad);
+                unitCircleCtx.fillText(angle + '°', x - 10, y + 3);
+            });
+            
+            // Calculate position
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const x = centerX + radius * Math.cos(angleRad);
+            const y = centerY - radius * Math.sin(angleRad);
+            
+            // Draw angle arc
+            unitCircleCtx.fillStyle = 'rgba(102, 126, 234, 0.2)';
+            unitCircleCtx.beginPath();
+            unitCircleCtx.moveTo(centerX, centerY);
+            unitCircleCtx.arc(centerX, centerY, 40, 0, -angleRad, true);
+            unitCircleCtx.closePath();
+            unitCircleCtx.fill();
+            
+            // Draw radius line
+            unitCircleCtx.strokeStyle = '#764ba2';
+            unitCircleCtx.lineWidth = 3;
+            unitCircleCtx.beginPath();
+            unitCircleCtx.moveTo(centerX, centerY);
+            unitCircleCtx.lineTo(x, y);
+            unitCircleCtx.stroke();
+            
+            // Draw sin line (vertical)
+            unitCircleCtx.strokeStyle = '#ff7675';
+            unitCircleCtx.lineWidth = 3;
+            unitCircleCtx.beginPath();
+            unitCircleCtx.moveTo(x, centerY);
+            unitCircleCtx.lineTo(x, y);
+            unitCircleCtx.stroke();
+            
+            // Draw cos line (horizontal)
+            unitCircleCtx.strokeStyle = '#74b9ff';
+            unitCircleCtx.lineWidth = 3;
+            unitCircleCtx.beginPath();
+            unitCircleCtx.moveTo(centerX, y);
+            unitCircleCtx.lineTo(x, y);
+            unitCircleCtx.stroke();
+            
+            // Draw point
+            unitCircleCtx.fillStyle = '#2d3436';
+            unitCircleCtx.beginPath();
+            unitCircleCtx.arc(x, y, 8, 0, 2 * Math.PI);
+            unitCircleCtx.fill();
+            
+            // Labels with values
+            unitCircleCtx.font = 'bold 14px Arial';
+            unitCircleCtx.fillStyle = '#2d3436';
+            unitCircleCtx.fillText('θ = ' + angleDeg + '°', centerX + 50, centerY - 20);
+            unitCircleCtx.fillStyle = '#ff7675';
+            unitCircleCtx.fillText('sin = ' + Math.sin(angleRad).toFixed(3), x + 10, (y + centerY) / 2);
+            unitCircleCtx.fillStyle = '#74b9ff';
+            unitCircleCtx.fillText('cos = ' + Math.cos(angleRad).toFixed(3), (x + centerX) / 2, y - 10);
+        }
+        
+        function drawTrigGraph(angleDeg) {
+            const canvas = trigGraphCtx.canvas;
+            trigGraphCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid with angle labels
+            trigGraphCtx.strokeStyle = '#e9ecef';
+            trigGraphCtx.lineWidth = 0.5;
+            trigGraphCtx.font = '10px Arial';
+            trigGraphCtx.fillStyle = '#adb5bd';
+            
+            // Vertical lines at key angles
+            const keyAngles = [0, 90, 180, 270, 360];
+            const startX = 50;
+            const scale = (canvas.width - 100) / 360;
+            
+            keyAngles.forEach(angle => {
+                const x = startX + angle * scale;
+                trigGraphCtx.beginPath();
+                trigGraphCtx.moveTo(x, 0);
+                trigGraphCtx.lineTo(x, canvas.height);
+                trigGraphCtx.stroke();
+                trigGraphCtx.fillText(angle + '°', x - 10, canvas.height - 5);
+            });
+            
+            // Horizontal lines for values
+            const centerY = canvas.height / 2;
+            const valueLines = [-1, -0.5, 0, 0.5, 1];
+            valueLines.forEach(val => {
+                const y = centerY - val * 100;
+                trigGraphCtx.beginPath();
+                trigGraphCtx.moveTo(0, y);
+                trigGraphCtx.lineTo(canvas.width, y);
+                trigGraphCtx.stroke();
+                trigGraphCtx.fillText(val.toFixed(1), 5, y + 3);
+            });
+            
+            // Draw axes
+            trigGraphCtx.strokeStyle = '#495057';
+            trigGraphCtx.lineWidth = 2;
+            trigGraphCtx.beginPath();
+            trigGraphCtx.moveTo(0, centerY);
+            trigGraphCtx.lineTo(canvas.width, centerY);
+            trigGraphCtx.moveTo(startX, 0);
+            trigGraphCtx.lineTo(startX, canvas.height);
+            trigGraphCtx.stroke();
+            
+            // Draw functions
+            const amplitude = 100;
+            
+            // Sin wave
+            trigGraphCtx.strokeStyle = '#ff7675';
+            trigGraphCtx.lineWidth = 2;
+            trigGraphCtx.beginPath();
+            for (let deg = 0; deg <= 360; deg++) {
+                const x = startX + deg * scale;
+                const y = centerY - Math.sin((deg * Math.PI) / 180) * amplitude;
+                if (deg === 0) {
+                    trigGraphCtx.moveTo(x, y);
+                } else {
+                    trigGraphCtx.lineTo(x, y);
+                }
+            }
+            trigGraphCtx.stroke();
+            
+            // Cos wave
+            trigGraphCtx.strokeStyle = '#74b9ff';
+            trigGraphCtx.lineWidth = 2;
+            trigGraphCtx.beginPath();
+            for (let deg = 0; deg <= 360; deg++) {
+                const x = startX + deg * scale;
+                const y = centerY - Math.cos((deg * Math.PI) / 180) * amplitude;
+                if (deg === 0) {
+                    trigGraphCtx.moveTo(x, y);
+                } else {
+                    trigGraphCtx.lineTo(x, y);
+                }
+            }
+            trigGraphCtx.stroke();
+            
+            // Tan wave (limited range)
+            trigGraphCtx.strokeStyle = '#fdcb6e';
+            trigGraphCtx.lineWidth = 2;
+            for (let segment = 0; segment < 3; segment++) {
+                trigGraphCtx.beginPath();
+                const startDeg = segment * 180 + 1;
+                const endDeg = (segment + 1) * 180 - 1;
+                for (let deg = startDeg; deg <= endDeg; deg++) {
+                    const x = startX + deg * scale;
+                    const tanValue = Math.tan((deg * Math.PI) / 180);
+                    if (Math.abs(tanValue) < 5) {
+                        const y = centerY - tanValue * 20;
+                        if (deg === startDeg) {
+                            trigGraphCtx.moveTo(x, y);
+                        } else {
+                            trigGraphCtx.lineTo(x, y);
+                        }
+                    }
+                }
+                trigGraphCtx.stroke();
+            }
+            
+            // Current angle indicator
+            const currentX = startX + angleDeg * scale;
+            trigGraphCtx.strokeStyle = '#2d3436';
+            trigGraphCtx.lineWidth = 2;
+            trigGraphCtx.setLineDash([5, 5]);
+            trigGraphCtx.beginPath();
+            trigGraphCtx.moveTo(currentX, 0);
+            trigGraphCtx.lineTo(currentX, canvas.height);
+            trigGraphCtx.stroke();
+            trigGraphCtx.setLineDash([]);
+            
+            // Draw current values
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const sinY = centerY - Math.sin(angleRad) * amplitude;
+            const cosY = centerY - Math.cos(angleRad) * amplitude;
+            
+            // Sin point
+            trigGraphCtx.fillStyle = '#ff7675';
+            trigGraphCtx.beginPath();
+            trigGraphCtx.arc(currentX, sinY, 5, 0, 2 * Math.PI);
+            trigGraphCtx.fill();
+            
+            // Cos point
+            trigGraphCtx.fillStyle = '#74b9ff';
+            trigGraphCtx.beginPath();
+            trigGraphCtx.arc(currentX, cosY, 5, 0, 2 * Math.PI);
+            trigGraphCtx.fill();
+            
+            // Tan point (if in range)
+            const tanValue = Math.tan(angleRad);
+            if (Math.abs(tanValue) < 5) {
+                const tanY = centerY - tanValue * 20;
+                trigGraphCtx.fillStyle = '#fdcb6e';
+                trigGraphCtx.beginPath();
+                trigGraphCtx.arc(currentX, tanY, 5, 0, 2 * Math.PI);
+                trigGraphCtx.fill();
+            }
+            
+            // Legend
+            trigGraphCtx.font = 'bold 12px Arial';
+            trigGraphCtx.fillStyle = '#ff7675';
+            trigGraphCtx.fillText('Sin', 10, 20);
+            trigGraphCtx.fillStyle = '#74b9ff';
+            trigGraphCtx.fillText('Cos', 10, 35);
+            trigGraphCtx.fillStyle = '#fdcb6e';
+            trigGraphCtx.fillText('Tan', 10, 50);
+            
+            // Current angle display
+            trigGraphCtx.fillStyle = '#2d3436';
+            trigGraphCtx.fillText('θ = ' + angleDeg + '°', currentX + 10, 20);
+        }
+        
+        function drawSlopeVisual(angle, height, waterTable) {
+            const canvas = slopeVisualCtx.canvas;
+            slopeVisualCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            drawGrid(slopeVisualCtx, canvas.width, canvas.height, 50, false);
+            
+            const angleRad = (angle * Math.PI) / 180;
+            const slopeLength = height / Math.sin(angleRad);
+            const baseLength = height / Math.tan(angleRad);
+            
+            // Scale to fit canvas
+            const scale = Math.min(300 / slopeLength, 200 / height);
+            const scaledHeight = height * scale;
+            const scaledBase = baseLength * scale;
+            
+            const startX = 80;
+            const startY = 300;
+            
+            // Draw elevation labels
+            slopeVisualCtx.font = '11px Arial';
+            slopeVisualCtx.fillStyle = '#6c757d';
+            for (let i = 0; i <= height; i += height/5) {
+                const y = startY - i * scale;
+                slopeVisualCtx.fillText(i.toFixed(1) + 'm', 10, y);
+                
+                // Horizontal guide lines
+                slopeVisualCtx.strokeStyle = '#dee2e6';
+                slopeVisualCtx.lineWidth = 0.5;
+                slopeVisualCtx.setLineDash([3, 3]);
+                slopeVisualCtx.beginPath();
+                slopeVisualCtx.moveTo(40, y);
+                slopeVisualCtx.lineTo(canvas.width - 10, y);
+                slopeVisualCtx.stroke();
+                slopeVisualCtx.setLineDash([]);
+            }
+            
+            // Draw ground
+            slopeVisualCtx.fillStyle = '#8b6914';
+            slopeVisualCtx.fillRect(0, startY, canvas.width, 50);
+            
+            // Draw slope
+            slopeVisualCtx.fillStyle = '#d4a76a';
+            slopeVisualCtx.beginPath();
+            slopeVisualCtx.moveTo(startX, startY);
+            slopeVisualCtx.lineTo(startX + scaledBase, startY);
+            slopeVisualCtx.lineTo(startX + scaledBase, startY - scaledHeight);
+            slopeVisualCtx.closePath();
+            slopeVisualCtx.fill();
+            
+            // Draw water table if applicable
+            if (waterTable < height) {
+                const waterY = startY - (waterTable * scale);
+                slopeVisualCtx.fillStyle = 'rgba(74, 185, 255, 0.3)';
+                slopeVisualCtx.fillRect(0, waterY, canvas.width, startY - waterY);
+                
+                // Water table line
+                slopeVisualCtx.strokeStyle = '#3498db';
+                slopeVisualCtx.lineWidth = 2;
+                slopeVisualCtx.setLineDash([10, 5]);
+                slopeVisualCtx.beginPath();
+                slopeVisualCtx.moveTo(0, waterY);
+                slopeVisualCtx.lineTo(canvas.width, waterY);
+                slopeVisualCtx.stroke();
+                slopeVisualCtx.setLineDash([]);
+                
+                // Water table label
+                slopeVisualCtx.fillStyle = '#3498db';
+                slopeVisualCtx.font = 'bold 12px Arial';
+                slopeVisualCtx.fillText('WT: ' + waterTable + 'm', canvas.width - 80, waterY - 5);
+            }
+            
+            // Draw slope surface
+            slopeVisualCtx.strokeStyle = '#2d3436';
+            slopeVisualCtx.lineWidth = 3;
+            slopeVisualCtx.beginPath();
+            slopeVisualCtx.moveTo(startX, startY);
+            slopeVisualCtx.lineTo(startX + scaledBase, startY - scaledHeight);
+            slopeVisualCtx.stroke();
+            
+            // Draw critical failure surface (circular arc approximation)
+            slopeVisualCtx.strokeStyle = '#e74c3c';
+            slopeVisualCtx.lineWidth = 2;
+            slopeVisualCtx.setLineDash([5, 5]);
+            slopeVisualCtx.beginPath();
+            const centerX = startX + scaledBase * 0.3;
+            const centerY = startY - scaledHeight * 1.2;
+            const radius = Math.sqrt((scaledBase * 0.7) ** 2 + (scaledHeight * 1.2) ** 2);
+            slopeVisualCtx.arc(centerX, centerY, radius, 0.3, 1.2);
+            slopeVisualCtx.stroke();
+            slopeVisualCtx.setLineDash([]);
+            
+            // Draw angle arc
+            slopeVisualCtx.strokeStyle = '#667eea';
+            slopeVisualCtx.lineWidth = 2;
+            slopeVisualCtx.beginPath();
+            slopeVisualCtx.arc(startX, startY, 50, -angleRad, 0);
+            slopeVisualCtx.stroke();
+            
+            // Labels and dimensions
+            slopeVisualCtx.font = 'bold 14px Arial';
+            slopeVisualCtx.fillStyle = '#2d3436';
+            slopeVisualCtx.fillText('β = ' + angle + '°', startX + 60, startY - 10);
+            slopeVisualCtx.fillText('H = ' + height + 'm', startX + scaledBase + 10, startY - scaledHeight / 2);
+            
+            // Add failure surface label
+            slopeVisualCtx.fillStyle = '#e74c3c';
+            slopeVisualCtx.font = '12px Arial';
+            slopeVisualCtx.fillText('Failure Surface', startX + scaledBase * 0.5, startY - scaledHeight * 0.3);
+            
+            // Add some texture lines to show soil layers
+            slopeVisualCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            slopeVisualCtx.lineWidth = 1;
+            for (let i = 1; i < 5; i++) {
+                const layerY = startY - (i * scaledHeight / 5);
+                slopeVisualCtx.beginPath();
+                slopeVisualCtx.moveTo(startX, layerY);
+                slopeVisualCtx.lineTo(startX + (scaledBase * (5 - i) / 5), layerY);
+                slopeVisualCtx.stroke();
+            }
+        }
+        
+        function drawForceDiagram(angle, weight, normalForce, shearForce, resistingForce) {
+            const canvas = forceDiagramCtx.canvas;
+            forceDiagramCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            drawGrid(forceDiagramCtx, canvas.width, canvas.height, 50, false);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const scale = 100 / Math.max(weight, 1);
+            
+            const angleRad = (angle * Math.PI) / 180;
+            
+            // Draw inclined plane
+            forceDiagramCtx.strokeStyle = '#8b6914';
+            forceDiagramCtx.lineWidth = 4;
+            forceDiagramCtx.beginPath();
+            forceDiagramCtx.moveTo(centerX - 150, centerY + 75);
+            forceDiagramCtx.lineTo(centerX + 150, centerY - 75);
+            forceDiagramCtx.stroke();
+            
+            // Draw angle indicator
+            forceDiagramCtx.strokeStyle = '#667eea';
+            forceDiagramCtx.lineWidth = 2;
+            forceDiagramCtx.beginPath();
+            forceDiagramCtx.arc(centerX - 100, centerY + 50, 30, -angleRad, 0);
+            forceDiagramCtx.stroke();
+            forceDiagramCtx.fillStyle = '#667eea';
+            forceDiagramCtx.font = '12px Arial';
+            forceDiagramCtx.fillText('β=' + angle + '°', centerX - 100, centerY + 80);
+            
+            // Draw block
+            forceDiagramCtx.fillStyle = '#d4a76a';
+            forceDiagramCtx.fillRect(centerX - 30, centerY - 30, 60, 60);
+            forceDiagramCtx.strokeStyle = '#2d3436';
+            forceDiagramCtx.lineWidth = 2;
+            forceDiagramCtx.strokeRect(centerX - 30, centerY - 30, 60, 60);
+            
+            // Draw weight vector (vertical down)
+            drawArrow(forceDiagramCtx, centerX, centerY, centerX, centerY + weight * scale, '#e74c3c', 'W=' + weight.toFixed(0));
+            
+            // Draw normal force (perpendicular to slope)
+            const normalX = centerX - normalForce * scale * Math.sin(angleRad);
+            const normalY = centerY - normalForce * scale * Math.cos(angleRad);
+            drawArrow(forceDiagramCtx, centerX, centerY, normalX, normalY, '#3498db', 'N=' + normalForce.toFixed(0));
+            
+            // Draw shear force (parallel to slope, down)
+            const shearX = centerX + shearForce * scale * Math.cos(angleRad);
+            const shearY = centerY + shearForce * scale * Math.sin(angleRad);
+            drawArrow(forceDiagramCtx, centerX, centerY, shearX, shearY, '#e67e22', 'τ=' + shearForce.toFixed(0));
+            
+            // Draw resisting force (parallel to slope, up)
+            const resistX = centerX - resistingForce * scale * Math.cos(angleRad);
+            const resistY = centerY - resistingForce * scale * Math.sin(angleRad);
+            drawArrow(forceDiagramCtx, centerX, centerY, resistX, resistY, '#27ae60', 'R=' + resistingForce.toFixed(0));
+            
+            // Legend
+            forceDiagramCtx.font = 'bold 12px Arial';
+            forceDiagramCtx.fillStyle = '#e74c3c';
+            forceDiagramCtx.fillText('W: Weight', 10, 20);
+            forceDiagramCtx.fillStyle = '#3498db';
+            forceDiagramCtx.fillText('N: Normal', 10, 35);
+            forceDiagramCtx.fillStyle = '#e67e22';
+            forceDiagramCtx.fillText('τ: Shear', 10, 50);
+            forceDiagramCtx.fillStyle = '#27ae60';
+            forceDiagramCtx.fillText('R: Resistance', 10, 65);
+            
+            // Title
+            forceDiagramCtx.font = 'bold 14px Arial';
+            forceDiagramCtx.fillStyle = '#2d3436';
+            forceDiagramCtx.fillText('Force Equilibrium', canvas.width/2 - 50, 20);
+            
+            // Show force equations
+            forceDiagramCtx.font = '11px Arial';
+            forceDiagramCtx.fillStyle = '#495057';
+            forceDiagramCtx.fillText('N = W×cos(β)', canvas.width - 100, canvas.height - 40);
+            forceDiagramCtx.fillText('τ = W×sin(β)', canvas.width - 100, canvas.height - 25);
+            forceDiagramCtx.fillText('R = c + N×tan(φ)', canvas.width - 100, canvas.height - 10);
+        }
+        
+        function drawWallVisual(height, backfillAngle, surcharge, width, embedment) {
+            const canvas = wallVisualCtx.canvas;
+            wallVisualCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid with measurements
+            drawGrid(wallVisualCtx, canvas.width, canvas.height, 50, false);
+            
+            const totalHeight = height + embedment;
+            const scale = 280 / totalHeight;
+            const scaledHeight = height * scale;
+            const scaledEmbed = embedment * scale;
+            const scaledWidth = width * scale;
+            const wallX = 180;
+            const groundY = 300;
+            const baseY = groundY + scaledEmbed;
+            
+            // Draw measurement labels
+            wallVisualCtx.font = '11px Arial';
+            wallVisualCtx.fillStyle = '#6c757d';
+            
+            // Height scale on left
+            for (let i = 0; i <= totalHeight; i += totalHeight/5) {
+                const y = baseY - i * scale;
+                wallVisualCtx.fillStyle = '#6c757d';
+                wallVisualCtx.fillText(i.toFixed(1) + 'm', 10, y);
+                
+                // Horizontal guide lines
+                wallVisualCtx.strokeStyle = '#dee2e6';
+                wallVisualCtx.lineWidth = 0.5;
+                wallVisualCtx.setLineDash([3, 3]);
+                wallVisualCtx.beginPath();
+                wallVisualCtx.moveTo(40, y);
+                wallVisualCtx.lineTo(canvas.width - 10, y);
+                wallVisualCtx.stroke();
+                wallVisualCtx.setLineDash([]);
+            }
+            
+            // Draw ground line
+            wallVisualCtx.strokeStyle = '#2d3436';
+            wallVisualCtx.lineWidth = 3;
+            wallVisualCtx.beginPath();
+            wallVisualCtx.moveTo(0, groundY);
+            wallVisualCtx.lineTo(canvas.width, groundY);
+            wallVisualCtx.stroke();
+            
+            // Draw ground behind wall (active side)
+            wallVisualCtx.fillStyle = '#d4a76a';
+            wallVisualCtx.beginPath();
+            wallVisualCtx.moveTo(wallX + scaledWidth, groundY);
+            wallVisualCtx.lineTo(canvas.width, groundY);
+            
+            if (backfillAngle > 0) {
+                const backfillRad = (backfillAngle * Math.PI) / 180;
+                const endY = groundY - (canvas.width - wallX - scaledWidth) * Math.tan(backfillRad);
+                wallVisualCtx.lineTo(canvas.width, endY);
+                wallVisualCtx.lineTo(wallX + scaledWidth, groundY - scaledHeight);
+            } else {
+                wallVisualCtx.lineTo(canvas.width, groundY - scaledHeight);
+                wallVisualCtx.lineTo(wallX + scaledWidth, groundY - scaledHeight);
+            }
+            wallVisualCtx.closePath();
+            wallVisualCtx.fill();
+            
+            // Draw embedment soil (both sides)
+            wallVisualCtx.fillStyle = '#b8956a';
+            wallVisualCtx.fillRect(0, groundY, wallX, baseY - groundY + 50);
+            wallVisualCtx.fillRect(wallX + scaledWidth, groundY, canvas.width - wallX - scaledWidth, baseY - groundY + 50);
+            
+            // Draw ground in front of wall (passive side - above ground)
+            wallVisualCtx.fillStyle = '#b8956a';
+            wallVisualCtx.fillRect(0, groundY - scaledHeight/3, wallX, scaledHeight/3);
+            
+            // Draw retaining wall with embedment
+            wallVisualCtx.fillStyle = '#636e72';
+            wallVisualCtx.fillRect(wallX, baseY - scaledHeight - scaledEmbed, scaledWidth, scaledHeight + scaledEmbed);
+            
+            // Draw wall base/footing
+            wallVisualCtx.fillStyle = '#495057';
+            wallVisualCtx.fillRect(wallX - scaledWidth/2, baseY, scaledWidth * 2, 20);
+            
+            wallVisualCtx.strokeStyle = '#2d3436';
+            wallVisualCtx.lineWidth = 2;
+            wallVisualCtx.strokeRect(wallX, baseY - scaledHeight - scaledEmbed, scaledWidth, scaledHeight + scaledEmbed);
+            wallVisualCtx.strokeRect(wallX - scaledWidth/2, baseY, scaledWidth * 2, 20);
+            
+            // Draw surcharge if present
+            if (surcharge > 0) {
+                wallVisualCtx.fillStyle = '#e74c3c';
+                wallVisualCtx.font = 'bold 12px Arial';
+                
+                // Draw downward arrows for surcharge
+                for (let x = wallX + scaledWidth + 20; x < canvas.width - 20; x += 30) {
+                    let y;
+                    if (backfillAngle > 0) {
+                        const backfillRad = (backfillAngle * Math.PI) / 180;
+                        y = groundY - scaledHeight - (x - wallX - scaledWidth) * Math.tan(backfillRad);
+                    } else {
+                        y = groundY - scaledHeight;
+                    }
+                    
+                    wallVisualCtx.beginPath();
+                    wallVisualCtx.moveTo(x, y - 30);
+                    wallVisualCtx.lineTo(x, y - 10);
+                    wallVisualCtx.stroke();
+                    
+                    wallVisualCtx.beginPath();
+                    wallVisualCtx.moveTo(x, y - 10);
+                    wallVisualCtx.lineTo(x - 5, y - 15);
+                    wallVisualCtx.lineTo(x + 5, y - 15);
+                    wallVisualCtx.closePath();
+                    wallVisualCtx.fill();
+                }
+                wallVisualCtx.fillText('q = ' + surcharge + ' kPa', wallX + scaledWidth + 40, groundY - scaledHeight - 40);
+            }
+            
+            // Draw failure wedges (dashed lines)
+            wallVisualCtx.strokeStyle = '#e74c3c';
+            wallVisualCtx.lineWidth = 2;
+            wallVisualCtx.setLineDash([5, 5]);
+            
+            // Active failure wedge
+            const activeAngle = 45 - parseFloat(document.getElementById('frictionAngle').value) / 2;
+            const activeRad = (activeAngle * Math.PI) / 180;
+            wallVisualCtx.beginPath();
+            wallVisualCtx.moveTo(wallX + scaledWidth, groundY);
+            const activeEndX = wallX + scaledWidth + scaledHeight / Math.tan(activeRad);
+            wallVisualCtx.lineTo(activeEndX, groundY - scaledHeight);
+            wallVisualCtx.stroke();
+            
+            // Passive failure wedge
+            wallVisualCtx.strokeStyle = '#27ae60';
+            const passiveAngle = 45 + parseFloat(document.getElementById('frictionAngle').value) / 2;
+            const passiveRad = (passiveAngle * Math.PI) / 180;
+            wallVisualCtx.beginPath();
+            wallVisualCtx.moveTo(wallX, groundY);
+            const passiveEndX = wallX - (scaledHeight/3) / Math.tan(passiveRad);
+            wallVisualCtx.lineTo(passiveEndX, groundY - scaledHeight/3);
+            wallVisualCtx.stroke();
+            
+            wallVisualCtx.setLineDash([]);
+            
+            // Dimension labels
+            wallVisualCtx.font = 'bold 14px Arial';
+            wallVisualCtx.fillStyle = '#2d3436';
+            
+            // Height dimension
+            wallVisualCtx.save();
+            wallVisualCtx.translate(wallX - 30, groundY - scaledHeight/2);
+            wallVisualCtx.rotate(-Math.PI/2);
+            wallVisualCtx.fillText('H = ' + height + 'm', -20, 0);
+            wallVisualCtx.restore();
+            
+            // Embedment dimension
+            wallVisualCtx.fillStyle = '#764ba2';
+            wallVisualCtx.save();
+            wallVisualCtx.translate(wallX - 30, groundY + scaledEmbed/2);
+            wallVisualCtx.rotate(-Math.PI/2);
+            wallVisualCtx.fillText('D = ' + embedment + 'm', -20, 0);
+            wallVisualCtx.restore();
+            
+            // Width dimension
+            wallVisualCtx.fillStyle = '#2d3436';
+            wallVisualCtx.fillText('B = ' + width + 'm', wallX + scaledWidth/2 - 20, baseY + 35);
+            
+            // Zone labels
+            wallVisualCtx.fillStyle = '#e74c3c';
+            wallVisualCtx.fillText('Active', wallX + scaledWidth + 10, groundY - 20);
+            
+            wallVisualCtx.fillStyle = '#27ae60';
+            wallVisualCtx.fillText('Passive', wallX - 60, groundY - 20);
+            
+            // Draw angle indicators
+            if (backfillAngle > 0) {
+                wallVisualCtx.strokeStyle = '#667eea';
+                wallVisualCtx.lineWidth = 2;
+                wallVisualCtx.beginPath();
+                const backfillRad = (backfillAngle * Math.PI) / 180;
+                wallVisualCtx.arc(wallX + scaledWidth + 100, groundY, 40, -backfillRad, 0);
+                wallVisualCtx.stroke();
+                wallVisualCtx.fillStyle = '#667eea';
+                wallVisualCtx.fillText('β = ' + backfillAngle + '°', wallX + scaledWidth + 110, groundY - 10);
+            }
+        }
+        
+        function drawPressureDiagram(height, ka, kp, gamma, surcharge, embedment) {
+            const canvas = pressureDiagramCtx.canvas;
+            pressureDiagramCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            drawGrid(pressureDiagramCtx, canvas.width, canvas.height, 50, false);
+            
+            const totalHeight = height + embedment;
+            const scale = 280 / totalHeight;
+            const scaledHeight = height * scale;
+            const scaledEmbed = embedment * scale;
+            const centerX = canvas.width / 2;
+            const groundY = 300;
+            const baseY = groundY + scaledEmbed;
+            const wallX = centerX - 15;
+            const wallThickness = 30;
+            
+            // Draw pressure scale on sides
+            pressureDiagramCtx.font = '10px Arial';
+            pressureDiagramCtx.fillStyle = '#6c757d';
+            
+            // Calculate pressures
+            const activePressureTop = surcharge * ka;
+            const activePressureGround = (gamma * height + surcharge) * ka;
+            const activePressureBase = (gamma * (height + embedment) + surcharge) * ka;
+            const passivePressureBase = gamma * embedment * kp;
+            
+            // Scale for pressure display
+            const maxPressure = Math.max(activePressureBase, passivePressureBase, 50);
+            const pressureScale = 120 / maxPressure;
+            
+            // Draw elevation scale
+            pressureDiagramCtx.fillStyle = '#6c757d';
+            for (let i = 0; i <= totalHeight; i += totalHeight/4) {
+                const y = baseY - i * scale;
+                pressureDiagramCtx.fillText(i.toFixed(1) + 'm', 10, y);
+                
+                // Horizontal guide lines
+                pressureDiagramCtx.strokeStyle = '#dee2e6';
+                pressureDiagramCtx.lineWidth = 0.5;
+                pressureDiagramCtx.setLineDash([3, 3]);
+                pressureDiagramCtx.beginPath();
+                pressureDiagramCtx.moveTo(40, y);
+                pressureDiagramCtx.lineTo(canvas.width - 10, y);
+                pressureDiagramCtx.stroke();
+                pressureDiagramCtx.setLineDash([]);
+            }
+            
+            // Draw ground line
+            pressureDiagramCtx.strokeStyle = '#8b6914';
+            pressureDiagramCtx.lineWidth = 3;
+            pressureDiagramCtx.beginPath();
+            pressureDiagramCtx.moveTo(0, groundY);
+            pressureDiagramCtx.lineTo(canvas.width, groundY);
+            pressureDiagramCtx.stroke();
+            
+            // Draw wall
+            pressureDiagramCtx.fillStyle = '#636e72';
+            pressureDiagramCtx.fillRect(wallX, baseY - scaledHeight - scaledEmbed, wallThickness, scaledHeight + scaledEmbed);
+            pressureDiagramCtx.strokeStyle = '#2d3436';
+            pressureDiagramCtx.lineWidth = 2;
+            pressureDiagramCtx.strokeRect(wallX, baseY - scaledHeight - scaledEmbed, wallThickness, scaledHeight + scaledEmbed);
+            
+            // Draw active pressure distribution (right side)
+            pressureDiagramCtx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+            pressureDiagramCtx.strokeStyle = '#e74c3c';
+            pressureDiagramCtx.lineWidth = 3;
+            pressureDiagramCtx.beginPath();
+            pressureDiagramCtx.moveTo(wallX + wallThickness, groundY - scaledHeight);
+            pressureDiagramCtx.lineTo(wallX + wallThickness + activePressureTop * pressureScale, groundY - scaledHeight);
+            pressureDiagramCtx.lineTo(wallX + wallThickness + activePressureGround * pressureScale, groundY);
+            pressureDiagramCtx.lineTo(wallX + wallThickness + activePressureBase * pressureScale, baseY);
+            pressureDiagramCtx.lineTo(wallX + wallThickness, baseY);
+            pressureDiagramCtx.closePath();
+            pressureDiagramCtx.fill();
+            pressureDiagramCtx.stroke();
+            
+            // Draw passive pressure distribution (left side - below ground only)
+            pressureDiagramCtx.fillStyle = 'rgba(39, 174, 96, 0.3)';
+            pressureDiagramCtx.strokeStyle = '#27ae60';
+            pressureDiagramCtx.lineWidth = 3;
+            pressureDiagramCtx.beginPath();
+            pressureDiagramCtx.moveTo(wallX, groundY);
+            pressureDiagramCtx.lineTo(wallX, baseY);
+            pressureDiagramCtx.lineTo(wallX - passivePressureBase * pressureScale, baseY);
+            pressureDiagramCtx.closePath();
+            pressureDiagramCtx.fill();
+            pressureDiagramCtx.stroke();
+            
+            // Draw pressure values at key points
+            pressureDiagramCtx.font = 'bold 11px Arial';
+            pressureDiagramCtx.fillStyle = '#e74c3c';
+            if (activePressureTop > 0.1) {
+                pressureDiagramCtx.fillText(activePressureTop.toFixed(1) + ' kPa', 
+                    wallX + wallThickness + activePressureTop * pressureScale + 5, groundY - scaledHeight);
+            }
+            pressureDiagramCtx.fillText(activePressureGround.toFixed(1) + ' kPa', 
+                wallX + wallThickness + activePressureGround * pressureScale + 5, groundY);
+            pressureDiagramCtx.fillText(activePressureBase.toFixed(1) + ' kPa', 
+                wallX + wallThickness + activePressureBase * pressureScale + 5, baseY);
+            
+            pressureDiagramCtx.fillStyle = '#27ae60';
+            pressureDiagramCtx.fillText(passivePressureBase.toFixed(1) + ' kPa', 
+                wallX - passivePressureBase * pressureScale - 50, baseY);
+            
+            // Title
+            pressureDiagramCtx.font = 'bold 16px Arial';
+            pressureDiagramCtx.fillStyle = '#2d3436';
+            pressureDiagramCtx.fillText('Earth Pressure Distribution', centerX - 80, 30);
+            
+            // Legend
+            pressureDiagramCtx.font = '12px Arial';
+            pressureDiagramCtx.fillStyle = '#e74c3c';
+            pressureDiagramCtx.fillText('Active (Ka = ' + ka.toFixed(3) + ')', 20, 60);
+            pressureDiagramCtx.fillStyle = '#27ae60';
+            pressureDiagramCtx.fillText('Passive (Kp = ' + kp.toFixed(3) + ')', 20, 75);
+        }
+        
+        function drawArrow(ctx, fromX, fromY, toX, toY, color, label) {
+            const headLength = 10;
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            
+            // Line
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+            
+            // Arrowhead
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+            
+            // Label
+            if (label) {
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(label, toX + 10, toY);
+            }
+        }
+        
+        function updateAll() {
+            // Get common values
+            const angle = parseFloat(document.getElementById('angleSlider').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const slopeAngle = parseFloat(document.getElementById('slopeAngle').value);
+            const frictionAngle = parseFloat(document.getElementById('frictionAngle').value);
+            const cohesion = parseFloat(document.getElementById('cohesion').value);
+            const density = parseFloat(document.getElementById('density').value);
+            const waterTable = parseFloat(document.getElementById('waterTable').value);
+            const wallWidth = parseFloat(document.getElementById('wallWidth').value);
+            const embedment = parseFloat(document.getElementById('embedment').value);
+            const wallInterface = parseFloat(document.getElementById('wallInterface').value);
+            const surcharge = parseFloat(document.getElementById('surcharge').value);
+            const wallWeight = parseFloat(document.getElementById('wallWeight').value);
+            
+            // Update trigonometry
+            const angleRad = (angle * Math.PI) / 180;
+            const sinValue = Math.sin(angleRad);
+            const cosValue = Math.cos(angleRad);
+            const tanValue = Math.tan(angleRad);
+            
+            document.getElementById('sinValue').textContent = sinValue.toFixed(3);
+            document.getElementById('cosValue').textContent = cosValue.toFixed(3);
+            document.getElementById('tanValue').textContent = Math.abs(tanValue) < 100 ? tanValue.toFixed(3) : (tanValue > 0 ? '∞' : '-∞');
+            
+            drawUnitCircle(angle);
+            drawTrigGraph(angle);
+            
+            // Update slope stability
+            calculateSlopeStability();
+            
+            // Update wall pressures
+            calculateWallPressures();
+        }
+        
+        function calculateSlopeStability() {
+            const angle = parseFloat(document.getElementById('slopeAngle').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const frictionAngle = parseFloat(document.getElementById('frictionAngle').value);
+            const cohesion = parseFloat(document.getElementById('cohesion').value);
+            const density = parseFloat(document.getElementById('density').value);
+            const waterTable = parseFloat(document.getElementById('waterTable').value);
+            
+            const angleRad = (angle * Math.PI) / 180;
+            const frictionRad = (frictionAngle * Math.PI) / 180;
+            
+            // Calculate at critical depth
+            const z = Math.min(height, height - waterTable + height);
+            
+            // Effective stress calculation
+            let effectiveStress;
+            if (waterTable < height) {
+                const dryDepth = Math.min(z, height - waterTable);
+                const wetDepth = Math.max(0, z - (height - waterTable));
+                effectiveStress = density * dryDepth + (density - 9.81) * wetDepth;
+            } else {
+                effectiveStress = density * z;
+            }
+            
+            // Normal and shear stresses
+            const normalStress = effectiveStress * Math.cos(angleRad) * Math.cos(angleRad);
+            const shearStress = effectiveStress * Math.sin(angleRad) * Math.cos(angleRad);
+            
+            // Resisting force
+            const resistingStress = cohesion + normalStress * Math.tan(frictionRad);
+            
+            // Factor of Safety
+            const fos = resistingStress / Math.max(shearStress, 0.001);
+            
+            // Update displays
+            document.getElementById('fosValue').textContent = fos.toFixed(2);
+            document.getElementById('drivingForce').textContent = (shearStress * 1).toFixed(1) + ' kPa';
+            document.getElementById('resistingForce').textContent = (resistingStress * 1).toFixed(1) + ' kPa';
+            document.getElementById('normalStress').textContent = normalStress.toFixed(1) + ' kPa';
+            
+            // Update safety indicator
+            const indicator = document.getElementById('slopeSafetyIndicator');
+            const safetyText = document.getElementById('slopeSafetyText');
+            
+            if (fos >= 1.5) {
+                indicator.className = 'safety-indicator safe';
+                safetyText.textContent = 'SAFE (FS ≥ 1.5)';
+            } else if (fos >= 1.0) {
+                indicator.className = 'safety-indicator marginal';
+                safetyText.textContent = 'MARGINAL (1.0 ≤ FS < 1.5)';
+            } else {
+                indicator.className = 'safety-indicator unsafe';
+                safetyText.textContent = 'UNSAFE (FS < 1.0)';
+            }
+            
+            // Draw visualizations
+            drawSlopeVisual(angle, height, waterTable);
+            
+            // Simplified force diagram
+            const weight = 100;
+            const normal = weight * Math.cos(angleRad);
+            const shear = weight * Math.sin(angleRad);
+            const resist = shear * fos;
+            
+            drawForceDiagram(angle, weight, normal, shear, resist);
+        }
+        
+        function calculateWallPressures() {
+            const height = parseFloat(document.getElementById('height').value);
+            const backfillAngle = parseFloat(document.getElementById('slopeAngle').value);
+            const frictionAngle = parseFloat(document.getElementById('frictionAngle').value);
+            const wallInterface = parseFloat(document.getElementById('wallInterface').value);
+            const gamma = parseFloat(document.getElementById('density').value);
+            const surcharge = parseFloat(document.getElementById('surcharge').value);
+            const wallWidth = parseFloat(document.getElementById('wallWidth').value);
+            const wallWeightUnit = parseFloat(document.getElementById('wallWeight').value);
+            const embedment = parseFloat(document.getElementById('embedment').value);
+            
+            const phiRad = (frictionAngle * Math.PI) / 180;
+            const betaRad = (backfillAngle * Math.PI) / 180;
+            const deltaRad = (wallInterface * Math.PI) / 180;
+            
+            // Calculate earth pressure coefficients
+            let ka, kp;
+            
+            if (backfillAngle === 0 && wallInterface === 0) {
+                // Rankine theory
+                ka = Math.tan((45 - frictionAngle/2) * Math.PI / 180) ** 2;
+                kp = Math.tan((45 + frictionAngle/2) * Math.PI / 180) ** 2;
+            } else {
+                // Coulomb theory (simplified)
+                const numerator = Math.sin(Math.PI/2 + phiRad) ** 2;
+                const term1 = Math.sin(Math.PI/2 - deltaRad) * (1 + Math.sqrt(
+                    (Math.sin(phiRad + deltaRad) * Math.sin(phiRad - betaRad)) /
+                    (Math.sin(Math.PI/2 - deltaRad) * Math.sin(Math.PI/2 + betaRad))
+                ));
+                ka = numerator / (term1 ** 2);
+                
+                // Simplified passive coefficient
+                kp = Math.tan((45 + frictionAngle/2) * Math.PI / 180) ** 2;
+            }
+            
+            // Calculate forces
+            const Pa = 0.5 * gamma * height * height * ka + surcharge * height * ka;
+            const Pp = 0.5 * gamma * embedment * embedment * kp;
+            
+            // Wall weight
+            const W = wallWidth * (height + embedment) * wallWeightUnit;
+            
+            // Application points
+            let yBar;
+            if (surcharge > 0) {
+                yBar = height * (2 * gamma * height + 3 * surcharge) / (3 * (gamma * height + 2 * surcharge));
+            } else {
+                yBar = height / 3;
+            }
+            
+            // Horizontal components
+            const PaH = Pa * Math.cos(deltaRad);
+            const PaV = Pa * Math.sin(deltaRad);
+            
+            // Factor of Safety calculations
+            
+            // 1. Overturning FOS
+            const overturnMoment = PaH * (yBar + embedment);
+            const resistMoment = W * wallWidth/2 + PaV * wallWidth + Pp * embedment/3;
+            const fosOverturning = resistMoment / Math.max(overturnMoment, 0.001);
+            
+            // 2. Sliding FOS  
+            const slidingResist = (W + PaV) * Math.tan(phiRad) + Pp;
+            const slidingForce = PaH;
+            const fosSliding = slidingResist / Math.max(slidingForce, 0.001);
+            
+            // Update displays
+            document.getElementById('kaValue').textContent = ka.toFixed(3);
+            document.getElementById('kpValue').textContent = kp.toFixed(3);
+            document.getElementById('paValue').textContent = Pa.toFixed(1) + ' kN/m';
+            document.getElementById('ppValue').textContent = Pp.toFixed(1) + ' kN/m';
+            document.getElementById('fosOverturning').textContent = fosOverturning.toFixed(2);
+            document.getElementById('fosSliding').textContent = fosSliding.toFixed(2);
+            
+            // Update safety indicator
+            const minFOS = Math.min(fosOverturning, fosSliding);
+            const indicator = document.getElementById('wallSafetyIndicator');
+            const safetyText = document.getElementById('wallSafetyText');
+            
+            if (minFOS >= 2.0) {
+                indicator.className = 'safety-indicator safe';
+                safetyText.textContent = 'SAFE (Min FS ≥ 2.0)';
+            } else if (minFOS >= 1.5) {
+                indicator.className = 'safety-indicator marginal';
+                safetyText.textContent = 'MARGINAL (1.5 ≤ Min FS < 2.0)';
+            } else {
+                indicator.className = 'safety-indicator unsafe';
+                safetyText.textContent = 'UNSAFE (Min FS < 1.5)';
+            }
+            
+            // Draw visualizations
+            drawWallVisual(height, backfillAngle, surcharge, wallWidth, embedment);
+            drawPressureDiagram(height, ka, kp, gamma, surcharge, embedment);
+        }
+        
+        // Event listeners
+        document.getElementById('angleSlider').addEventListener('input', function() {
+            document.getElementById('angleValue').textContent = this.value + '°';
+            updateAll();
+        });
+        
+        document.getElementById('height').addEventListener('input', function() {
+            document.getElementById('heightValue').textContent = this.value + 'm';
+            updateAll();
+        });
+        
+        document.getElementById('slopeAngle').addEventListener('input', function() {
+            document.getElementById('slopeAngleValue').textContent = this.value + '°';
+            updateAll();
+        });
+        
+        document.getElementById('frictionAngle').addEventListener('input', function() {
+            document.getElementById('frictionAngleValue').textContent = this.value + '°';
+            updateAll();
+        });
+        
+        document.getElementById('cohesion').addEventListener('input', function() {
+            document.getElementById('cohesionValue').textContent = this.value + ' kPa';
+            updateAll();
+        });
+        
+        document.getElementById('density').addEventListener('input', function() {
+            document.getElementById('densityValue').textContent = this.value + ' kN/m³';
+            updateAll();
+        });
+        
+        document.getElementById('waterTable').addEventListener('input', function() {
+            document.getElementById('waterTableValue').textContent = this.value + 'm';
+            updateAll();
+        });
+        
+        document.getElementById('wallWidth').addEventListener('input', function() {
+            document.getElementById('wallWidthValue').textContent = this.value + 'm';
+            updateAll();
+        });
+        
+        document.getElementById('embedment').addEventListener('input', function() {
+            document.getElementById('embedmentValue').textContent = this.value + 'm';
+            updateAll();
+        });
+        
+        document.getElementById('wallInterface').addEventListener('input', function() {
+            document.getElementById('wallInterfaceValue').textContent = this.value + '°';
+            updateAll();
+        });
+        
+        document.getElementById('surcharge').addEventListener('input', function() {
+            document.getElementById('surchargeValue').textContent = this.value + ' kPa';
+            updateAll();
+        });
+        
+        document.getElementById('wallWeight').addEventListener('input', function() {
+            document.getElementById('wallWeightValue').textContent = this.value + ' kN/m³';
+            updateAll();
+        });
+        
+        // Initial render
+        updateAll();
+    </script>
+</body>
+</html>

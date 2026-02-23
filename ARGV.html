@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FIELDVIEW AR — GNSS Surface Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;900&display=swap');
+
+:root {
+  --bg:      #080a0c;
+  --panel:   rgba(8,12,16,0.90);
+  --border:  rgba(255,140,0,0.35);
+  --accent:  #ff8c00;
+  --accent2: #00d4ff;
+  --danger:  #ff3b30;
+  --success: #39ff14;
+  --text:    #e8f0f8;
+  --dim:     #607080;
+  --mono:    'Share Tech Mono', monospace;
+  --disp:    'Barlow Condensed', sans-serif;
+  --topbar:  52px;
+  --botbar:  134px;
+  /* PiP corner dimensions */
+  --pip-w:   220px;
+  --pip-h:   165px;
+  --pip-r:   16px; /* corner radius feel — actually border-radius on container */
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--mono);
+  height:100dvh; overflow:hidden; position:relative;
+}
+body::after{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:8000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+}
+
+/* ── MAIN VIEWS ───────────────────────────────────── */
+#camera-feed{
+  position:fixed; inset:0; width:100%; height:100%;
+  object-fit:cover; display:none; z-index:1;
+}
+#canvas-wrap{
+  position:fixed; inset:0; z-index:2;
+  transition: all 0.38s cubic-bezier(0.4,0,0.2,1);
+}
+#fallback-canvas{ display:block; width:100%; height:100%; }
+
+#map-wrap{
+  position:fixed; inset:0; z-index:3;
+  transition: all 0.38s cubic-bezier(0.4,0,0.2,1);
+}
+#leaflet-map{ width:100%; height:100%; }
+
+/* ── PiP (picture-in-picture) state ──
+   When map is fullscreen, 3D canvas becomes PiP.
+   When 3D is fullscreen, map becomes PiP.            */
+.pip-topleft {
+  position:fixed !important;
+  top: calc(var(--topbar) + 8px);
+  left: 8px;
+  width: var(--pip-w) !important;
+  height: var(--pip-h) !important;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  cursor: pointer;
+  z-index: 500 !important;
+}
+.pip-topleft::after{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(255,140,0,0.2);
+  z-index:2;
+}
+
+/* swap button on PiP */
+.pip-swap-btn{
+  position:absolute; top:5px; right:5px;
+  background:rgba(8,12,16,0.85); border:1px solid var(--border);
+  color:var(--accent); font-size:14px; font-family:var(--mono);
+  width:26px; height:26px; border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:10;
+  transition:background 0.15s;
+}
+.pip-swap-btn:hover{ background:var(--accent); color:#000; }
+
+/* PiP label */
+.pip-label{
+  position:absolute; bottom:5px; left:7px;
+  font-family:var(--disp); font-weight:600; font-size:9px;
+  letter-spacing:2px; color:var(--accent); pointer-events:none; z-index:10;
+  background:rgba(8,12,16,0.7); padding:2px 6px; border-radius:2px;
+}
+
+/* ── TOP BAR ─────────────────────────────────────── */
+#top-bar{
+  position:fixed; top:0; left:0; right:0; height:var(--topbar);
+  background:var(--panel); border-bottom:1px solid var(--border);
+  backdrop-filter:blur(8px);
+  display:flex; align-items:center; padding:0 14px; gap:12px;
+  z-index:600;
+}
+.logo{
+  font-family:var(--disp); font-weight:900; font-size:21px;
+  letter-spacing:3px; color:var(--accent); text-transform:uppercase; line-height:1;
+}
+.logo span{ color:var(--accent2); }
+.tdiv{ width:1px; height:26px; background:var(--border); }
+
+#gps-status{ display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dim); }
+#gps-dot{
+  width:7px; height:7px; border-radius:50%; background:var(--danger);
+  box-shadow:0 0 7px currentColor; animation:gpspulse 1.5s ease-in-out infinite;
+}
+#gps-dot.active  { background:var(--success);  color:var(--success); }
+#gps-dot.srch    { background:var(--accent);    color:var(--accent); }
+@keyframes gpspulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.tsp{ flex:1; }
+
+#compass-wrap{
+  display:flex; flex-direction:column; align-items:center;
+  font-size:9px; color:var(--dim); gap:1px;
+}
+#compass-val{
+  font-family:var(--disp); font-weight:600; font-size:17px;
+  color:var(--accent2); line-height:1;
+}
+
+/* ── HUD CORNERS ─────────────────────────────────── */
+.hc{ position:fixed; width:36px; height:36px; pointer-events:none; z-index:590; }
+.hc::before,.hc::after{ content:''; position:absolute; background:var(--accent); opacity:.6; }
+.hc-tl{ top:60px; left:8px; }  .hc-tl::before{ width:2px;height:24px;top:0;left:0; } .hc-tl::after{ width:24px;height:2px;top:0;left:0; }
+.hc-tr{ top:60px; right:8px; } .hc-tr::before{ width:2px;height:24px;top:0;right:0;} .hc-tr::after{ width:24px;height:2px;top:0;right:0; }
+.hc-bl{ bottom:98px;left:8px; } .hc-bl::before{ width:2px;height:24px;bottom:0;left:0;} .hc-bl::after{ width:24px;height:2px;bottom:0;left:0;}
+.hc-br{ bottom:98px;right:8px;} .hc-br::before{ width:2px;height:24px;bottom:0;right:0;} .hc-br::after{ width:24px;height:2px;bottom:0;right:0;}
+
+/* ── MODE BADGE ──────────────────────────────────── */
+#mode-badge{
+  position:fixed; top:58px; left:50%; transform:translateX(-50%);
+  font-family:var(--disp); font-weight:900; font-size:10px; letter-spacing:3px;
+  padding:4px 14px; border:1px solid var(--accent);
+  background:rgba(255,140,0,0.1); color:var(--accent);
+  border-radius:2px; z-index:590; pointer-events:none;
+}
+
+/* ── STATS (moved lower — sits above bottom bar) ─── */
+#stats-overlay{
+  position:fixed;
+  /* sits just above bottom bar, right side */
+  bottom: calc(var(--botbar) + 10px);
+  right:12px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:4px; padding:9px 13px; font-size:10px;
+  z-index:590; min-width:148px;
+  backdrop-filter:blur(8px);
+  transition:opacity 0.3s, transform 0.3s;
+}
+#stats-overlay.hidden{ opacity:0; pointer-events:none; transform:translateY(6px); }
+.stat-title{
+  font-family:var(--disp); font-weight:600; font-size:11px;
+  letter-spacing:1px; color:var(--accent);
+  margin-bottom:6px; padding-bottom:5px; border-bottom:1px solid var(--border);
+}
+.sl{ display:flex; justify-content:space-between; gap:14px; margin-bottom:4px; color:var(--dim); }
+.sl span:last-child{ color:var(--accent2); font-weight:bold; }
+
+/* ── LEGEND (above stats) ──────────────────────────── */
+#legend{
+  position:fixed;
+  bottom: calc(var(--botbar) + 120px);
+  right:12px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:4px; padding:8px 12px; font-size:9px;
+  z-index:590; backdrop-filter:blur(8px); min-width:110px;
+  transition:opacity 0.3s;
+}
+#legend.hidden{ opacity:0; pointer-events:none; }
+.leg-title{ font-family:var(--disp); font-weight:600; font-size:10px; color:var(--accent); letter-spacing:1px; margin-bottom:4px; }
+.leg-bar{ height:7px; border-radius:2px; background:linear-gradient(to right,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000); margin:4px 0; }
+.leg-lbs{ display:flex; justify-content:space-between; color:var(--dim); }
+
+/* ── BOTTOM BAR ──────────────────────────────────── */
+#bot-bar{
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--panel); border-top:1px solid var(--border);
+  backdrop-filter:blur(8px); z-index:600;
+  padding:8px 12px 10px; display:flex; flex-direction:column; gap:7px;
+}
+.brow{ display:flex; gap:7px; align-items:center; }
+
+.btn{
+  font-family:var(--mono); font-size:11px;
+  border:1px solid var(--border); background:rgba(255,140,0,0.07);
+  color:var(--text); padding:8px 11px; border-radius:3px;
+  cursor:pointer; transition:all 0.15s; white-space:nowrap; letter-spacing:.5px; flex-shrink:0;
+}
+.btn:hover,.btn:active{ background:rgba(255,140,0,0.2); border-color:var(--accent); color:var(--accent); }
+.btn.pri{ background:rgba(255,140,0,0.16); border-color:var(--accent); color:var(--accent); font-weight:bold; }
+.btn.act{ background:rgba(0,212,255,0.13); border-color:var(--accent2); color:var(--accent2); }
+.btn.dng{ border-color:rgba(255,59,48,0.5); color:var(--danger); background:rgba(255,59,48,0.07); }
+.btn.full{ flex:1; text-align:center; }
+.btn.ar-btn{
+  background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,140,0,0.08));
+  border-color:var(--accent); color:var(--accent);
+  font-family:var(--disp); font-weight:900; font-size:14px; letter-spacing:2px;
+  padding:11px 20px; flex:1;
+}
+/* reset view button */
+.btn.reset-btn{
+  background:rgba(0,212,255,0.1); border-color:var(--accent2);
+  color:var(--accent2); font-size:15px; padding:8px 13px;
+}
+.btn.reset-btn:hover{ background:var(--accent2); color:#000; }
+
+/* toggles */
+.tog-row{ display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); }
+.tog{
+  width:30px; height:17px; background:#1a2030; border:1px solid var(--border);
+  border-radius:9px; position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0;
+}
+.tog::after{
+  content:''; position:absolute; width:11px; height:11px; background:var(--dim);
+  border-radius:50%; top:2px; left:2px; transition:all 0.2s;
+}
+.tog.on{ background:rgba(255,140,0,0.18); border-color:var(--accent); }
+.tog.on::after{ background:var(--accent); left:15px; }
+.tog.on2{ background:rgba(0,212,255,0.13); border-color:var(--accent2); }
+.tog.on2::after{ background:var(--accent2); left:15px; }
+
+/* slider */
+.sl-row{ display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); }
+.sl-row input[type=range]{
+  flex:1; height:3px; background:#1a2030; border-radius:2px; -webkit-appearance:none; cursor:pointer;
+}
+.sl-row input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:13px; height:13px; background:var(--accent); border-radius:50%; }
+.slv{ width:34px; text-align:right; font-size:10px; color:var(--accent); }
+
+/* ── SIDE PANEL ──────────────────────────────────── */
+#side-panel{
+  position:fixed; top:var(--topbar); left:0; bottom:0; width:275px;
+  background:var(--panel); border-right:1px solid var(--border);
+  backdrop-filter:blur(12px); z-index:700;
+  transform:translateX(-100%);
+  transition:transform 0.32s cubic-bezier(0.25,0.8,0.25,1);
+  display:flex; flex-direction:column;
+}
+#side-panel.open{ transform:translateX(0); }
+.ph{
+  padding:13px 15px; border-bottom:1px solid var(--border);
+  font-family:var(--disp); font-weight:900; font-size:13px;
+  letter-spacing:2px; color:var(--accent);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.phx{ background:none; border:none; color:var(--dim); font-size:20px; cursor:pointer; }
+.phx:hover{ color:var(--text); }
+.pb{ flex:1; overflow-y:auto; padding:12px; }
+.pb::-webkit-scrollbar{ width:3px; }
+.pb::-webkit-scrollbar-thumb{ background:var(--border); border-radius:2px; }
+
+.dz{
+  border:1px dashed var(--border); border-radius:4px;
+  padding:18px; text-align:center; cursor:pointer; transition:0.2s;
+  margin-bottom:10px; font-size:11px; color:var(--dim);
+}
+.dz:hover{ border-color:var(--accent); color:var(--accent); background:rgba(255,140,0,0.04); }
+.dz-ico{ font-size:26px; margin-bottom:5px; }
+.dz-main{ font-family:var(--disp); font-weight:600; font-size:13px; margin-bottom:3px; color:var(--text); }
+
+.ds-item{
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+  border-radius:3px; padding:7px 9px; margin-bottom:5px; font-size:10px;
+}
+.ds-name{ font-family:var(--disp); font-weight:600; font-size:12px; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ds-meta{ color:var(--dim); margin-bottom:5px; }
+.ds-row{ display:flex; gap:5px; }
+
+.sec{
+  font-family:var(--disp); font-size:10px; font-weight:600;
+  letter-spacing:2px; color:var(--accent); text-transform:uppercase;
+  margin:13px 0 7px; padding-bottom:4px; border-bottom:1px solid var(--border);
+}
+
+/* ── TOAST ───────────────────────────────────────── */
+#toast{
+  position:fixed; bottom:calc(var(--botbar)+14px); left:50%; transform:translateX(-50%);
+  background:rgba(8,12,16,0.96); border:1px solid var(--accent); color:var(--accent);
+  font-size:11px; padding:9px 18px; border-radius:3px;
+  z-index:9999; pointer-events:none; opacity:0; transition:opacity 0.3s; white-space:nowrap;
+}
+#toast.show{ opacity:1; }
+
+/* ── RETICLE ─────────────────────────────────────── */
+#reticle{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:56px; height:56px; pointer-events:none; z-index:590; display:none;
+}
+#reticle svg{ width:100%; height:100%; animation:rspin 8s linear infinite; }
+@keyframes rspin{ to{ transform:rotate(360deg); } }
+
+/* ── NO-AR MSG ───────────────────────────────────── */
+#no-ar-msg{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  text-align:center; z-index:800; padding:28px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; max-width:290px; backdrop-filter:blur(8px); display:none;
+}
+#no-ar-msg h2{ font-family:var(--disp); font-weight:900; font-size:20px; color:var(--accent); margin-bottom:8px; letter-spacing:2px; }
+#no-ar-msg p{ font-size:11px; color:var(--dim); line-height:1.6; }
+.lring{
+  width:36px; height:36px; border:2px solid rgba(255,140,0,0.15);
+  border-top-color:var(--accent); border-radius:50%;
+  animation:spin 1s linear infinite; margin:10px auto;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ── Bottom toggle grid ──────────────────────────────────────── */
+.tog-grid-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  padding: 2px 0 0;
+  border-top: 1px solid var(--border);
+}
+.tog-cell {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; padding: 4px 2px;
+  cursor: pointer; user-select: none;
+  font-size: 9px; color: var(--dim);
+  letter-spacing: 0.5px;
+  border-right: 1px solid rgba(255,140,0,0.1);
+  transition: background 0.15s;
+}
+.tog-cell:last-child { border-right: none; }
+.tog-cell:hover { background: rgba(255,140,0,0.07); color: var(--text); }
+.tog-cell:active { background: rgba(255,140,0,0.14); }
+/* tighter toggles in the grid */
+.tog-cell .tog { width:26px; height:15px; }
+.tog-cell .tog::after { width:9px; height:9px; top:2px; left:2px; }
+.tog-cell .tog.on::after  { left:13px; }
+.tog-cell .tog.on2.on::after { left:13px; }
+
+/* ── Leaflet overrides ───────────────────────────── */
+.leaflet-container{ background:#0a0e12 !important; font-family:var(--mono); }
+.leaflet-tile-pane{ filter:brightness(0.85) saturate(0.9); }
+.leaflet-control-attribution{ font-size:8px !important; background:rgba(8,12,16,0.7) !important; color:var(--dim) !important; }
+.leaflet-control-zoom a{
+  background:var(--panel) !important; color:var(--accent) !important;
+  border-color:var(--border) !important; font-family:var(--mono) !important;
+}
+/* Marker styling for our points */
+.fv-marker{ width:8px; height:8px; border-radius:50%; border:1px solid rgba(0,0,0,0.4); }
+.fv-bh{
+  width:14px; height:14px; border-radius:50%;
+  background:#00d4ff; border:2px solid #fff;
+  box-shadow:0 0 6px #00d4ff;
+}
+</style>
+</head>
+<body>
+
+<!-- HUD corners -->
+<div class="hc hc-tl"></div>
+<div class="hc hc-tr"></div>
+<div class="hc hc-bl"></div>
+<div class="hc hc-br"></div>
+
+<!-- Camera passthrough -->
+<video id="camera-feed" autoplay playsinline muted></video>
+
+<!-- ── 3D canvas wrap ── -->
+<div id="canvas-wrap">
+  <canvas id="fallback-canvas"></canvas>
+  <!-- swap button shown when 3D is PiP -->
+  <div class="pip-swap-btn" id="canvas-swap-btn" style="display:none" onclick="swapViews()" title="Expand 3D">⇱</div>
+  <div class="pip-label" id="canvas-pip-label" style="display:none">3D VIEW</div>
+</div>
+
+<!-- ── Map wrap ── -->
+<div id="map-wrap">
+  <div id="leaflet-map"></div>
+  <!-- swap button shown when map is PiP -->
+  <div class="pip-swap-btn" id="map-swap-btn" style="display:none" onclick="swapViews()" title="Expand Map">⇱</div>
+  <div class="pip-label" id="map-pip-label" style="display:none">MAP VIEW</div>
+</div>
+
+<!-- Mode badge -->
+<div id="mode-badge">3D PREVIEW</div>
+
+<!-- Reticle -->
+<div id="reticle">
+  <svg viewBox="0 0 60 60" fill="none">
+    <circle cx="30" cy="30" r="27" stroke="#ff8c00" stroke-width="1" stroke-dasharray="4 6"/>
+    <circle cx="30" cy="30" r="4" fill="#ff8c00"/>
+    <line x1="30" y1="0" x2="30" y2="12" stroke="#ff8c00" stroke-width="1.5"/>
+    <line x1="30" y1="48" x2="30" y2="60" stroke="#ff8c00" stroke-width="1.5"/>
+    <line x1="0" y1="30" x2="12" y2="30" stroke="#ff8c00" stroke-width="1.5"/>
+    <line x1="48" y1="30" x2="60" y2="30" stroke="#ff8c00" stroke-width="1.5"/>
+  </svg>
+</div>
+
+<!-- Top bar -->
+<div id="top-bar">
+  <div class="logo">FIELD<span>VIEW</span></div>
+  <div class="tdiv"></div>
+  <div id="gps-status">
+    <div id="gps-dot"></div>
+    <span id="gps-text">NO GPS</span>
+  </div>
+  <div class="tsp"></div>
+  <div id="compass-wrap">
+    <div id="compass-val">---°</div>
+    <div>HDG</div>
+  </div>
+</div>
+
+<!-- Stats (bottom-right, above bottom bar) -->
+<div id="stats-overlay">
+  <div class="stat-title">◈ DATASET</div>
+  <div class="sl"><span>POINTS</span><span id="st-pts">0</span></div>
+  <div class="sl"><span>TRACKS</span><span id="st-trk">0</span></div>
+  <div class="sl"><span>MIN Z</span><span id="st-min">—</span></div>
+  <div class="sl"><span>MAX Z</span><span id="st-max">—</span></div>
+  <div class="sl"><span>SPREAD</span><span id="st-spd">—</span></div>
+</div>
+
+<!-- Legend -->
+<div id="legend">
+  <div class="leg-title">ELEVATION</div>
+  <div class="leg-bar"></div>
+  <div class="leg-lbs"><span id="leg-min">—</span><span id="leg-max">—</span></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- No-AR message -->
+<div id="no-ar-msg">
+  <h2>AR UNAVAILABLE</h2>
+  <div class="lring"></div>
+  <p>WebXR AR is not supported here. Using camera passthrough overlay. For full AR, open Chrome on Android or Safari on iOS 16+.</p>
+  <button class="btn pri" style="margin-top:13px;width:100%;" onclick="document.getElementById('no-ar-msg').style.display='none'">CONTINUE IN 3D MODE</button>
+</div>
+
+<!-- Side panel -->
+<div id="side-panel">
+  <div class="ph">
+    <span>◈ DATASETS</span>
+    <button class="phx" onclick="togglePanel(false)">×</button>
+  </div>
+  <div class="pb">
+    <div class="dz" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-ico">📂</div>
+      <div class="dz-main">DROP CSV / GEOJSON</div>
+      <div>Lat, Lon, Elev — or GeoJSON</div>
+    </div>
+    <input type="file" id="file-input" multiple accept=".csv,.txt,.geojson,.json" style="display:none">
+    <button class="btn full pri" onclick="loadSampleData()" style="margin-bottom:10px">⬡ LOAD SAMPLE DATA</button>
+
+    <div class="sec">LOADED FILES</div>
+    <div id="dataset-list"><div style="color:var(--dim);font-size:10px;text-align:center;padding:10px;">No files loaded</div></div>
+
+    <div class="sec">APPEARANCE</div>
+    <div class="sl-row">
+      <span>Z SCALE</span>
+      <input type="range" id="sl-z" min="1" max="50" step="1" value="10" oninput="updateZScale(this.value)">
+      <div class="slv" id="sv-z">10×</div>
+    </div>
+    <div class="sl-row" style="margin-top:6px">
+      <span>OPACITY</span>
+      <input type="range" id="sl-op" min="10" max="100" step="5" value="80" oninput="updateOpacity(this.value)">
+      <div class="slv" id="sv-op">80%</div>
+    </div>
+    <div class="sl-row" style="margin-top:6px">
+      <span>PT SIZE</span>
+      <input type="range" id="sl-ps" min="1" max="20" step="1" value="5" oninput="updatePointSize(this.value)">
+      <div class="slv" id="sv-ps">5px</div>
+    </div>
+
+    <div class="sec">BOREHOLES</div>
+    <div class="dz" id="bh-drop-zone" onclick="document.getElementById('bh-file-input').click()" style="padding:12px;">
+      <div class="dz-ico" style="font-size:20px;">🕳️</div>
+      <div class="dz-main" style="font-size:11px;">DROP BOREHOLE TXT</div>
+      <div>ID E N GL Depth GW [Unit Bottom...]</div>
+    </div>
+    <input type="file" id="bh-file-input" accept=".txt,.csv" style="display:none">
+    <div id="bh-list"><div style="color:var(--dim);font-size:10px;padding:6px;">No boreholes loaded</div></div>
+    <button class="btn full" onclick="generateKrigingSurfaces()" style="margin-top:6px;margin-bottom:4px;">⬡ GENERATE KRIGING LAYERS</button>
+    <button class="btn full dng" onclick="clearBoreholes()" style="margin-bottom:8px;font-size:10px;padding:6px;">✕ CLEAR BOREHOLES</button>
+
+    <div class="sec">AR ORIGIN</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:8px;line-height:1.5;">
+      Scene centres on dataset midpoint. Tap Re-Centre to anchor to GPS.
+    </div>
+    <button class="btn full" onclick="recentreOrigin()" style="margin-bottom:5px">⊕ RE-CENTRE ON GPS</button>
+    <div id="origin-coords" style="font-size:9px;color:var(--dim);text-align:center;padding:3px;">Origin: not set</div>
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div id="bot-bar">
+  <!-- Row 1: action buttons -->
+  <div class="brow">
+    <button class="btn" onclick="togglePanel(true)" style="font-size:17px;padding:8px 12px;">☰</button>
+    <button class="btn ar-btn" id="ar-btn" onclick="startAR()">⬡ LAUNCH AR</button>
+	<button class="btn ar-btn" id="xreal-btn" onclick="startXReal()" style="background:linear-gradient(135deg,rgba(0,212,255,0.22),rgba(0,212,255,0.08)); border-color:var(--accent2); color:var(--accent2);">👓 XREAL 3DoF</button>
+    <button class="btn reset-btn" onclick="resetView()" title="Reset View">⟲</button>
+  </div>
+  <!-- Row 2: view / scene toggles -->
+  <div class="brow tog-grid-row">
+    <div class="tog-cell" onclick="toggleCam()">
+      <div class="tog on2 on" id="tog-cam"></div><span>CAM</span>
+    </div>
+    <div class="tog-cell" onclick="toggleGrid()">
+      <div class="tog on" id="tog-grid"></div><span>GRID</span>
+    </div>
+    <div class="tog-cell" onclick="toggleStats()">
+      <div class="tog on" id="tog-stats"></div><span>STATS</span>
+    </div>
+    <div class="tog-cell" onclick="toggleMapVisibility()">
+      <div class="tog on" id="tog-map"></div><span>MAP</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('points')">
+      <div class="tog on" id="tog-points"></div><span>PTS</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('track')">
+      <div class="tog on2 on" id="tog-track"></div><span>TRK</span>
+    </div>
+  </div>
+  <!-- Row 3: surface / kriging toggles -->
+  <div class="brow tog-grid-row">
+    <div class="tog-cell" onclick="toggleLayerBtn('surface')">
+      <div class="tog" id="tog-surface"></div><span>SURF</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('contour')">
+      <div class="tog" id="tog-contour"></div><span>CONT</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('boreholes')">
+      <div class="tog on" id="tog-bh"></div><span>BH</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('soilLayers')">
+      <div class="tog" id="tog-soil"></div><span>SOIL</span>
+    </div>
+    <div class="tog-cell" onclick="toggleLayerBtn('gwSurface')">
+      <div class="tog" id="tog-gw"></div><span>GW</span>
+    </div>
+    <div class="tog-cell" onclick="">
+      <div style="width:26px;height:15px;opacity:0;pointer-events:none;"></div><span></span>
+    </div>
+  </div>
+</div>
+
+<!-- orientation hint -->
+<div id="orient-msg" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9998;flex-direction:column;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:18px;letter-spacing:2px;color:var(--accent);text-align:center;padding:30px;">
+  <div style="font-size:50px;margin-bottom:16px;animation:spin 3s linear infinite;">↻</div>
+  ROTATE FOR BEST EXPERIENCE
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Safe Leaflet loader (cdnjs primary, unpkg fallback) ──────────
+function loadLeaflet(cb){
+  if(typeof L !== 'undefined'){ cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload = cb;
+  s.onerror = () => {
+    console.warn('cdnjs Leaflet failed, trying unpkg...');
+    const s2 = document.createElement('script');
+    s2.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s2.onload = cb;
+    s2.onerror = () => {
+      console.error('All Leaflet CDNs failed — map disabled');
+      window.LEAFLET_FAILED = true;
+      cb();
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+}
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const APP = {
+  datasets:[], boreholes:[],
+  gps:{lat:null,lon:null,acc:null,heading:0},
+  origin:null, zScale:10, opacity:0.8, ptSize:5,
+  arMode:false, camStream:null,
+  layers:{points:true,track:true,surface:false,contour:false,boreholes:true,soilLayers:false,gwSurface:false},
+  showGrid:true, mapVisible:true,
+  krigingSurfaces:{}, gwSurface:null,
+  mainView: '3d-full',
+  nextId:1
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  THREE.JS
+// ═══════════════════════════════════════════════════════════════
+let scene, camera, renderer;
+let obj = {points:null,track:null,surface:null,contour:null,grid:null,boreholes:null,bhLabels:null,soilLayers:null,gwSurf:null};
+
+function initThree(){
+  const canvas = document.getElementById('fallback-canvas');
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setClearColor(0x000000,0);
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000000,0.0015);
+  camera = new THREE.PerspectiveCamera(60,1,0.1,50000);
+  camera.position.set(0,150,300);
+  scene.add(new THREE.AmbientLight(0xffffff,0.6));
+  const dl = new THREE.DirectionalLight(0xffffff,0.8);
+  dl.position.set(100,300,100); scene.add(dl);
+  buildGrid();
+  initOrbit();
+  window.addEventListener('resize', onResize);
+  onResize();
+  animLoop();
+}
+
+function onResize(){
+  const cw = document.getElementById('canvas-wrap');
+  const w = cw.offsetWidth, h = cw.offsetHeight;
+  renderer.setSize(w,h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+
+// minimal orbit
+let orb = {active:false,last:{x:0,y:0},theta:225,phi:45,radius:400,target:new THREE.Vector3()};
+function initOrbit(){
+  const el = renderer.domElement;
+  el.addEventListener('mousedown', e=>{orb.active=true;orb.last={x:e.clientX,y:e.clientY};});
+  el.addEventListener('mousemove', e=>{if(!orb.active)return;orbMv(e.clientX-orb.last.x,e.clientY-orb.last.y);orb.last={x:e.clientX,y:e.clientY};});
+  el.addEventListener('mouseup',   ()=>orb.active=false);
+  el.addEventListener('wheel',     e=>{orb.radius=Math.max(10,orb.radius+e.deltaY*0.4);orbApply();});
+  el.addEventListener('touchstart',e=>{orb.active=true;orb.last={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+  el.addEventListener('touchmove', e=>{
+    if(!orb.active)return;
+    if(e.touches.length===1){orbMv(e.touches[0].clientX-orb.last.x,e.touches[0].clientY-orb.last.y);orb.last={x:e.touches[0].clientX,y:e.touches[0].clientY};}
+  },{passive:true});
+  el.addEventListener('touchend',  ()=>orb.active=false);
+  orbApply();
+}
+function orbMv(dx,dy){
+  orb.theta -= dx*0.4;
+  orb.phi = Math.max(4,Math.min(86,orb.phi-dy*0.4));
+  orbApply();
+}
+function orbApply(){
+  const t=orb.theta*Math.PI/180, p=orb.phi*Math.PI/180;
+  camera.position.set(
+    orb.target.x+orb.radius*Math.sin(p)*Math.sin(t),
+    orb.target.y+orb.radius*Math.cos(p),
+    orb.target.z+orb.radius*Math.sin(p)*Math.cos(t)
+  );
+  camera.lookAt(orb.target);
+}
+function animLoop(){ requestAnimationFrame(animLoop); renderer.render(scene,camera); }
+
+function buildGrid(){
+  if(obj.grid) scene.remove(obj.grid);
+  if(!APP.showGrid) return;
+  obj.grid = new THREE.GridHelper(2000,40,0x1a2a3a,0x0d1520);
+  scene.add(obj.grid);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  VIEW SWAP  (3D full ↔ Map full, other becomes PiP)
+// ═══════════════════════════════════════════════════════════════
+function applyViewLayout(){
+  const cw = document.getElementById('canvas-wrap');
+  const mw = document.getElementById('map-wrap');
+  const csb = document.getElementById('canvas-swap-btn');
+  const msb = document.getElementById('map-swap-btn');
+  const cpl = document.getElementById('canvas-pip-label');
+  const mpl = document.getElementById('map-pip-label');
+
+  if(APP.mainView === '3d-full'){
+    // 3D is fullscreen
+    cw.style.cssText='position:fixed;inset:0;z-index:2;transition:all 0.38s cubic-bezier(0.4,0,0.2,1);';
+    cw.classList.remove('pip-topleft');
+    csb.style.display='none'; cpl.style.display='none';
+
+    if(APP.mapVisible){
+      // Map is PiP top-right
+      mw.style.cssText='position:fixed;z-index:400;transition:all 0.38s cubic-bezier(0.4,0,0.2,1);';
+      mw.classList.add('pip-topleft');
+      // reposition to top-RIGHT
+      mw.style.left=''; mw.style.right='12px';
+      mw.style.top='calc(52px + 8px)';
+      mw.style.width='220px'; mw.style.height='165px';
+      msb.style.display='flex'; mpl.style.display='block';
+      document.getElementById('mode-badge').textContent = '3D PREVIEW';
+    } else {
+      mw.style.cssText='position:fixed;inset:0;z-index:3;display:none;transition:all 0.38s;';
+      mw.classList.remove('pip-topleft');
+      msb.style.display='none'; mpl.style.display='none';
+    }
+  } else {
+    // Map is fullscreen
+    mw.style.cssText='position:fixed;inset:0;z-index:3;transition:all 0.38s cubic-bezier(0.4,0,0.2,1);';
+    mw.classList.remove('pip-topleft');
+    msb.style.display='none'; mpl.style.display='none';
+
+    // 3D is PiP top-right
+    cw.style.cssText='position:fixed;z-index:400;transition:all 0.38s cubic-bezier(0.4,0,0.2,1);';
+    cw.classList.add('pip-topleft');
+    cw.style.left=''; cw.style.right='12px';
+    cw.style.top='calc(52px + 8px)';
+    cw.style.width='220px'; cw.style.height='165px';
+    csb.style.display='flex'; cpl.style.display='block';
+    document.getElementById('mode-badge').textContent='MAP VIEW';
+  }
+
+  // let leaflet know its size changed
+  setTimeout(()=>{ if(leafMap) leafMap.invalidateSize(); onResize(); }, 420);
+}
+
+function swapViews(){
+  APP.mainView = APP.mainView==='3d-full' ? 'map-full' : '3d-full';
+  applyViewLayout();
+}
+
+// Also allow tapping the PiP container itself
+document.getElementById('canvas-wrap').addEventListener('click', e=>{
+  if(APP.mainView==='map-full' && document.getElementById('canvas-wrap').classList.contains('pip-topleft')){
+    swapViews();
+  }
+});
+document.getElementById('map-wrap').addEventListener('click', e=>{
+  if(APP.mainView==='3d-full' && document.getElementById('map-wrap').classList.contains('pip-topleft')){
+    swapViews();
+  }
+});
+
+// Reset View: return to 3D-full, reset orbit camera, stop AR if running
+function resetView(){
+  if(APP.arMode){ exitAR(); }
+  APP.mainView='3d-full';
+  applyViewLayout();
+  // Fit camera to the actual z-scaled scene extents
+  const allPts = APP.datasets.filter(d=>d.visible).flatMap(d=>d.data);
+  if(allPts.length>0 && APP.origin){
+    const lxs=allPts.map(p=>{ const u=latLonToUTM(p.lat,p.lon); return u.x-APP.origin.x; });
+    const lys=allPts.map(p=>{ const u=latLonToUTM(p.lat,p.lon); return -(u.y-APP.origin.y); });
+    const zs=allPts.map(p=>p.z);
+    const hSpread=Math.max(Math.max(...lxs)-Math.min(...lxs),Math.max(...lys)-Math.min(...lys));
+    const vSpread=(Math.max(...zs)-Math.min(...zs))*APP.zScale;
+    const diagSpread=Math.sqrt(hSpread*hSpread+vSpread*vSpread);
+    orb.radius=Math.max(50,diagSpread*1.4);
+    // Aim at vertical midpoint of scaled scene
+    const midZ=((Math.max(...zs)+Math.min(...zs))/2)*APP.zScale;
+    orb.target.set(0,midZ,0);
+  } else {
+    orb.radius=400; orb.target.set(0,0,0);
+  }
+  orb.theta=225; orb.phi=35;
+  orbApply();
+  toast('⟲ View reset');
+}
+
+function toggleMapVisibility(){
+  APP.mapVisible=!APP.mapVisible;
+  document.getElementById('tog-map').className='tog'+(APP.mapVisible?' on':'');
+  applyViewLayout();
+  if(!APP.mapVisible && APP.mainView==='map-full'){
+    APP.mainView='3d-full'; applyViewLayout();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LEAFLET MAP
+// ═══════════════════════════════════════════════════════════════
+let leafMap, leafLayers={pts:null,bh:null};
+
+function initLeaflet(){
+  if(window.LEAFLET_FAILED || typeof L === 'undefined'){
+    console.warn('Leaflet unavailable — map disabled');
+    document.getElementById('tog-map').style.opacity='0.3';
+    document.getElementById('tog-map').style.pointerEvents='none';
+    APP.mapVisible = false;
+    applyViewLayout();
+    return;
+  }
+  leafMap = L.map('leaflet-map', {zoomControl:true, attributionControl:true})
+             .setView([-31.7789, 115.7676], 17);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OSM', maxZoom:22
+  }).addTo(leafMap);
+
+  // Satellite layer
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri', maxZoom:22
+  });
+  L.control.layers({'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:22}).addTo(leafMap),'Satellite':sat}).addTo(leafMap);
+
+  leafLayers.pts = L.layerGroup().addTo(leafMap);
+  leafLayers.bh  = L.layerGroup().addTo(leafMap);
+}
+
+function updateMapMarkers(){
+  if(!leafMap) return;
+  leafLayers.pts.clearLayers();
+  leafLayers.bh.clearLayers();
+
+  if(APP.datasets.length===0) return;
+  const allPts = APP.datasets.filter(d=>d.visible).flatMap(d=>d.data);
+  if(allPts.length===0) return;
+
+  const zs=allPts.map(p=>p.z), minZ=Math.min(...zs), zRange=Math.max(...zs)-minZ||1;
+  const colors=['#ff8c00','#00d4ff','#39ff14','#ff3b30','#bf5fff'];
+
+  // Points — only if layer enabled
+  if(APP.layers.points){
+    const step = allPts.length>3000 ? Math.ceil(allPts.length/3000) : 1;
+    for(let i=0;i<allPts.length;i+=step){
+      const p=allPts[i];
+      const t=(p.z-minZ)/zRange;
+      const hue=Math.round((1-t)*240);
+      L.circleMarker([p.lat,p.lon],{
+        radius:4, fillColor:`hsl(${hue},100%,50%)`, color:'#000', weight:0.5, fillOpacity:0.9
+      }).bindPopup(`<b>Z: ${p.z.toFixed(2)}m</b><br>Fix:${p.fix} Sats:${p.sats}`).addTo(leafLayers.pts);
+    }
+  }
+
+  // Track lines — only if layer enabled
+  if(APP.layers.track){
+    APP.datasets.filter(d=>d.visible).forEach((ds,i)=>{
+      if(ds.data.length>1){
+        const latlons = ds.data.map(p=>[p.lat,p.lon]);
+        L.polyline(latlons,{color:colors[i%colors.length],weight:2,opacity:0.75}).addTo(leafLayers.pts);
+      }
+    });
+  }
+
+  // Boreholes on map — cyan circles
+  if(APP.layers.boreholes && APP.boreholes.length){
+    APP.boreholes.forEach(bh=>{
+      // Convert UTM back to lat/lon via reverse lookup through datasets, or use stored lat if available
+      // We stored UTM x/y — find matching dataset point for lat/lon
+      // Simpler: store lat/lon on bh during parse (we'll add that)
+      if(bh.lat&&bh.lon){
+        L.circleMarker([bh.lat,bh.lon],{
+          radius:8, fillColor:'#00d4ff', color:'#fff', weight:2, fillOpacity:0.9
+        }).bindPopup(`<b>${bh.id}</b><br>GL: ${bh.z.toFixed(2)}m | Depth: ${bh.depth}m<br>GW: ${bh.gw}m`).addTo(leafLayers.bh);
+      }
+    });
+  }
+
+  // Fit to all visible data
+  const fitPts = allPts.map(p=>L.latLng(p.lat,p.lon));
+  if(fitPts.length) leafMap.fitBounds(L.latLngBounds(fitPts),{padding:[30,30]});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PROJECTION
+// ═══════════════════════════════════════════════════════════════
+function latLonToUTM(lat,lon){
+  const a=6378137,f=1/298.257223563,k0=0.9996,cm=117;
+  const phi=lat*Math.PI/180,lam=lon*Math.PI/180,lam0=cm*Math.PI/180;
+  const e2=2*f-f*f,ep=e2/(1-e2),N=a/Math.sqrt(1-e2*Math.sin(phi)**2);
+  const T=Math.tan(phi)**2,C=ep*Math.cos(phi)**2,A=(lam-lam0)*Math.cos(phi);
+  const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*phi-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  return{x:500000+k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T**2+72*C-58*ep)*A**5/120),y:10000000+k0*(M+N*Math.tan(phi)*(A**2/2+(5-T+9*C+4*C**2)*A**4/24+(61-58*T+T**2+600*C-330*ep)*A**6/720))};
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PARSING
+// ═══════════════════════════════════════════════════════════════
+function parseCSV(text,name){
+  const lines=text.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<2) return null;
+  const hdr=lines[0].toLowerCase().split(/[,;\t]/);
+  const col=k=>hdr.findIndex(h=>h.includes(k));
+  const idx={lat:col('lat'),lon:Math.max(col('lon'),col('lng')),elev:Math.max(col('elev'),col('z'),col('height'),col('alt'),col('ortho')),fix:Math.max(col('fix'),col('qual')),sats:col('sat')};
+  const data=[];
+  for(let i=1;i<lines.length;i++){
+    const row=lines[i].split(/[,;\t]/);
+    if(idx.lat<0||idx.lon<0) continue;
+    const lat=parseFloat(row[idx.lat]),lon=parseFloat(row[idx.lon]);
+    if(isNaN(lat)||isNaN(lon)) continue;
+    data.push({lat,lon,z:idx.elev>=0?(parseFloat(row[idx.elev])||0):0,fix:idx.fix>=0?(parseInt(row[idx.fix])||0):4,sats:idx.sats>=0?(parseInt(row[idx.sats])||0):0,seq:i});
+  }
+  return data.length?{id:APP.nextId++,name,data,visible:true}:null;
+}
+
+function parseGeoJSON(text,name){
+  try{
+    const gj=JSON.parse(text);
+    const features=gj.features||(gj.type==='Feature'?[gj]:[]);
+    const data=[];
+    features.forEach(f=>{
+      const g=f.geometry; if(!g) return;
+      const push=(lon,lat,z)=>data.push({lat,lon,z:z||0,fix:4,sats:0,seq:data.length});
+      if(g.type==='Point') push(...g.coordinates);
+      else if(g.type==='LineString') g.coordinates.forEach(c=>push(...c));
+      else if(g.type==='MultiPoint') g.coordinates.forEach(c=>push(...c));
+    });
+    return data.length?{id:APP.nextId++,name,data,visible:true}:null;
+  }catch{return null;}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════════
+function addDataset(ds){
+  if(!ds) return;
+  APP.datasets.push(ds);
+  if(!APP.origin){
+    const mid=ds.data[Math.floor(ds.data.length/2)];
+    setOrigin(mid.lat,mid.lon);
+  }
+  rebuildScene();
+  updateMapMarkers();
+  renderDatasetList();
+  updateStats();
+  toast(`✓ ${ds.name} — ${ds.data.length.toLocaleString()} pts`);
+}
+
+function setOrigin(lat,lon){
+  const utm=latLonToUTM(lat,lon);
+  APP.origin={lat,lon,x:utm.x,y:utm.y};
+  document.getElementById('origin-coords').textContent=`Origin: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SCENE
+// ═══════════════════════════════════════════════════════════════
+function clearObj(){
+  ['points','track','surface','contour','boreholes','bhLabels','soilLayers','gwSurf'].forEach(k=>{if(obj[k]){scene.remove(obj[k]);obj[k]=null;}});
+}
+
+function rebuildScene(){
+  clearObj();
+  if(!APP.origin||APP.datasets.length===0) return;
+  const allPts=[];
+  APP.datasets.filter(d=>d.visible).forEach(ds=>{
+    ds.data.forEach(p=>{
+      const utm=latLonToUTM(p.lat,p.lon);
+      allPts.push({lx:utm.x-APP.origin.x,ly:-(utm.y-APP.origin.y),z:p.z,fix:p.fix,seq:p.seq,dsId:ds.id});
+    });
+  });
+  if(allPts.length===0) return;
+  const zs=allPts.map(p=>p.z), minZ=Math.min(...zs), maxZ=Math.max(...zs), zR=maxZ-minZ||1;
+  const xs=allPts.map(p=>p.lx), ys=allPts.map(p=>p.ly);
+  const spread=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  orb.radius=Math.max(50,spread*1.5); orb.target.set(0,0,0); orbApply();
+  document.getElementById('leg-min').textContent=minZ.toFixed(1)+'m';
+  document.getElementById('leg-max').textContent=maxZ.toFixed(1)+'m';
+  if(APP.layers.points)  buildPoints(allPts,minZ,zR);
+  if(APP.layers.track)   buildTrack(allPts);
+  if(APP.layers.surface) buildSurface(allPts,minZ,zR);
+  if(APP.layers.contour) buildContours(allPts,minZ,maxZ);
+  buildBoreholes3D();
+  if(APP.layers.soilLayers) renderKrigingSurfaces();
+  if(APP.layers.gwSurface)  renderGWSurface();
+}
+
+function elevCol(z,minZ,zR){ return new THREE.Color().setHSL((1-(z-minZ)/zR)*0.66,1.0,0.5); }
+
+function buildPoints(pts,minZ,zR){
+  const geo=new THREE.BufferGeometry(), pos=[], col=[];
+  pts.forEach(p=>{ pos.push(p.lx,p.z*APP.zScale,p.ly); const c=elevCol(p.z,minZ,zR); col.push(c.r,c.g,c.b); });
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('color',   new THREE.Float32BufferAttribute(col,3));
+  obj.points=new THREE.Points(geo,new THREE.PointsMaterial({size:APP.ptSize,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:APP.opacity}));
+  scene.add(obj.points);
+}
+
+function buildTrack(pts){
+  const byDs={};
+  pts.forEach(p=>{if(!byDs[p.dsId])byDs[p.dsId]=[];byDs[p.dsId].push(p);});
+  const grp=new THREE.Group();
+  const cols=['#ff8c00','#00d4ff','#39ff14','#ff3b30','#bf5fff'];
+  let ci=0;
+  Object.values(byDs).forEach(dpts=>{
+    dpts.sort((a,b)=>a.seq-b.seq);
+    const pos=[];
+    dpts.forEach(p=>pos.push(p.lx,p.z*APP.zScale+1,p.ly));
+    if(pos.length<6) return;
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    grp.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:cols[ci%cols.length],opacity:0.85,transparent:true})));
+    ci++;
+  });
+  obj.track=grp; scene.add(grp);
+}
+
+function buildSurface(pts,minZ,zR){
+  const RES=60;
+  const xs=pts.map(p=>p.lx),ys=pts.map(p=>p.ly);
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  const span=Math.max(bx1-bx0,by1-by0)||1; // guard zero-extent
+  const pad=span*0.05+1;
+  const gx0=bx0-pad,gx1=bx1+pad,gy0=by0-pad,gy1=by1+pad;
+  const sx=(gx1-gx0)/(RES-1),sy=(gy1-gy0)/(RES-1);
+  if(!isFinite(sx)||!isFinite(sy)||sx===0||sy===0) return;
+  const r2=Math.pow(span*0.4+2,2);
+  const grid=[];
+  for(let iy=0;iy<RES;iy++){
+    const row=[],wy=gy0+iy*sy;
+    for(let ix=0;ix<RES;ix++){
+      const wx=gx0+ix*sx; let n=0,d=0,h=false;
+      pts.forEach(p=>{const dq=(p.lx-wx)**2+(p.ly-wy)**2;if(dq<r2){const w=1/(dq+0.001);n+=w*p.z;d+=w;h=true;}});
+      row.push(h?n/d:null);
+    }
+    grid.push(row);
+  }
+  const verts=[],cols=[],idx=[],vmap=new Array(RES*RES).fill(-1); let vc=0;
+  const addV=(ix,iy)=>{
+    const gi=iy*RES+ix; if(vmap[gi]===-1){
+      const z=grid[iy][ix];
+      if(z===null||!isFinite(z)) return -1;
+      const wx=gx0+ix*sx,wy=gy0+iy*sy;
+      verts.push(wx,z*APP.zScale,wy);
+      const c=elevCol(z,minZ,zR); cols.push(c.r,c.g,c.b); vmap[gi]=vc++;
+    } return vmap[gi];
+  };
+  for(let iy=0;iy<RES-1;iy++) for(let ix=0;ix<RES-1;ix++){
+    const v=[grid[iy][ix],grid[iy][ix+1],grid[iy+1][ix],grid[iy+1][ix+1]];
+    if(v[0]!==null&&v[1]!==null&&v[2]!==null){ const a=addV(ix,iy),b=addV(ix+1,iy),c=addV(ix,iy+1); if(a>=0&&b>=0&&c>=0) idx.push(a,b,c); }
+    if(v[1]!==null&&v[3]!==null&&v[2]!==null){ const a=addV(ix+1,iy),b=addV(ix+1,iy+1),c=addV(ix,iy+1); if(a>=0&&b>=0&&c>=0) idx.push(a,b,c); }
+  }
+  if(verts.length===0||idx.length===0) return;
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setAttribute('color',   new THREE.Float32BufferAttribute(cols,3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  obj.surface=new THREE.Mesh(geo,new THREE.MeshPhongMaterial({vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:APP.opacity*0.85,flatShading:false}));
+  scene.add(obj.surface);
+}
+
+function buildContours(pts,minZ,maxZ){
+  const RES=50;
+  const xs=pts.map(p=>p.lx),ys=pts.map(p=>p.ly);
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  const cspan=Math.max(bx1-bx0,by1-by0)||1;
+  const cpad=cspan*0.05+1;
+  const cbx0=bx0-cpad,cbx1=bx1+cpad,cby0=by0-cpad,cby1=by1+cpad;
+  const sx=(cbx1-cbx0)/(RES-1),sy=(cby1-cby0)/(RES-1),r2=Math.pow(cspan*0.4+2,2);
+  if(!isFinite(sx)||!isFinite(sy)||sx===0||sy===0) return;
+  const grid=[];
+  for(let iy=0;iy<RES;iy++){const row=[],wy=cby0+iy*sy;for(let ix=0;ix<RES;ix++){const wx=cbx0+ix*sx;let n=0,d=0,h=false;pts.forEach(p=>{const dq=(p.lx-wx)**2+(p.ly-wy)**2;if(dq<r2){const w=1/(dq+0.001);n+=w*p.z;d+=w;h=true;}});row.push(h?n/d:null);}grid.push(row);}
+  const zR=maxZ-minZ||1,intv=Math.max(0.1,zR/12),lvls=[];
+  for(let l=Math.ceil(minZ/intv)*intv;l<=maxZ;l+=intv)lvls.push(l);
+  const positions=[],off=(v1,v2,lv)=>(lv-v1)/(v2-v1);
+  for(let iy=0;iy<RES-1;iy++)for(let ix=0;ix<RES-1;ix++){
+    const v00=grid[iy][ix],v10=grid[iy][ix+1],v01=grid[iy+1][ix],v11=grid[iy+1][ix+1];
+    if(v00===null||v10===null||v01===null||v11===null)continue;
+    lvls.forEach(lv=>{
+      let ci=0;if(v00>=lv)ci|=1;if(v10>=lv)ci|=2;if(v11>=lv)ci|=4;if(v01>=lv)ci|=8;if(ci===0||ci===15)return;
+      const pB={x:cbx0+(ix+off(v00,v10,lv))*sx,y:cby0+iy*sy},pR={x:cbx0+(ix+1)*sx,y:cby0+(iy+off(v10,v11,lv))*sy},pT={x:cbx0+(ix+off(v01,v11,lv))*sx,y:cby0+(iy+1)*sy},pL={x:cbx0+ix*sx,y:cby0+(iy+off(v00,v01,lv))*sy};
+      const push=(a,b)=>positions.push(a.x,lv*APP.zScale+0.5,a.y,b.x,lv*APP.zScale+0.5,b.y);
+      const segs={1:[pL,pB],2:[pB,pR],3:[pL,pR],4:[pR,pT],5:[[pL,pT],[pB,pR]],6:[pT,pB],7:[pL,pT],8:[pL,pT],9:[pT,pB],10:[[pL,pB],[pR,pT]],11:[pR,pT],12:[pL,pR],13:[pB,pR],14:[pL,pB]};
+      const s=segs[ci];if(Array.isArray(s[0])&&Array.isArray(s[0][0])){s.forEach(([a,b])=>push(a,b));}else if(Array.isArray(s))push(s[0],s[1]);
+    });
+  }
+  if(positions.length===0) return;
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  obj.contour=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#ffffff',opacity:0.6,transparent:true}));
+  scene.add(obj.contour);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SOIL COLOURS (USCS standard)
+// ═══════════════════════════════════════════════════════════════
+const SOIL_COLORS={
+  FILL:'#E91E63',L:'#FFCDD2',MD:'#EF9A9A',D:'#E53935',VD:'#B71C1C',
+  SOFT:'#F3E5F5',FIRM:'#CE93D8',STIFF:'#BA68C8','VERY STIFF':'#8E24AA',HARD:'#4A148C',
+  GW:'#FFD700',GP:'#EEE8AA',GM:'#BDB76B',GC:'#8B4513',
+  SW:'#FFFF00',SP:'#FFFACD',SM:'#F0E68C',SC:'#A52A2A',
+  ML:'#D2B48C',CL:'#A0522D',OL:'#556B2F',MH:'#DEB887',CH:'#800000',OH:'#2F4F4F',
+  PT:'#111111',CLAY:'#9C6B3C',ROCK:'#616161',LIMESTONE:'#BDBDBD',UNKNOWN:'#9E9E9E'
+};
+function soilColor(name){ return SOIL_COLORS[name.toUpperCase()]||SOIL_COLORS[name.toUpperCase().replace(/_/g,' ')]||'#666666'; }
+
+// ═══════════════════════════════════════════════════════════════
+//  APPROX UTM→LATLON (Zone 50S) for map display only
+// ═══════════════════════════════════════════════════════════════
+function utmToLatLon(x, y){
+  // Reverse UTM Zone 50S (WGS84) — iterative
+  const a=6378137,f=1/298.257223563,k0=0.9996,cm=117*Math.PI/180;
+  const e2=2*f-f*f,e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const x1=x-500000, y1=y-10000000; // southern hemisphere false northing
+  const M=y1/k0;
+  const mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2*e2*e2/256));
+  const p1=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu);
+  const ep2=e2/(1-e2), N1=a/Math.sqrt(1-e2*Math.sin(p1)**2);
+  const T1=Math.tan(p1)**2, C1=ep2*Math.cos(p1)**2, R1=a*(1-e2)/Math.pow(1-e2*Math.sin(p1)**2,1.5);
+  const D=x1/(N1*k0);
+  const lat=p1-(N1*Math.tan(p1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D*D*D*D*D*D/720);
+  const lon=cm+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D*D*D*D*D/120)/Math.cos(p1);
+  return{lat:lat*180/Math.PI, lon:lon*180/Math.PI};
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BOREHOLE PARSING
+// ═══════════════════════════════════════════════════════════════
+// Format: ID Easting Northing GL Depth GW [UnitName Bottom ...]
+function parseBoreholes(text){
+  APP.boreholes=[];
+  const lines=text.trim().split('\n');
+  lines.forEach(line=>{
+    const p=line.trim().split(/\s+/);
+    if(p.length<6) return;
+    const bh={id:p[0],x:parseFloat(p[1]),y:parseFloat(p[2]),z:parseFloat(p[3]),depth:parseFloat(p[4]),gw:parseFloat(p[5]),units:[]};
+    if(isNaN(bh.x)||isNaN(bh.y)) return;
+    try{ const ll=utmToLatLon(bh.x,bh.y); bh.lat=ll.lat; bh.lon=ll.lon; }catch(e){}
+    for(let i=6;i<p.length-1;i+=2){
+      bh.units.push({name:p[i],bottom:parseFloat(p[i+1])});
+    }
+    APP.boreholes.push(bh);
+  });
+  toast(`◈ ${APP.boreholes.length} boreholes loaded`);
+  rebuildScene();
+  renderBhPanel();
+}
+
+function renderBhPanel(){
+  const el=document.getElementById('bh-list');
+  if(!el) return;
+  if(APP.boreholes.length===0){el.innerHTML='<div style="color:var(--dim);font-size:10px;padding:6px;">No boreholes</div>';return;}
+  el.innerHTML=APP.boreholes.map(b=>`
+    <div class="ds-item">
+      <div class="ds-name">⬡ ${b.id}</div>
+      <div class="ds-meta">GL: ${b.z.toFixed(1)}m | Depth: ${b.depth}m | GW: ${b.gw}m</div>
+      <div style="font-size:9px;color:var(--dim);margin-top:3px;">${b.units.map(u=>`<span style="display:inline-block;margin-right:5px;color:${soilColor(u.name)}">${u.name}→${u.bottom}m</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BOREHOLE 3D CYLINDERS
+// ═══════════════════════════════════════════════════════════════
+function buildBoreholes3D(){
+  if(obj.boreholes){scene.remove(obj.boreholes);obj.boreholes=null;}
+  if(obj.bhLabels){scene.remove(obj.bhLabels);obj.bhLabels=null;}
+  if(!APP.layers.boreholes||!APP.boreholes.length||!APP.origin) return;
+
+  const zs=APP.datasets.filter(d=>d.visible).flatMap(d=>d.data);
+  obj.boreholes=new THREE.Group();
+  obj.bhLabels=new THREE.Group();
+  const bhRadius=2.5;
+
+  APP.boreholes.forEach(bh=>{
+    const lx=bh.x-APP.origin.x, ly=-(bh.y-APP.origin.y);
+    const glY=bh.z*APP.zScale;
+    let curDepth=0;
+    bh.units.forEach(unit=>{
+      const thick=unit.bottom-curDepth; if(thick<=0) return;
+      const h=thick*APP.zScale;
+      const yPos=glY-(curDepth*APP.zScale)-(h/2);
+      const geo=new THREE.CylinderGeometry(bhRadius,bhRadius,h,10);
+      const mat=new THREE.MeshPhongMaterial({color:soilColor(unit.name),transparent:true,opacity:0.88,side:THREE.DoubleSide});
+      const mesh=new THREE.Mesh(geo,mat);
+      mesh.position.set(lx,yPos,ly);
+      obj.boreholes.add(mesh);
+      curDepth=unit.bottom;
+    });
+    // GW marker ring
+    if(bh.gw>0){
+      const gwY=glY-(bh.gw*APP.zScale);
+      const ring=new THREE.Mesh(
+        new THREE.CylinderGeometry(bhRadius*1.8,bhRadius*1.8,0.8,12),
+        new THREE.MeshBasicMaterial({color:'#00d4ff',transparent:true,opacity:0.85,side:THREE.DoubleSide})
+      );
+      ring.position.set(lx,gwY,ly); obj.boreholes.add(ring);
+    }
+    // Sprite label
+    const cvs=document.createElement('canvas'); cvs.width=256; cvs.height=64;
+    const ctx=cvs.getContext('2d');
+    ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,256,64);
+    ctx.fillStyle='#00d4ff'; ctx.font='bold 30px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(bh.id,128,32);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cvs),transparent:true,depthTest:false}));
+    sp.position.set(lx,glY+bhRadius*6,ly); sp.scale.set(bhRadius*10,bhRadius*2.5,1);
+    obj.bhLabels.add(sp);
+  });
+  scene.add(obj.boreholes); scene.add(obj.bhLabels);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  IDW GRID UTILITY (shared by all kriging layers)
+// ═══════════════════════════════════════════════════════════════
+function idwGrid(srcPts, RES, rangeMultiplier=0.5){
+  // srcPts: [{lx,ly,z}]
+  if(srcPts.length<2) return null;
+  const xs=srcPts.map(p=>p.lx),ys=srcPts.map(p=>p.ly);
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  const idwSpan=Math.max(bx1-bx0,by1-by0)||1;
+  const pad=idwSpan*0.1+2;
+  const gx0=bx0-pad,gx1=bx1+pad,gy0=by0-pad,gy1=by1+pad;
+  const sx=(gx1-gx0)/(RES-1),sy=(gy1-gy0)/(RES-1);
+  const range2=Math.pow(Math.max(bx1-bx0,by1-by0,10)*rangeMultiplier*2,2);
+  const grid=[];
+  let gMinZ=Infinity,gMaxZ=-Infinity;
+  for(let iy=0;iy<RES;iy++){
+    const row=[],wy=gy0+iy*sy;
+    for(let ix=0;ix<RES;ix++){
+      const wx=gx0+ix*sx; let n=0,d=0,h=false;
+      srcPts.forEach(p=>{const dq=(p.lx-wx)**2+(p.ly-wy)**2;if(dq<range2){const w=1/(dq+0.001);n+=w*p.z;d+=w;h=true;}});
+      const v=h?n/d:null; row.push(v);
+      if(v!==null){gMinZ=Math.min(gMinZ,v);gMaxZ=Math.max(gMaxZ,v);}
+    }
+    grid.push(row);
+  }
+  return{grid,RES,sx,sy,gx0,gy0,minZ:gMinZ,maxZ:gMaxZ};
+}
+
+function gridToMesh(gd,color,opacity){
+  if(!gd) return null;
+  const {grid,RES,sx,sy,gx0,gy0}=gd;
+  const verts=[],idx=[],vmap=new Array(RES*RES).fill(-1);let vc=0;
+  const addV=(ix,iy)=>{
+    const gi=iy*RES+ix; if(vmap[gi]===-1){
+      const z=grid[iy][ix];
+      if(z===null||!isFinite(z)) return -1;
+      verts.push(gx0+ix*sx, z*APP.zScale, gy0+iy*sy);
+      vmap[gi]=vc++;
+    } return vmap[gi];
+  };
+  for(let iy=0;iy<RES-1;iy++) for(let ix=0;ix<RES-1;ix++){
+    const v=[grid[iy][ix],grid[iy][ix+1],grid[iy+1][ix],grid[iy+1][ix+1]];
+    if(v[0]!==null&&v[1]!==null&&v[2]!==null){ const a=addV(ix,iy),b=addV(ix+1,iy),c=addV(ix,iy+1); if(a>=0&&b>=0&&c>=0) idx.push(a,b,c); }
+    if(v[1]!==null&&v[3]!==null&&v[2]!==null){ const a=addV(ix+1,iy),b=addV(ix+1,iy+1),c=addV(ix,iy+1); if(a>=0&&b>=0&&c>=0) idx.push(a,b,c); }
+  }
+  if(idx.length===0) return null;
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,transparent:true,opacity,flatShading:false}));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  KRIGING: GENERATE SOIL LAYER SURFACES + GW TABLE
+// ═══════════════════════════════════════════════════════════════
+function generateKrigingSurfaces(){
+  if(!APP.boreholes.length||!APP.origin){toast('Load boreholes first');return;}
+  APP.krigingSurfaces={};
+  APP.gwSurface=null;
+
+  // Collect unique layer names
+  const layerNames=new Set();
+  APP.boreholes.forEach(bh=>bh.units.forEach(u=>layerNames.add(u.name)));
+
+  // For each layer, find top-of-layer elevation at each borehole
+  layerNames.forEach(layerName=>{
+    const pts=[];
+    APP.boreholes.forEach(bh=>{
+      let depth=0;
+      for(let i=0;i<bh.units.length;i++){
+        if(bh.units[i].name===layerName){
+          // Top of this layer = GL - accumulated depth
+          pts.push({lx:bh.x-APP.origin.x, ly:-(bh.y-APP.origin.y), z:bh.z-depth});
+          break;
+        }
+        depth=bh.units[i].bottom;
+      }
+    });
+    if(pts.length>0) APP.krigingSurfaces[layerName]=idwGrid(pts,40,1.5);
+  });
+
+  // Groundwater surface
+  const gwPts=APP.boreholes.filter(b=>b.gw>0).map(b=>({lx:b.x-APP.origin.x,ly:-(b.y-APP.origin.y),z:b.z-b.gw}));
+  if(gwPts.length>0) APP.gwSurface=idwGrid(gwPts,40,1.5);
+
+  const n=Object.keys(APP.krigingSurfaces).length;
+  toast(`◈ Kriging: ${n} soil layers${APP.gwSurface?' + GW':''} generated`);
+  APP.layers.soilLayers=true;
+  APP.layers.gwSurface=!!APP.gwSurface;
+  APP.layers.soilLayers=true; syncToggleUI('soilLayers');
+  if(APP.gwSurface){ APP.layers.gwSurface=true; syncToggleUI('gwSurface'); }
+  renderKrigingSurfaces();
+  renderGWSurface();
+}
+
+function renderKrigingSurfaces(){
+  if(obj.soilLayers){scene.remove(obj.soilLayers);obj.soilLayers=null;}
+  if(!APP.layers.soilLayers||!APP.origin) return;
+  const grp=new THREE.Group();
+  const op=parseFloat(document.getElementById('sl-soilop')?.value||45)/100;
+  Object.entries(APP.krigingSurfaces).forEach(([name,gd])=>{
+    const mesh=gridToMesh(gd,soilColor(name),op);
+    if(mesh) grp.add(mesh);
+  });
+  obj.soilLayers=grp; scene.add(grp);
+}
+
+function renderGWSurface(){
+  if(obj.gwSurf){scene.remove(obj.gwSurf);obj.gwSurf=null;}
+  if(!APP.layers.gwSurface||!APP.gwSurface||!APP.origin) return;
+  const mesh=gridToMesh(APP.gwSurface,'#00d4ff',0.45);
+  if(mesh){obj.gwSurf=mesh;scene.add(mesh);}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SAMPLE DATA
+// ═══════════════════════════════════════════════════════════════
+function loadSampleData(){
+  const center={lat:-31.778833,lon:115.767663};
+  let csv="Lat,Lon,Elev,Fix,Sats,PDOP\n";
+  // 6 explicit site surface points
+  const explicitPoints=[
+    {lat:-31.77874335,lon:115.7675373},{lat:-31.77871441,lon:115.7677122},
+    {lat:-31.77881175,lon:115.7677509},{lat:-31.77886305,lon:115.7675838},
+    {lat:-31.77890514,lon:115.7677896},{lat:-31.77895249,lon:115.7676364}
+  ];
+  explicitPoints.forEach(p=>{
+    const z=20-((p.lon-center.lon)*8000)+((p.lat-center.lat)*8000);
+    csv+=`${p.lat.toFixed(8)},${p.lon.toFixed(8)},${z.toFixed(3)},4,18,1.1\n`;
+  });
+  // Dense surrounding mesh
+  for(let i=0;i<600;i++){
+    const r=Math.sqrt(i)*0.00001,t=i*0.5;
+    const lat=center.lat+r*Math.sin(t),lon=center.lon+r*Math.cos(t);
+    const z=20-((lon-center.lon)*8000)+((lat-center.lat)*8000)+(Math.random()*0.05);
+    csv+=`${lat.toFixed(8)},${lon.toFixed(8)},${z.toFixed(3)},4,18,1.1\n`;
+  }
+  const dsSurf=parseCSV(csv,'SITE_SURFACE.csv');
+  if(dsSurf)addDataset(dsSurf);
+  // Boreholes — load after a tick so origin is set
+  setTimeout(loadSampleBoreholes,50);
+}
+
+function loadSampleBoreholes(){
+  const bhs=[
+    {id:'BH-1',lat:-31.77888935,lon:115.7677385},
+    {id:'BH-2',lat:-31.77890777,lon:115.7676457},
+    {id:'BH-3',lat:-31.77876834,lon:115.7676936},
+    {id:'BH-4',lat:-31.77877623,lon:115.7676054}
+  ];
+  const center={lat:-31.778833,lon:115.767663};
+  let sample='';
+  bhs.forEach((b,i)=>{
+    const utm=latLonToUTM(b.lat,b.lon);
+    const z=20-((b.lon-center.lon)*8000)+((b.lat-center.lat)*8000);
+    const gw=6.0+(i*0.5);
+    sample+=`${b.id} ${utm.x.toFixed(2)} ${utm.y.toFixed(2)} ${z.toFixed(2)} 30.0 ${gw.toFixed(1)} FILL 1.5 L 4.0 MD 8.0 D 15.0 SC 22.0 CLAY 28.0 ROCK 30.0\n`;
+  });
+  parseBoreholes(sample.trim());
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BOREHOLE FILE LOADER
+// ═══════════════════════════════════════════════════════════════
+function initBhDrop(){
+  const dz=document.getElementById('bh-drop-zone');
+  const fi=document.getElementById('bh-file-input');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--accent2)';});
+  dz.addEventListener('dragleave',()=>dz.style.borderColor='');
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='';loadBhFile(e.dataTransfer.files[0]);});
+  fi.addEventListener('change',e=>loadBhFile(e.target.files[0]));
+}
+function loadBhFile(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>parseBoreholes(e.target.result);
+  r.readAsText(file);
+}
+function clearBoreholes(){
+  APP.boreholes=[];
+  APP.krigingSurfaces={};
+  APP.gwSurface=null;
+  ['boreholes','bhLabels','soilLayers','gwSurf'].forEach(k=>{if(obj[k]){scene.remove(obj[k]);obj[k]=null;}});
+  renderBhPanel();
+  toast('✕ Boreholes cleared');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILE LOAD
+// ═══════════════════════════════════════════════════════════════
+function handleFiles(files){
+  Array.from(files).forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const text=e.target.result,ext=f.name.split('.').pop().toLowerCase();
+      let ds=null;
+      if(ext==='geojson'||ext==='json') ds=parseGeoJSON(text,f.name);
+      else ds=parseCSV(text,f.name);
+      if(ds)addDataset(ds); else toast(`✗ Could not parse ${f.name}`);
+    };
+    reader.readAsText(f);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════════════
+function renderDatasetList(){
+  const el=document.getElementById('dataset-list');
+  if(APP.datasets.length===0){el.innerHTML='<div style="color:var(--dim);font-size:10px;text-align:center;padding:10px;">No files loaded</div>';return;}
+  el.innerHTML=APP.datasets.map(ds=>`
+    <div class="ds-item">
+      <div class="ds-name">◈ ${ds.name}</div>
+      <div class="ds-meta">${ds.data.length.toLocaleString()} points</div>
+      <div class="ds-row">
+        <button class="btn" style="flex:1;font-size:9px;padding:5px;" onclick="toggleDs(${ds.id})">${ds.visible?'● HIDE':'○ SHOW'}</button>
+        <button class="btn dng" style="font-size:9px;padding:5px 8px;" onclick="removeDs(${ds.id})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleDs(id){const ds=APP.datasets.find(d=>d.id===id);if(ds){ds.visible=!ds.visible;rebuildScene();updateMapMarkers();renderDatasetList();updateStats();}}
+function removeDs(id){APP.datasets=APP.datasets.filter(d=>d.id!==id);if(APP.datasets.length===0)APP.origin=null;rebuildScene();updateMapMarkers();renderDatasetList();updateStats();}
+
+function updateStats(){
+  const pts=APP.datasets.filter(d=>d.visible).flatMap(d=>d.data);
+  document.getElementById('st-pts').textContent=pts.length.toLocaleString();
+  document.getElementById('st-trk').textContent=APP.datasets.filter(d=>d.visible).length;
+  if(pts.length){const zs=pts.map(p=>p.z),mn=Math.min(...zs),mx=Math.max(...zs);document.getElementById('st-min').textContent=mn.toFixed(2)+'m';document.getElementById('st-max').textContent=mx.toFixed(2)+'m';document.getElementById('st-spd').textContent=(mx-mn).toFixed(2)+'m';}
+  else['st-min','st-max','st-spd'].forEach(id=>document.getElementById(id).textContent='—');
+}
+
+function togglePanel(open){document.getElementById('side-panel').classList.toggle('open',open);}
+// Global toggle — works for all layers including kriging with side-effects
+function toggleLayerBtn(key){
+  APP.layers[key]=!APP.layers[key];
+  syncToggleUI(key);
+  // Kriging layers need explicit render/remove calls
+  if(key==='soilLayers'){
+    if(APP.layers.soilLayers) renderKrigingSurfaces();
+    else{ if(obj.soilLayers){scene.remove(obj.soilLayers);obj.soilLayers=null;} }
+  } else if(key==='gwSurface'){
+    if(APP.layers.gwSurface) renderGWSurface();
+    else{ if(obj.gwSurf){scene.remove(obj.gwSurf);obj.gwSurf=null;} }
+  } else {
+    rebuildScene();
+  }
+}
+
+// Sync all toggle UI elements that share the same key (bottom bar + any panel remnants)
+function syncToggleUI(key){
+  const el=document.getElementById('tog-'+{
+    points:'points', track:'track', surface:'surface', contour:'contour',
+    boreholes:'bh', soilLayers:'soil', gwSurface:'gw'
+  }[key]||key);
+  if(!el) return;
+  const on=APP.layers[key];
+  const useBlue=(key==='track'||key==='gwSurface');
+  el.className='tog'+(on?(useBlue?' on2 on':' on'):'');
+}
+
+function toggleLayer(key){APP.layers[key]=!APP.layers[key];const el=document.getElementById('tog-'+key);el.className='tog'+(APP.layers[key]?(key==='track'?' on2 on':' on'):'');rebuildScene();}
+function toggleGrid(){APP.showGrid=!APP.showGrid;document.getElementById('tog-grid').className='tog'+(APP.showGrid?' on':'');buildGrid();}
+function toggleStats(){const el=document.getElementById('stats-overlay');el.classList.toggle('hidden');document.getElementById('tog-stats').className='tog'+(el.classList.contains('hidden')?'':' on');}
+
+function toggleCam(){
+  const tog=document.getElementById('tog-cam');
+  if(APP.camStream){APP.camStream.getTracks().forEach(t=>t.stop());APP.camStream=null;document.getElementById('camera-feed').style.display='none';tog.className='tog';renderer.setClearColor(0x050810,1);}
+  else startCamFeed();
+}
+async function startCamFeed(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    APP.camStream=stream;
+    const f=document.getElementById('camera-feed'); f.srcObject=stream; f.style.display='block';
+    renderer.setClearColor(0x000000,0);
+    document.getElementById('tog-cam').className='tog on2 on';
+  }catch(e){toast('Camera access denied');document.getElementById('tog-cam').className='tog';}
+}
+
+function updateZScale(v){APP.zScale=parseFloat(v);document.getElementById('sv-z').textContent=v+'×';rebuildScene();}
+function updateOpacity(v){APP.opacity=v/100;document.getElementById('sv-op').textContent=v+'%';if(obj.points)obj.points.material.opacity=APP.opacity;if(obj.surface)obj.surface.material.opacity=APP.opacity*0.85;}
+function updatePointSize(v){APP.ptSize=parseFloat(v);document.getElementById('sv-ps').textContent=v+'px';if(obj.points)obj.points.material.size=APP.ptSize;}
+
+function recentreOrigin(){
+  if(APP.gps.lat!==null){
+    APP.origin={lat:APP.gps.lat,lon:APP.gps.lon,...latLonToUTM(APP.gps.lat,APP.gps.lon)};
+    document.getElementById('origin-coords').textContent=`Origin: ${APP.gps.lat.toFixed(5)}, ${APP.gps.lon.toFixed(5)}`;
+    rebuildScene(); toast('⊕ Origin set to GPS position');
+  }else toast('GPS not available');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GPS + COMPASS
+// ═══════════════════════════════════════════════════════════════
+function initGPS(){
+  if(!navigator.geolocation){toast('GPS not available');return;}
+  document.getElementById('gps-dot').className='srch';
+  document.getElementById('gps-text').textContent='ACQUIRING';
+  navigator.geolocation.watchPosition(pos=>{
+    APP.gps.lat=pos.coords.latitude; APP.gps.lon=pos.coords.longitude; APP.gps.acc=pos.coords.accuracy;
+    document.getElementById('gps-dot').className='active';
+    document.getElementById('gps-text').textContent=`${APP.gps.lat.toFixed(4)},${APP.gps.lon.toFixed(4)} ±${APP.gps.acc?.toFixed(0)}m`;
+  },()=>{document.getElementById('gps-dot').className='';document.getElementById('gps-text').textContent='GPS ERR';},{enableHighAccuracy:true,maximumAge:2000,timeout:10000});
+}
+function initCompass(){
+  const upd=e=>{const deg=e.alpha||e.webkitCompassHeading||0;APP.gps.heading=deg;document.getElementById('compass-val').textContent=Math.round(deg)+'°';};
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',upd);}).catch(()=>{});}
+  else window.addEventListener('deviceorientation',upd);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WebXR AR
+// ═══════════════════════════════════════════════════════════════
+async function startAR(){
+  if(!navigator.xr){showNoAR();return;}
+  const ok=await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
+  if(!ok){showNoAR();return;}
+  try{
+    const session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local'],optionalFeatures:['dom-overlay','hit-test'],domOverlay:{root:document.body}});
+    renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
+    await renderer.xr.setSession(session);
+    document.getElementById('camera-feed').style.display='none';
+    document.getElementById('mode-badge').textContent='◉ AR ACTIVE';
+    document.getElementById('ar-btn').textContent='⬡ EXIT AR';
+    document.getElementById('ar-btn').onclick=()=>{session.end();exitAR();};
+    document.getElementById('reticle').style.display='block';
+    APP.arMode=true; session.addEventListener('end',exitAR);
+    toast('◉ AR Session Active');
+  }catch(e){showNoAR();}
+}
+function exitAR(){
+  APP.arMode=false; renderer.xr.enabled=false;
+  document.getElementById('mode-badge').textContent='3D PREVIEW';
+  document.getElementById('ar-btn').textContent='⬡ LAUNCH AR';
+  document.getElementById('ar-btn').onclick=startAR;
+  document.getElementById('reticle').style.display='none';
+}
+function showNoAR(){
+  document.getElementById('no-ar-msg').style.display='block';
+  startCamFeed();
+  document.getElementById('mode-badge').textContent='◎ CAM + 3D';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800);}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAG & DROP
+// ═══════════════════════════════════════════════════════════════
+function initDragDrop(){
+  const dz=document.getElementById('drop-zone');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--accent)';});
+  dz.addEventListener('dragleave',()=>dz.style.borderColor='');
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='';handleFiles(e.dataTransfer.files);});
+  document.getElementById('file-input').addEventListener('change',e=>handleFiles(e.target.files));
+  document.addEventListener('dragover',e=>e.preventDefault());
+  document.addEventListener('drop',e=>{e.preventDefault();handleFiles(e.dataTransfer.files);});
+}
+// ═══════════════════════════════════════════════════════════════
+//  XREAL AIR WebHID 3DoF INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+let xrealDevice = null;
+let xrealActive = false;
+let imuFusion = { pitch: 0, yaw: 0, roll: 0 };
+let lastImuTime = 0;
+
+async function startXReal() {
+  if (!("hid" in navigator)) {
+    toast('✗ WebHID not supported in this browser. Use Chrome/Edge.');
+    return;
+  }
+
+  try {
+    // Request the XREAL Air device (Nreal Vendor ID: 0x0483 or 0x3318)
+    // We leave filters empty so the user can select the 'Air' device from the Chrome prompt
+    const devices = await navigator.hid.requestDevice({ filters: [] });
+    if (devices.length === 0) return;
+    
+    xrealDevice = devices[0];
+    await xrealDevice.open();
+
+    // The OV580 magic packet to initialize the high-frequency IMU stream
+    const magicPacket = new Uint8Array([0x02, 0x19, 0x01]);
+    
+    // Send the initialization report
+    // Note: Report ID 0 or 1 depending on the specific firmware endpoint
+    await xrealDevice.sendReport(0, magicPacket).catch(async () => {
+        // Fallback to report ID 1 if 0 fails
+        await xrealDevice.sendReport(1, magicPacket); 
+    });
+
+    xrealDevice.addEventListener("inputreport", handleXRealIMU);
+    xrealActive = true;
+    
+    // UI Updates
+    document.getElementById('xreal-btn').textContent = '👓 XREAL ACTIVE';
+    document.getElementById('mode-badge').textContent = 'XREAL 3DoF VIEW';
+    toast('👓 XREAL Air Connected & Streaming');
+
+    // Detach standard orbit controls so they don't fight the headset
+    orb.active = false; 
+    
+  } catch (err) {
+    console.error("XREAL Connection Error:", err);
+    toast('✗ Failed to connect XREAL glasses');
+  }
+}
+
+function handleXRealIMU(event) {
+  if (!xrealActive) return;
+  
+  const { data } = event;
+  const now = performance.now();
+  if (!lastImuTime) lastImuTime = now;
+  const dt = (now - lastImuTime) / 1000; // Delta time in seconds
+  lastImuTime = now;
+
+  // XREAL IMU payload mapping (Typical OV580 format)
+  // Bytes 14-19: Gyroscope X, Y, Z (Int16, Little Endian)
+  // Bytes 20-25: Accelerometer X, Y, Z (Int16, Little Endian)
+  
+  if (data.byteLength > 20) {
+    // Read raw gyro values
+    const rawGyroX = data.getInt16(14, true);
+    const rawGyroY = data.getInt16(16, true);
+    const rawGyroZ = data.getInt16(18, true);
+
+    // Convert raw values to degrees per second
+    // (Standard Invensense MPU6050 conversion factor for 2000 deg/s range)
+    const gyroScale = 1 / 16.4; 
+    
+    const gyroX = rawGyroX * gyroScale;
+    const gyroY = rawGyroY * gyroScale;
+    const gyroZ = rawGyroZ * gyroScale;
+
+    // Simple Euler integration (Gyro only)
+    // For a production app, you would blend this with the Accelerometer 
+    // using a Madgwick or Mahony filter to prevent drift.
+    imuFusion.pitch += (gyroX * dt);
+    imuFusion.yaw   += (gyroY * dt);
+    imuFusion.roll  += (gyroZ * dt);
+
+    // Map the IMU rotation directly to the Three.js camera
+    // We use a quaternion to avoid gimbal lock
+    const euler = new THREE.Euler(
+      THREE.MathUtils.degToRad(-imuFusion.pitch), 
+      THREE.MathUtils.degToRad(-imuFusion.yaw), 
+      THREE.MathUtils.degToRad(imuFusion.roll), 
+      'YXZ'
+    );
+    
+    camera.quaternion.setFromEuler(euler);
+  }
+}
+
+// Optional: Add a disconnect function
+function stopXReal() {
+    if (xrealDevice) {
+        xrealDevice.close();
+        xrealDevice = null;
+    }
+    xrealActive = false;
+    document.getElementById('xreal-btn').textContent = '👓 XREAL 3DoF';
+    document.getElementById('mode-badge').textContent = '3D PREVIEW';
+    resetView();
+}
+// ═══════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  initThree();
+  initGPS();
+  initCompass();
+  initDragDrop();
+  initBhDrop();
+  // Load Leaflet dynamically then boot map — avoids "L is not defined" race
+  loadLeaflet(()=>{
+    initLeaflet();
+    applyViewLayout();   // 3D fullscreen, map PiP top-right
+    startCamFeed();
+    toast('◈ FIELDVIEW AR — Ready');
+  });
+});
+</script>
+</body>
+</html>
